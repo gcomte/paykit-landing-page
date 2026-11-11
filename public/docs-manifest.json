@@ -1,0 +1,17 @@
+{
+  "fingerprint": "a4eb15d1e139eb601bc51d732f75d25d9df1e1a8866e0333ecba2627fa501fdf",
+  "sources": {
+    "released": {
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "tag": "v0.1.0"
+    },
+    "coming-soon": {
+      "commit": "1fdbedd29de28bd174529aa3da3c5b3c0471b1f6",
+      "tag": null
+    }
+  },
+  "contentHashes": {
+    "released": "896c1cdac30bd370db43b161797c1fedd65def6343cebc11e611aa001fffba65",
+    "coming-soon": "474703596ba37083391be4a2cb5197f59477814d92447b0958a0a233275bf6a0"
+  }
+}

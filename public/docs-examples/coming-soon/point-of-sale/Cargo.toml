@@ -1,0 +1,11 @@
+[package]
+name = "paykit-point-of-sale-demo"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.91.1"
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+paykit-lib = { git = "https://github.com/pubky/paykit-rs", rev = "1fdbedd29de28bd174529aa3da3c5b3c0471b1f6" }

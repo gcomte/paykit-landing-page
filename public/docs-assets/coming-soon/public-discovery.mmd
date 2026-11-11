@@ -1,0 +1,4 @@
+flowchart TD
+  A[Payee app] -->|publishes| B[Public endpoint text]
+  B -->|read as a list| C[Payer app]
+  C -->|chooses using app policy| D[Supported rail]

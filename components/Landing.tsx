@@ -225,6 +225,7 @@ export default function Landing({
           </a>
           <nav className="desktop-nav" aria-label="Main navigation">
             <a href="#how-it-works">How it works</a>
+            <a href="/docs">Docs</a>
           </nav>
           <a href="#try-paykit" className="button button-orange header-cta">
             Try Paykit <Arrow />
@@ -236,6 +237,7 @@ export default function Landing({
             </summary>
             <nav className="mobile-nav" aria-label="Mobile navigation">
               <a href="#how-it-works">How it works</a>
+              <a href="/docs">Docs</a>
               <a href="#try-paykit">Try Paykit</a>
             </nav>
           </details>
