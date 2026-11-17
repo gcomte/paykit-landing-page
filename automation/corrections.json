@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "policy": "Every user correction is recorded here and enforced on generation, source import and publication. One-time preview requests do not waive normal acceptance gates.",
+  "landingDocs": {
+    "sectionId": "docs-teaser",
+    "beforeSectionAriaLabelledby": "foundation-title",
+    "beforeSectionHeading": "Your data. Your choice.",
+    "mainHref": "/docs",
+    "version": "released",
+    "featuredSlugs": ["flows", "wallets", "point-of-sale"],
+    "copySource": "generated released page titles and descriptions",
+    "responsiveWidths": [375, 768, 1440]
+  },
+  "privateContext": {
+    "talosConsultationRequired": true,
+    "defaultClassification": "private",
+    "sourceBoundaryMode": "instruction-based-public-evidence-v1",
+    "enforcedIsolationRequired": false,
+    "requiresProtectedRunnerSetup": false,
+    "purpose": "The private coordinator consults Talos on every run and material process investigation to locate leads only, never to supply publication facts.",
+    "publicAuthorInput": "Separate fresh public author and reviewer tasks: public policies, independently anonymously fetched approved immutable public source identities/bytes and necessary public artifacts only. Do not query Talos/private storage or use earlier conversations, memory or pretrained Paykit facts as evidence; no private excerpts, summaries, titles, links, queries or hashes.",
+    "handoff": "Talos leads remain coordinator-only until independent anonymous public verification against approved repositories and frozen commits. Public author/reviewer independently inspect exact public bytes, never private retrieval metadata or coordinator factual assurances.",
+    "publicLogs": "Consultation outcome and independently verified public metadata only; no private snippets, summaries, titles, links, queries, hashes or paraphrases.",
+    "onUnavailableOrUnverifiable": "Block new publication or unsupported assertions, preserve last good documentation and report a non-sensitive diagnostic. Omit facts without public support, never paraphrase or declassify them.",
+    "securityLimit": "The user's instruction-based correction supersedes mandatory enforced-isolation, protected-runner, native receipt, canary/privacy certification, restricted-tool/SDK grant, disabled-memory and credential-relay prerequisites and accepts reduced confidentiality assurance. Fresh tasks are hygiene, not access isolation; tools and runtime remain unchanged. Independent public-evidence review cannot prove absence of private influence or that no private knowledge was used. Historical rejected evidence, stopped components and exhausted run budgets remain preserved."
+  },
+  "requirements": [
+    {
+      "id": "server-local-unprivileged-documentation-jobs",
+      "requirement": "Run orchestration, author/reviewer tasks, tests and eventual scheduling on the existing user-controlled always-on server, not GitHub-hosted Actions; GitHub is source control and Vercel is hosting. Preserve existing provider/authentication, broad tools, profile and Docker backend/image/mount/security. Supersedes the earlier protected-runner/separate-administrator setup requirement: use the existing Hermes runtime and ordinary bounded delegation/CLI without new service setup, sudo or root model/build/review jobs. Preserve independent evidence review, task-owned cleanup, publication gates and original shared repair/deadline accounting; historical rejected work remains stopped.",
+      "enforcedBy": ["automation/local-execution-policy.json", "automation/LOCAL-EXECUTION.md", "automation/tests/test_local_execution_policy.py", "automation/COORDINATOR.md"],
+      "enforcementScope": "Policy regression and ordinary existing-runtime scope only; not runtime isolation certification, content approval, publication or scheduling approval. Protected-runner qualification is no longer a prerequisite."
+    },
+    {
+      "id": "instruction-boundary-public-evidence-review",
+      "requirement": "Supersedes hard-isolation/root-runner prerequisites with instruction-based-public-evidence-v1, accepting reduced confidentiality assurance and leaving existing runtime/tools unchanged. The private coordinator still consults Talos every run/material investigation; public author/reviewer must not query Talos/private storage or use prior conversations, memory, pretrained Paykit facts or private excerpts/summaries/titles/links/queries/hashes as evidence. Use separate fresh public tasks and only independently anonymously fetched approved immutable public primary sources. Reuse per-claim/example API/expected behavior/diagram node and directed-edge mapping with canonical repo/commit/path/lines/excerpt/full-file SHA/evidence ID/classification and occurrence location; a section citation is not blanket support. A different agent gets the complete candidate/mapping/exact artifact hash and independently enumerates material claims from prose/examples/diagrams to find unmapped claims, then checks actual public source context, entailment, qualifications, facts versus specification intent, version/readiness/application responsibility and package availability. Report missing/unsupported/overstated/contradicted claims with locations/evidence IDs/public-source explanations; omit unsupported assertions, never paraphrase/declassify private knowledge. No author self-approval. Active review uses real different authorRunId/reviewerRunId, four distinct walker reporterRunIds separate from both, and publicEvidenceAudit with exactly checkedTargets/checkedEvidenceIds/unmappedClaims/unsupportedClaims/nonempty notes; read-only review-targets returns exact current duplicate-free inventories, never PASS. Coordinator writes reports directly from actual delegate output, not retired nativebridge review_submission. Inventory attestation is not technical proof of each claim. Public review can establish support but provides no proof of private-knowledge absence. Preserve all prior design, walkthrough, validation, publication, exact-SHA stable-alias checkpoint and scheduling requirements and original budgets; no privacy certification/native receipt/protected setup is prerequisite.",
+      "enforcedBy": ["automation/local-execution-policy.json", "automation/SOURCE-BOUNDARY.md", "automation/COORDINATOR.md", "automation/LOCAL-EXECUTION.md", "automation/skills/sources.md", "automation/skills/writing.md", "automation/skills/diagrams.md", "automation/skills/evaluation.md", "automation/tests/test_local_execution_policy.py"],
+      "enforcementScope": "Explicit role instructions, public source mapping, independent semantic review and policy regression; no enforced tool/storage isolation or absence-of-private-influence claim."
+    },
+    {
+      "id": "mandatory-talos-public-source-boundary",
+      "requirement": "Consult Talos for every Paykit run and material development/process investigation, while treating all retrieved context as private until independently verified from approved public snapshots. Private facts, including paraphrases, never become public documentation evidence.",
+      "enforcedBy": ["automation/SOURCE-BOUNDARY.md", "automation/COORDINATOR.md", "automation/skills/sources.md"]
+    },
+    {
+      "id": "landing-docs-section",
+      "requirement": "The URL root has a dedicated, visually consistent, responsive Docs section immediately before Your data. Your choice., with the main Docs entry plus exactly three noteworthy documentation pages.",
+      "enforcedBy": ["components/docs/DocsTeaser.tsx", "tests/browser/landing-docs.spec.ts"]
+    },
+    {
+      "id": "generated-teaser-copy",
+      "requirement": "Featured card titles, descriptions and default released links come from the generated documentation and this selection policy; no parallel hand-maintained documentation copy.",
+      "enforcedBy": ["components/docs/DocsTeaser.tsx", "automation/pipeline.py"]
+    },
+    {
+      "id": "persistent-user-corrections",
+      "requirement": "Read this register on every import/regeneration. Preserve prior corrections, add new ones with executable checks, and include the register and affected site components in change detection. Do not rely only on conversation memory.",
+      "enforcedBy": ["AGENTS.md", "automation/COORDINATOR.md", "automation/pipeline.py"]
+    },
+    {
+      "id": "existing-stable-development-alias",
+      "requirement": "The existing development project's stable alias must serve the intended working branch, not merely its preview URL. The actual personal alias and account settings stay in ignored deployment configuration, never portable upstream files.",
+      "enforcedBy": [".automation/deployment.json", "automation/COORDINATOR.md"]
+    },
+    {
+      "id": "temporary-preview-is-not-acceptance",
+      "requirement": "The one-time user-requested early preview is not a successful automated trial, must not advance successful inputs, and does not enable scheduling or relax subsequent validation.",
+      "enforcedBy": ["automation/pipeline.py", "automation/COORDINATOR.md"]
+    }
+  ]
+}

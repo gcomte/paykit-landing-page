@@ -1,0 +1,1641 @@
+{
+  "sourceCommit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+  "pages": [
+    {
+      "slug": "overview",
+      "title": "What Paykit does",
+      "description": "Understand payment coordination, then run a safe local wallet or point-of-sale fixture.",
+      "group": "Understand Paykit",
+      "kind": "explanation",
+      "sections": [
+        {
+          "id": "purpose",
+          "title": "Coordinate a payment, not custody it",
+          "evidence": [
+            "released-lib-scope",
+            "released-adapter-boundary",
+            "released-scope-policy"
+          ],
+          "paragraphs": [
+            "Paykit helps applications discover how a counterparty can receive payment and exchange payment-related messages over Pubky. A payment endpoint is receiving-detail text identified by a payment method; a rail is the payment system your application uses to act on it.",
+            "Paykit is not a wallet balance or settlement service. Your application retains funds, user authorization, rail execution and settlement checks. Start with a local fixture before adding identity, storage or network access."
+          ],
+          "links": [
+            {
+              "label": "Run the wallet fixture",
+              "href": "/docs/released/wallets"
+            },
+            {
+              "label": "Run the point-of-sale fixture",
+              "href": "/docs/released/point-of-sale"
+            }
+          ]
+        },
+        {
+          "id": "surface",
+          "title": "Choose the integration surface",
+          "evidence": [
+            "released-lib-scope",
+            "released-sdk-new",
+            "released-sdk-lib",
+            "released-ffi",
+            "released-ffi-package",
+            "released-storage-contract"
+          ],
+          "list": [
+            "paykit-lib: validated values, app-scoped public discovery and private protocol helpers. You manage sessions and durable state when using this layer directly.",
+            "paykit-sdk: a stateful Rust runtime with storage, live-session and payment-adapter boundaries. Prefer this for a durable application rather than rebuilding request and link state.",
+            "paykit-ffi: the Swift/Kotlin-facing UniFFI layer in the source tree. Binding availability is separate from a Rust crate version; the Rust fixtures below do not exercise mobile bindings."
+          ],
+          "links": [
+            {
+              "label": "See components and relationships",
+              "href": "/docs/released/components"
+            }
+          ]
+        },
+        {
+          "id": "snapshot",
+          "title": "Use one source snapshot",
+          "evidence": [
+            "released-lib-package",
+            "released-sdk-package",
+            "released-ffi-package"
+          ],
+          "paragraphs": [
+            "These pages describe released v0.1.0 at dd8e75e5588cf7a0b3b45cacbab9125576ee90df. The locked package check records paykit-lib and paykit-sdk 0.1.0 as published; the tutorials pin paykit-lib exactly to =0.1.0. paykit-ffi is present in source but is not a published Rust registry package in this snapshot."
+          ]
+        },
+        {
+          "id": "path",
+          "title": "From a fixture to an application",
+          "evidence": [
+            "released-endpoint-read",
+            "released-request-send",
+            "released-adapter-boundary",
+            "released-shared-state"
+          ],
+          "list": [
+            "Wallet outcome: choose a known endpoint type and handle no shared rail without sending money.",
+            "Point-of-sale outcome: build valid request terms and round-trip the request through serialization and parsing.",
+            "Before network work: review public versus private data, authenticated peer keys, shared-state requirements and app-owned payment checks."
+          ],
+          "links": [
+            {
+              "label": "Follow the payment interaction",
+              "href": "/docs/released/flows"
+            },
+            {
+              "label": "Check responsibilities and limitations",
+              "href": "/docs/released/boundaries"
+            }
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "Library scope",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/README.md"
+        },
+        {
+          "label": "Application and payment adapter boundary",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/domain/adapters/mod.rs"
+        },
+        {
+          "label": "Official integration skill — v0.1.0 source snapshot",
+          "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
+        }
+      ]
+    },
+    {
+      "slug": "components",
+      "title": "Components and relationships",
+      "description": "Choose the library, stateful runtime and application adapters without confusing them with a payment rail.",
+      "group": "Understand Paykit",
+      "kind": "explanation",
+      "sections": [
+        {
+          "id": "layers",
+          "title": "How the layers fit",
+          "evidence": [
+            "released-sdk-new",
+            "released-sdk-lib",
+            "released-endpoint-read",
+            "released-endpoint-write",
+            "released-public-io",
+            "released-adapter-boundary"
+          ],
+          "paragraphs": [
+            "The SDK adds durable coordination around the library. Pubky supplies the network/storage backend; the payment rail is a separate application integration."
+          ],
+          "diagram": {
+            "id": "components",
+            "caption": "A Rust integration layers durable SDK state over the lower-level Pubky helpers.",
+            "alt": "Your application constructs paykit-sdk with storage, session and payment adapters. The SDK uses paykit-lib. The library reads and writes Pubky storage. Payment-rail execution is outside this stack."
+          }
+        },
+        {
+          "id": "adapters",
+          "title": "Supply three application boundaries",
+          "evidence": [
+            "released-sdk-new",
+            "released-session-provider",
+            "released-storage-contract",
+            "released-adapter-selection",
+            "released-adapter-boundary"
+          ],
+          "list": [
+            "StorageAdapter: commits SDK mutations atomically and preserves ordering. Apps sharing a Pubky identity must share the same logical durable state.",
+            "PubkySessionProvider: exposes current authenticated Pubky access from your app or platform. It is not a secure credential store or a user sign-in screen.",
+            "PaymentAdapter: supplies receiving details, candidate selection and payment targets. It does not execute payments or validate settlement for you."
+          ]
+        },
+        {
+          "id": "public-private",
+          "title": "App ownership is not private isolation",
+          "evidence": [
+            "released-app-scope",
+            "released-public-path-prefix",
+            "released-public-path",
+            "released-private-message",
+            "released-scope-policy",
+            "released-noise-publish",
+            "released-noise-pin",
+            "released-noise-validate"
+          ],
+          "paragraphs": [
+            "A Paykit App ID identifies which app owns a public endpoint and attributes private messages. Public endpoints live under /pub/paykit/v0/apps/{app_id}/endpoints/. Do not place secrets or private order details there.",
+            "Apps on one identity share private communication and state; an App ID is not a cryptographic boundary between mutually authorized apps. Private links require signed Noise key authorization, not just a key advertised in a public registry. The SDK checks peer authorization pins and authenticated static keys."
+          ],
+          "links": [
+            {
+              "label": "Read the trust and deployment constraints",
+              "href": "/docs/released/boundaries"
+            }
+          ]
+        },
+        {
+          "id": "binding",
+          "title": "Rust first, bindings separately",
+          "evidence": [
+            "released-ffi",
+            "released-ffi-package",
+            "released-lib-package",
+            "released-sdk-package"
+          ],
+          "paragraphs": [
+            "The tutorials use paykit-lib to expose a small protocol outcome. A stateful Rust app can integrate paykit-sdk for durable coordination workflows. Swift/Kotlin integrations use the source-matched FFI surface; these pages do not claim a tested mobile build."
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "SDK construction and dependencies",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/runtime/mod.rs"
+        },
+        {
+          "label": "Session and payment adapter contracts",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/domain/adapters/mod.rs"
+        },
+        {
+          "label": "Atomic storage contract",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/storage/mod.rs"
+        },
+        {
+          "label": "UniFFI binding layer",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-ffi/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "slug": "flows",
+      "title": "A payment interaction",
+      "description": "Separate public discovery, private request coordination and application-owned execution.",
+      "group": "Understand Paykit",
+      "kind": "explanation",
+      "sections": [
+        {
+          "id": "public",
+          "title": "1. Discover receiving details",
+          "evidence": [
+            "released-endpoint-write",
+            "released-public-io",
+            "released-endpoint-read",
+            "released-payload-list",
+            "released-adapter-selection",
+            "released-adapter-boundary"
+          ],
+          "paragraphs": [
+            "For public discovery, the payee publishes app-scoped receiving details and the payer reads that app's PaymentList. The endpoint identifier says which method the payload describes; the payload wrapper does not validate an invoice or make it payable.",
+            "The payer must support the method and apply its own selection and risk policy. The wallet fixture demonstrates only this local map lookup, including the no-shared-rail case."
+          ],
+          "links": [
+            {
+              "label": "Try local rail selection",
+              "href": "/docs/released/wallets"
+            }
+          ],
+          "diagram": {
+            "id": "public-discovery",
+            "caption": "Public discovery finds receiving details; it does not send a payment.",
+            "alt": "The payee app publishes app-scoped endpoint text to public Pubky storage. The payer reads the endpoint list for that payee and app. Payer-owned policy selects a supported rail; reading or selecting an endpoint does not execute that rail."
+          }
+        },
+        {
+          "id": "private",
+          "title": "2. Exchange and review request terms",
+          "evidence": [
+            "released-terms",
+            "released-request-construction",
+            "released-request-send",
+            "released-noise-publish",
+            "released-noise-validate",
+            "released-adapter-boundary",
+            "released-skill-link"
+          ],
+          "paragraphs": [
+            "For request-based coordination, establish an authorized Encrypted Link first. The payee proposes an amount, asset, reference and accepted payment methods. The payer reviews the request and can accept or reject it; low-level callers must enforce the sender roles.",
+            "Only the application can authorize a financial action. Its rail integration executes the payment and checks the outcome. The point-of-sale fixture stops before sending any private message."
+          ],
+          "links": [
+            {
+              "label": "Try a local request round trip",
+              "href": "/docs/released/point-of-sale"
+            }
+          ],
+          "diagram": {
+            "id": "private-request",
+            "caption": "A private request coordinates terms. Authorization, rail execution and settlement checks belong to the application.",
+            "alt": "The payee sends typed request terms to the payer on an Encrypted Link. The payer application reviews and authorizes the payment before its own rail code executes it. The application verifies the rail outcome before deciding settlement; Paykit request acceptance and proof messages are not that verification."
+          }
+        },
+        {
+          "id": "statuses",
+          "title": "3. Track coordination without inventing settlement",
+          "evidence": [
+            "released-lifecycle",
+            "released-proof",
+            "released-adapter-boundary",
+            "released-idempotent-propose"
+          ],
+          "list": [
+            "Accepted means acceptance is recorded locally, not that funds moved.",
+            "ProofSubmitted means a one-time proof is present in local history. Validate method-specific evidence and the actual rail result before marking an order paid.",
+            "A queued proposal is local intent, not confirmed delivery. Persist the request ID, counterparty and exact original terms before proposing; retry with propose_payment_request_with_id as the same creating App and identity while retaining that identity's proposal/Event Message history.",
+            "Proposal idempotency searches retained shared history, not an independent permanent ID registry. Deleting state or restoring a backup from before creation loses that protection. After rollback, reconcile external order and payment-execution records before recreating a request or executing payment; the persisted ID alone does not prevent duplicates."
+          ]
+        },
+        {
+          "id": "fallback",
+          "title": "Keep failure paths explicit",
+          "evidence": [
+            "released-private-resolution",
+            "released-public-resolution",
+            "released-bound-endpoints"
+          ],
+          "paragraphs": [
+            "Public and private resolution are separate paths. A missing or recovering private link is not permission to expose a private payment through a public fallback. Request-bound endpoints further constrain the permitted destination; do not silently replace them.",
+            "If a current private list has already been consumed, use the SDK's freshness token and wait for updated details rather than submitting another payment against the same receiving data."
+          ],
+          "links": [
+            {
+              "label": "Review recovery and responsibility limits",
+              "href": "/docs/released/boundaries"
+            }
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "Public discovery implementation",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/payment_endpoint.rs"
+        },
+        {
+          "label": "Request parsing, serialization and sender roles",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/payment_request/api.rs"
+        },
+        {
+          "label": "Separate public/private resolution paths",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/runtime/payment_resolution.rs"
+        },
+        {
+          "label": "Local lifecycle state meanings",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/domain/payment_requests/mod.rs"
+        }
+      ]
+    },
+    {
+      "slug": "boundaries",
+      "title": "Responsibilities, trust and limitations",
+      "description": "Know what a local success proves and what remains your application or deployment responsibility.",
+      "group": "Understand Paykit",
+      "kind": "explanation",
+      "sections": [
+        {
+          "id": "split",
+          "title": "What Paykit handles; what you must handle",
+          "evidence": [
+            "released-sdk-new",
+            "released-serialize",
+            "released-parse",
+            "released-adapter-boundary",
+            "released-scope-policy"
+          ],
+          "list": [
+            "Paykit: validated protocol values, endpoint discovery, typed message encoding/decoding and SDK state coordination.",
+            "Your application: consent and authorization, funds and balances, invoice/target interpretation, fees, route policy, execution and independent settlement checks.",
+            "A parsed request, a delivery event or a receipt is coordination evidence, not a substitute for rail-specific proof validation."
+          ]
+        },
+        {
+          "id": "trust",
+          "title": "Public data and private trust",
+          "evidence": [
+            "released-public-io",
+            "released-private-message",
+            "released-app-scope",
+            "released-noise-publish",
+            "released-noise-pin",
+            "released-noise-validate",
+            "released-skill-privacy",
+            "released-shared-state"
+          ],
+          "paragraphs": [
+            "Public endpoint payloads are public text. Private message raw_json and SDK backup/state exports are sensitive plaintext in the application, even when the transport or live shared-state resource is encrypted. Keep them out of logs and protect exported backups.",
+            "Use identity-signed Noise key authorization and retained peer pins for private links. Registry metadata alone is not that authorization. App IDs scope ownership, not mutual trust; apps with shared identity keys and write access share private state.",
+            "Live-state encryption does not conceal resource existence, size or update timing, and does not prevent homeserver replay."
+          ]
+        },
+        {
+          "id": "deployment",
+          "title": "A production shared-state prerequisite",
+          "evidence": [
+            "released-storage-contract",
+            "released-shared-state"
+          ],
+          "paragraphs": [
+            "PubkySharedStateStorage requires every serving homeserver instance to run 0.16.2 or newer with GCS storage. Its source explicitly says server versions and backends are not checked automatically. Verify the deployment independently; a Rust dependency upgrade or WebDAV-lock support alone does not establish compatibility.",
+            "All participating writers must use lock tokens and pre-upgrade writes must be drained before rollout. Separate device-local blobs do not satisfy the shared-identity contract. Failed or unconfirmed state publication can leave recovery pending; never replace a failed load with empty state just to proceed."
+          ]
+        },
+        {
+          "id": "limits",
+          "title": "What these tutorials do not establish",
+          "evidence": [
+            "released-amount",
+            "released-payload-list",
+            "released-roundtrip-test",
+            "released-endpoint-test",
+            "released-adapter-boundary"
+          ],
+          "list": [
+            "The wallet fixture uses an in-memory endpoint map, not live discovery. Its payload is deliberately not a payable invoice.",
+            "The point-of-sale fixture validates and parses local terms. It opens no encrypted link, negotiates no conversion and settles no order.",
+            "Decimal/asset syntax validation does not establish asset precision, an exchange rate, economic correctness or counterparty capability.",
+            "Upstream implementation and test sources support the documented APIs; these pages are not a security audit or proof of your deployment."
+          ],
+          "links": [
+            {
+              "label": "Wallet fixture and integration checklist",
+              "href": "/docs/released/wallets"
+            },
+            {
+              "label": "Point-of-sale fixture and integration checklist",
+              "href": "/docs/released/point-of-sale"
+            }
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "Application-owned financial responsibilities",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/domain/adapters/mod.rs"
+        },
+        {
+          "label": "Shared-state production requirements and privacy limits",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/storage/pubky_shared.rs#L97-L114"
+        },
+        {
+          "label": "Signed-key verification and peer pins",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/runtime/noise_key_authorization.rs"
+        },
+        {
+          "label": "Official integration skill — v0.1.0 source snapshot",
+          "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
+        }
+      ]
+    },
+    {
+      "slug": "wallets",
+      "title": "Wallet: select a supported rail",
+      "description": "Choose a known endpoint type from an in-memory PaymentList and handle an unsupported method without sending a payment.",
+      "group": "Integrate Paykit",
+      "kind": "tutorial",
+      "sections": [
+        {
+          "id": "outcome",
+          "title": "The outcome is a local fixture",
+          "evidence": [
+            "released-app-scope",
+            "released-endpoint-id",
+            "released-payload-list",
+            "released-adapter-boundary"
+          ],
+          "paragraphs": [
+            "Choose a known endpoint type from an in-memory PaymentList and handle an unsupported method without sending a payment.",
+            "Use no real funds, production credentials or live payment targets. Building may download toolchain and dependency files; running this fixture makes no Pubky discovery request and sends no payment."
+          ]
+        },
+        {
+          "id": "prerequisites",
+          "title": "1. Prepare the build environment",
+          "evidence": [
+            "released-lib-package"
+          ],
+          "list": [
+            "Install Rust through rustup so the included rust-toolchain.toml can select Rust 1.91.1. The shell commands below assume a terminal with tar.",
+            "Have a C compiler/linker, pkg-config and internet access for toolchain/dependency downloads.",
+            "Start in an empty working directory. Download the archive linked in the next step into that directory; keep its filename unchanged."
+          ]
+        },
+        {
+          "id": "run",
+          "title": "2. Download, extract and run",
+          "evidence": [
+            "released-lib-package",
+            "released-app-scope",
+            "released-endpoint-id",
+            "released-payload-list"
+          ],
+          "paragraphs": [
+            "Download the complete fixture using this page's archive link. It contains Cargo.toml, Cargo.lock, rust-toolchain.toml and src/main.rs; no separately copied code is needed.",
+            "The manifest pins paykit-lib to the published registry version =0.1.0.",
+            "Run these commands in order from the directory holding the downloaded archive. Keep Cargo.lock and use --locked; the toolchain file selects the pinned compiler."
+          ],
+          "code": [
+            {
+              "language": "bash",
+              "code": "tar -xzf paykit-wallet-released.tar.gz\ncd paykit-wallet-demo\ncargo run --locked",
+              "caption": "Run the complete downloaded fixture."
+            }
+          ],
+          "links": [
+            {
+              "label": "Download the wallet fixture for this version",
+              "href": "/docs-examples/released/paykit-wallet-released.tar.gz"
+            }
+          ]
+        },
+        {
+          "id": "code",
+          "title": "3. Read the dependency and the complete small fixture",
+          "evidence": [
+            "released-app-scope",
+            "released-endpoint-id",
+            "released-payload-list",
+            "released-lib-package"
+          ],
+          "paragraphs": [
+            "The choose function is application-owned selection policy, not an automatic Paykit rail selector. It checks a known method against the local map, asserts no match for an unsupported rail, and rejects an unsafe identifier."
+          ],
+          "code": [
+            {
+              "language": "toml",
+              "artifact": "wallet/Cargo.toml",
+              "caption": "Exact dependency source for this snapshot."
+            },
+            {
+              "language": "rust",
+              "artifact": "wallet/src/main.rs",
+              "caption": "Complete local fixture; no network integration is opened."
+            }
+          ]
+        },
+        {
+          "id": "expected",
+          "title": "4. Check the result",
+          "evidence": [
+            "released-app-scope",
+            "released-endpoint-id",
+            "released-payload-list"
+          ],
+          "paragraphs": [
+            "Successful execution exits with status 0 after all assertions pass. Cargo may print download or compilation messages separately; the program stdout is exactly:"
+          ],
+          "code": [
+            {
+              "language": "text",
+              "code": "demo-pos: shared rail btc-lightning-bolt11; unsupported rail: no shared rail\nLocal fixture only; no discovery request or payment was sent.",
+              "caption": "Expected program stdout."
+            }
+          ]
+        },
+        {
+          "id": "meaning",
+          "title": "What this success proves",
+          "evidence": [
+            "released-app-scope",
+            "released-endpoint-id",
+            "released-payload-list",
+            "released-adapter-boundary"
+          ],
+          "list": [
+            "Validated identifiers and the endpoint map are usable with this exact dependency.",
+            "Your small selection policy finds the advertised known method and returns no shared rail for the unsupported one.",
+            "It does not prove network discovery, invoice validity, available liquidity, an authenticated private session or settlement."
+          ]
+        },
+        {
+          "id": "troubleshooting",
+          "title": "If the result differs",
+          "evidence": [
+            "released-lib-package",
+            "released-app-scope",
+            "released-endpoint-id",
+            "released-payload-list"
+          ],
+          "list": [
+            "tar reports a missing file: download this version's archive first, keep its filename unchanged and run extraction from the download directory.",
+            "cargo or rustup is missing, or Rust 1.91.1 cannot be selected: install/repair rustup, then rerun inside the extracted directory so rust-toolchain.toml is discovered.",
+            "A compiler, linker or pkg-config error appears: install the missing build prerequisite. A dependency or toolchain download error needs working network access, not payment credentials.",
+            "Cargo says the lock file needs updating: use a fresh extraction and cargo run --locked. Do not delete the lock, loosen the version or switch to master to make the fixture pass.",
+            "No shared rail in your own data: compare the exact endpoint identifiers with your supported set. A wrapped payload is not proof that your backend can pay it.",
+            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local fixture."
+          ]
+        },
+        {
+          "id": "integrate",
+          "title": "Next: replace the fixture with real discovery",
+          "evidence": [
+            "released-endpoint-read",
+            "released-read-budget",
+            "released-public-resolution",
+            "released-private-resolution",
+            "released-sdk-new",
+            "released-publish-app",
+            "released-sdk-sync",
+            "released-storage-contract",
+            "released-shared-state",
+            "released-adapter-boundary"
+          ],
+          "list": [
+            "Public path: obtain the payee identity and app ID through your product flow, then call get_payment_list with PublicStorage rather than populating the map by hand. Keep client timeouts and fetch budgets explicit.",
+            "For a durable wallet, construct paykit-sdk with shared storage, a live-session provider and your payment adapter. Enroll the app with publish_paykit_app; sync_public_endpoints publishes your adapter's receiving details.",
+            "Use resolve_public_contact_payment for public discovery or resolve_private_contact_payment for private lists. Keep that choice explicit: private failure is not public fallback permission.",
+            "Replace the fixture payload and lookup policy with rail-specific target validation, user authorization, durable execution intent and settlement checks. Verify shared-state deployment requirements before multi-app use."
+          ],
+          "links": [
+            {
+              "label": "Choose the application adapters",
+              "href": "/docs/released/components"
+            },
+            {
+              "label": "Review trust and production prerequisites",
+              "href": "/docs/released/boundaries"
+            }
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "Package manifest and compiler requirement",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/Cargo.toml"
+        },
+        {
+          "label": "Endpoint values and public discovery implementation",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/payment_endpoint.rs"
+        },
+        {
+          "label": "Application-owned rail selection and execution boundary",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/domain/adapters/mod.rs"
+        },
+        {
+          "label": "Upstream public endpoint and fetch-limit tests",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/tests/payment_endpoint.rs"
+        },
+        {
+          "label": "paykit-lib 0.1.0 API reference",
+          "href": "https://docs.rs/paykit-lib/0.1.0/paykit_lib/"
+        },
+        {
+          "label": "Official integration skill — v0.1.0 source snapshot",
+          "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
+        }
+      ]
+    },
+    {
+      "slug": "point-of-sale",
+      "title": "Point of sale: validate a request",
+      "description": "Build one-time payment request terms and assert that serialization and parsing preserve the typed event and request ID.",
+      "group": "Integrate Paykit",
+      "kind": "tutorial",
+      "sections": [
+        {
+          "id": "outcome",
+          "title": "The outcome is a local fixture",
+          "evidence": [
+            "released-app-scope",
+            "released-event-id",
+            "released-request-id",
+            "released-amount",
+            "released-amount-construction",
+            "released-amount-test",
+            "released-reference",
+            "released-endpoint-id",
+            "released-terms",
+            "released-terms-build",
+            "released-request-construction",
+            "released-serialize",
+            "released-parse",
+            "released-parsed-access",
+            "released-private-message",
+            "released-roundtrip-test",
+            "released-adapter-boundary"
+          ],
+          "paragraphs": [
+            "Build one-time payment request terms and assert that serialization and parsing preserve the typed event and request ID.",
+            "Use no real funds, production credentials or live payment targets. Building may download toolchain and dependency files; running this fixture makes no Pubky discovery request and sends no payment."
+          ]
+        },
+        {
+          "id": "prerequisites",
+          "title": "1. Prepare the build environment",
+          "evidence": [
+            "released-lib-package"
+          ],
+          "list": [
+            "Install Rust through rustup so the included rust-toolchain.toml can select Rust 1.91.1. The shell commands below assume a terminal with tar.",
+            "Have a C compiler/linker, pkg-config and internet access for toolchain/dependency downloads.",
+            "Start in an empty working directory. Download the archive linked in the next step into that directory; keep its filename unchanged."
+          ]
+        },
+        {
+          "id": "run",
+          "title": "2. Download, extract and run",
+          "evidence": [
+            "released-lib-package",
+            "released-app-scope",
+            "released-event-id",
+            "released-request-id",
+            "released-amount",
+            "released-amount-construction",
+            "released-amount-test",
+            "released-reference",
+            "released-endpoint-id",
+            "released-terms",
+            "released-terms-build",
+            "released-request-construction",
+            "released-serialize",
+            "released-parse",
+            "released-parsed-access",
+            "released-private-message",
+            "released-roundtrip-test"
+          ],
+          "paragraphs": [
+            "Download the complete fixture using this page's archive link. It contains Cargo.toml, Cargo.lock, rust-toolchain.toml and src/main.rs; no separately copied code is needed.",
+            "The manifest pins paykit-lib to the published registry version =0.1.0.",
+            "Run these commands in order from the directory holding the downloaded archive. Keep Cargo.lock and use --locked; the toolchain file selects the pinned compiler."
+          ],
+          "code": [
+            {
+              "language": "bash",
+              "code": "tar -xzf paykit-point-of-sale-released.tar.gz\ncd paykit-point-of-sale-demo\ncargo run --locked",
+              "caption": "Run the complete downloaded fixture."
+            }
+          ],
+          "links": [
+            {
+              "label": "Download the point-of-sale fixture for this version",
+              "href": "/docs-examples/released/paykit-point-of-sale-released.tar.gz"
+            }
+          ]
+        },
+        {
+          "id": "code",
+          "title": "3. Read the dependency and the complete small fixture",
+          "evidence": [
+            "released-app-scope",
+            "released-event-id",
+            "released-request-id",
+            "released-amount",
+            "released-amount-construction",
+            "released-amount-test",
+            "released-reference",
+            "released-endpoint-id",
+            "released-terms",
+            "released-terms-build",
+            "released-request-construction",
+            "released-serialize",
+            "released-parse",
+            "released-parsed-access",
+            "released-private-message",
+            "released-roundtrip-test",
+            "released-lib-package"
+          ],
+          "paragraphs": [
+            "The example amount 10.00 usd is protocol data, not a Lightning invoice or conversion quote. The fixture rejects ten as an amount, builds a one-time request, serializes it, then supplies that JSON to a local receive item and checks the parsed event and request ID."
+          ],
+          "code": [
+            {
+              "language": "toml",
+              "artifact": "point-of-sale/Cargo.toml",
+              "caption": "Exact dependency source for this snapshot."
+            },
+            {
+              "language": "rust",
+              "artifact": "point-of-sale/src/main.rs",
+              "caption": "Complete local fixture; no network integration is opened."
+            }
+          ]
+        },
+        {
+          "id": "expected",
+          "title": "4. Check the result",
+          "evidence": [
+            "released-app-scope",
+            "released-event-id",
+            "released-request-id",
+            "released-amount",
+            "released-amount-construction",
+            "released-amount-test",
+            "released-reference",
+            "released-endpoint-id",
+            "released-terms",
+            "released-terms-build",
+            "released-request-construction",
+            "released-serialize",
+            "released-parse",
+            "released-parsed-access",
+            "released-private-message",
+            "released-roundtrip-test"
+          ],
+          "paragraphs": [
+            "Successful execution exits with status 0 after all assertions pass. Cargo may print download or compilation messages separately; the program stdout is exactly:"
+          ],
+          "code": [
+            {
+              "language": "text",
+              "code": "order-demo-001: request validated and parsed; no payment was sent.",
+              "caption": "Expected program stdout."
+            }
+          ]
+        },
+        {
+          "id": "meaning",
+          "title": "What this success proves",
+          "evidence": [
+            "released-app-scope",
+            "released-event-id",
+            "released-request-id",
+            "released-amount",
+            "released-amount-construction",
+            "released-amount-test",
+            "released-reference",
+            "released-endpoint-id",
+            "released-terms",
+            "released-terms-build",
+            "released-request-construction",
+            "released-serialize",
+            "released-parse",
+            "released-parsed-access",
+            "released-private-message",
+            "released-roundtrip-test",
+            "released-adapter-boundary"
+          ],
+          "list": [
+            "The constructors accept the example terms and reject the deliberately invalid amount.",
+            "The request event and request ID survive a local serialization/parse round trip.",
+            "It does not prove peer delivery, private-link authentication, payment acceptance, currency conversion, rail execution or settlement."
+          ]
+        },
+        {
+          "id": "troubleshooting",
+          "title": "If the result differs",
+          "evidence": [
+            "released-lib-package",
+            "released-app-scope",
+            "released-event-id",
+            "released-request-id",
+            "released-amount",
+            "released-amount-construction",
+            "released-amount-test",
+            "released-reference",
+            "released-endpoint-id",
+            "released-terms",
+            "released-terms-build",
+            "released-request-construction",
+            "released-serialize",
+            "released-parse",
+            "released-parsed-access",
+            "released-private-message",
+            "released-roundtrip-test"
+          ],
+          "list": [
+            "tar reports a missing file: download this version's archive first, keep its filename unchanged and run extraction from the download directory.",
+            "cargo or rustup is missing, or Rust 1.91.1 cannot be selected: install/repair rustup, then rerun inside the extracted directory so rust-toolchain.toml is discovered.",
+            "A compiler, linker or pkg-config error appears: install the missing build prerequisite. A dependency or toolchain download error needs working network access, not payment credentials.",
+            "Cargo says the lock file needs updating: use a fresh extraction and cargo run --locked. Do not delete the lock, loosen the version or switch to master to make the fixture pass.",
+            "The request parser returns None: it is not a recognized request-event kind. A recognized result with is_valid false still needs rejection/error handling; dispatch alone does not validate its body.",
+            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local fixture."
+          ]
+        },
+        {
+          "id": "integrate",
+          "title": "Next: queue a real request, then verify payment",
+          "evidence": [
+            "released-sdk-new",
+            "released-noise-publish",
+            "released-noise-validate",
+            "released-publish-app",
+            "released-idempotent-propose",
+            "released-private-resolution",
+            "released-lifecycle",
+            "released-adapter-boundary",
+            "released-amount"
+          ],
+          "list": [
+            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Publish the app and complete signed-key authorization and an authenticated private link before trying to deliver requests.",
+            "Persist the order reference, exact terms, counterparty and a newly generated request ID. Use propose_payment_request_with_id with those same values as the same creating App and identity after an uncertain retry; do not reuse the fixture's fixed ID across real orders. Retain the identity's proposal/Event Message history: deleting it or restoring a pre-creation backup removes the idempotency binding. After rollback, reconcile external order and payment-execution records before recreating requests or executing payment; the persisted ID alone does not prevent duplicates.",
+            "Define your own asset precision and conversion policy. The example usd amount and Lightning method do not establish conversion support or a payable destination.",
+            "Track local queue and request state separately from delivery and payment state. The payer uses request-constrained resolution; acceptance or ProofSubmitted is not permission for the merchant to release goods.",
+            "Bind method-specific proof to the order and request, and independently validate the rail outcome before marking an order paid. Exercise this with non-production infrastructure before adding funds."
+          ],
+          "links": [
+            {
+              "label": "Review the request interaction",
+              "href": "/docs/released/flows"
+            },
+            {
+              "label": "Review trust and production prerequisites",
+              "href": "/docs/released/boundaries"
+            }
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "Package manifest and compiler requirement",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/Cargo.toml"
+        },
+        {
+          "label": "Endpoint values and public discovery implementation",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/payment_endpoint.rs"
+        },
+        {
+          "label": "Request serialization and parser implementation",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/payment_request/api.rs"
+        },
+        {
+          "label": "Upstream request round-trip and malformed-event tests",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/tests/payment_request.rs"
+        },
+        {
+          "label": "Idempotent proposal queueing contract",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/runtime/payment_requests.rs"
+        },
+        {
+          "label": "paykit-lib 0.1.0 API reference",
+          "href": "https://docs.rs/paykit-lib/0.1.0/paykit_lib/"
+        },
+        {
+          "label": "Official integration skill — v0.1.0 source snapshot",
+          "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "released-lib-package",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/Cargo.toml",
+      "startLine": 1,
+      "endLine": 14,
+      "excerpt": "[package]\nname = \"paykit-lib\"\nversion = \"0.1.0\"\nauthors = [\"denys@synonym.to\"]\ndescription = \"Paykit library implementation\"\nlicense = \"MIT\"\nedition = \"2021\"\nrust-version = \"1.91.1\"\nrepository = \"https://github.com/pubky/paykit-rs\"\nhomepage = \"https://github.com/pubky/paykit-rs#readme\"\ndocumentation = \"https://docs.rs/paykit-lib\"\nreadme = \"README.md\"\nkeywords = [\"paykit\", \"payments\", \"routing\", \"pubky\"]\ncategories = [\"network-programming\", \"finance\"]",
+      "sourceHash": "c5431e7ef5c092fad8d85a6bb69ee5c4b79dd774380f1830878ebd4de9bf7cce",
+      "kind": "package",
+      "claim": "The paykit-lib manifest declares this snapshot package version and Rust 1.91.1 minimum."
+    },
+    {
+      "id": "released-sdk-package",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/Cargo.toml",
+      "startLine": 1,
+      "endLine": 14,
+      "excerpt": "[package]\nname = \"paykit-sdk\"\nversion = \"0.1.0\"\nauthors = [\"ben@synonym.to\", \"denys@synonym.to\"]\ndescription = \"Stateful Paykit SDK runtime\"\nlicense = \"MIT\"\nedition = \"2021\"\nrust-version = \"1.91.1\"\nrepository = \"https://github.com/pubky/paykit-rs\"\nhomepage = \"https://github.com/pubky/paykit-rs#readme\"\ndocumentation = \"https://docs.rs/paykit-sdk\"\nreadme = \"README.md\"\nkeywords = [\"paykit\", \"payments\", \"routing\", \"pubky\"]\ncategories = [\"network-programming\", \"finance\"]",
+      "sourceHash": "845c624d99248339520ee8ab7794844fb927cbfe8b3fea2449d3fbe8f38c6f79",
+      "kind": "package",
+      "claim": "The paykit-sdk manifest declares this snapshot package version and Rust 1.91.1 minimum."
+    },
+    {
+      "id": "released-ffi-package",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-ffi/Cargo.toml",
+      "startLine": 1,
+      "endLine": 12,
+      "excerpt": "[package]\nname = \"paykit-ffi\"\nversion = \"0.1.0\"\nedition = \"2021\"\nrust-version = \"1.91.1\"\ndescription = \"UniFFI bindings for Paykit SDK targeting iOS and Android\"\nlicense = \"MIT\"\n\n[lib]\ncrate-type = [\"cdylib\", \"staticlib\", \"rlib\"]\nname = \"paykit\"\npath = \"src/lib.rs\"",
+      "sourceHash": "2f6950468eb67cc7f417252304058b33fa88651b25705c41f48113ced84c16b2",
+      "kind": "package",
+      "claim": "paykit-ffi declares iOS/Android UniFFI SDK bindings; its package version does not establish registry publication."
+    },
+    {
+      "id": "released-lib-scope",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/README.md",
+      "startLine": 1,
+      "endLine": 5,
+      "excerpt": "# Paykit Library\n\nStateless Rust crate that implements Paykit Library functionality on [Pubky](https://pubky.org/). It provides helpers for **public** Payment Endpoints (stored as plaintext files on the homeserver), Private Payment Lists, Payment Requests, Allowances, Encrypted Links, and Receipts, while delegating Pubky authentication and session management to callers.\n\nPubky is the only supported network/storage backend for this crate, and Pubky dependencies are unconditional.",
+      "sourceHash": "8202054b808268425debd19e88f780deb5c9fa40764df776a8067c0bcc19d940",
+      "kind": "implemented",
+      "claim": "paykit-lib is the stateless Pubky-backed library for endpoint discovery and private protocol helpers."
+    },
+    {
+      "id": "released-app-scope",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/app.rs",
+      "startLine": 7,
+      "endLine": 26,
+      "excerpt": "/// Stable identifier for one application participating in a Paykit identity.\n///\n/// App IDs are used for endpoint ownership and private-message attribution.\n/// They do not create separate Paykit identities or Encrypted Links.\n#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]\n#[serde(try_from = \"String\", into = \"String\")]\npub struct PaykitAppId(String);\n\nimpl PaykitAppId {\n    /// Create a validated Paykit App ID.\n    pub fn new(value: impl Into<String>) -> Result<Self> {\n        let value = value.into();\n        validate_app_id(&value)?;\n        Ok(Self(value))\n    }\n\n    /// Return the path-safe App ID.\n    pub fn as_str(&self) -> &str {\n        &self.0\n    }",
+      "sourceHash": "d5ff569a0e42445fe92204a37d29cd0f7f13d52260b7f4eb812a6770993fe60a",
+      "kind": "implemented",
+      "claim": "Validated PaykitAppId scopes endpoint ownership and private message attribution, not separate identities or links."
+    },
+    {
+      "id": "released-endpoint-id",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_endpoint.rs",
+      "startLine": 40,
+      "endLine": 95,
+      "excerpt": "impl PaymentEndpointIdentifier {\n    /// Create a new `PaymentEndpointIdentifier` after validating the identifier.\n    ///\n    /// Returns `Err(PaykitError::Validation)` if the value is empty, too long,\n    /// contains forbidden characters, resembles a path-traversal component,\n    /// or collides with a reserved identifier.\n    pub fn new(id: impl Into<String>) -> Result<Self> {\n        let id = id.into();\n\n        if id.is_empty() {\n            return Err(PaykitError::Validation(\n                \"PaymentEndpointIdentifier must not be empty\".into(),\n            ));\n        }\n\n        if id.len() > PAYMENT_ENDPOINT_IDENTIFIER_MAX_LEN {\n            return Err(PaykitError::Validation(format!(\n                \"PaymentEndpointIdentifier must not exceed {PAYMENT_ENDPOINT_IDENTIFIER_MAX_LEN} characters, got {}\",\n                id.chars().count()\n            )));\n        }\n\n        if id == PAYMENT_ENDPOINT_IDENTIFIER_RESERVED_PRIVATE {\n            return Err(PaykitError::Validation(format!(\n                \"PaymentEndpointIdentifier '{id}' is reserved for Paykit storage\"\n            )));\n        }\n\n        // Every character must be ASCII alphanumeric, hyphen, underscore, or dot.\n        if let Some((pos, ch)) = id\n            .char_indices()\n            .find(|&(_, ch)| !(ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' || ch == '.'))\n        {\n            // SECURITY / REDACTION: the identifier can come from decrypted\n            // private-message plaintext or remote public data. Report only the\n            // code point and byte offset, as `PaymentReference::new` does.\n            return Err(PaykitError::Validation(format!(\n                \"PaymentEndpointIdentifier contains forbidden character U+{:04X} at byte {pos}\",\n                ch as u32\n            )));\n        }\n\n        // Reject pure-dot names that are path-traversal components.\n        if id.bytes().all(|b| b == b'.') {\n            return Err(PaykitError::Validation(format!(\n                \"PaymentEndpointIdentifier must not be a path-traversal component: \\\"{id}\\\"\"\n            )));\n        }\n\n        Ok(Self(id))\n    }\n\n    /// Access the inner identifier string.\n    pub fn as_str(&self) -> &str {\n        &self.0\n    }",
+      "sourceHash": "9860a3615bbb64dfbc14c78ca2b17e31adcb6c1c39adb209df5ca965ec177bd4",
+      "kind": "implemented",
+      "claim": "PaymentEndpointIdentifier::new validates a nonempty bounded safe path segment, rejecting traversal and reserved private values."
+    },
+    {
+      "id": "released-payload-list",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_endpoint.rs",
+      "startLine": 110,
+      "endLine": 159,
+      "excerpt": "/// Serialized Payment Endpoint Payload served by a Payment Endpoint.\n///\n/// The payload is UTF-8 text such as JSON, lnurl, or another payment-specific\n/// descriptor. If you need to transmit binary payloads, encode them (for\n/// example base64) before wrapping in `PaymentEndpointPayload`.\n/// Public storage helpers reject payloads larger than\n/// [`PAYMENT_ENDPOINT_PAYLOAD_MAX_BYTES`].\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct PaymentEndpointPayload(String);\n\n/// Maximum encoded size of one public Payment Endpoint payload.\npub const PAYMENT_ENDPOINT_PAYLOAD_MAX_BYTES: usize = 64 * 1024;\n/// Maximum number of public Payment Endpoints fetched for one Paykit App.\npub const PAYMENT_LIST_MAX_ENDPOINTS: usize = 256;\n\nimpl PaymentEndpointPayload {\n    /// Wrap a UTF-8 string as a Payment Endpoint Payload.\n    pub fn new(data: impl Into<String>) -> Self {\n        Self(data.into())\n    }\n\n    /// Access the inner payload string.\n    pub fn as_str(&self) -> &str {\n        &self.0\n    }\n\n    /// Consume the wrapper and return the inner string.\n    pub fn into_inner(self) -> String {\n        self.0\n    }\n}\n\nimpl std::fmt::Display for PaymentEndpointPayload {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        f.write_str(&self.0)\n    }\n}\n\nimpl AsRef<str> for PaymentEndpointPayload {\n    fn as_ref(&self) -> &str {\n        &self.0\n    }\n}\n\n/// Collection of Payment Endpoints keyed by Payment Endpoint Identifiers.\n#[derive(Clone, Debug, Default, PartialEq, Eq)]\npub struct PaymentList {\n    /// Map of Payment Endpoint Identifier to Payment Endpoint Payload.\n    pub payment_endpoints: HashMap<PaymentEndpointIdentifier, PaymentEndpointPayload>,\n}",
+      "sourceHash": "9860a3615bbb64dfbc14c78ca2b17e31adcb6c1c39adb209df5ca965ec177bd4",
+      "kind": "implemented",
+      "claim": "PaymentEndpointPayload wraps arbitrary UTF-8 text; PaymentList is a default-constructible map keyed by endpoint identifier, not a rail executor."
+    },
+    {
+      "id": "released-endpoint-write",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_endpoint.rs",
+      "startLine": 174,
+      "endLine": 185,
+      "excerpt": "#[instrument(skip(session, payload), fields(identifier = %identifier))]\npub async fn set_payment_endpoint(\n    session: &pubky::PubkySession,\n    app_id: &PaykitAppId,\n    identifier: PaymentEndpointIdentifier,\n    payload: PaymentEndpointPayload,\n) -> Result<()> {\n    debug!(\"storing payment endpoint\");\n    pubky_routing::upsert_payment_endpoint(session, app_id, &identifier, &payload)\n        .await\n        .map_err(|err| map_error(\"set_payment_endpoint\", err))\n}",
+      "sourceHash": "9860a3615bbb64dfbc14c78ca2b17e31adcb6c1c39adb209df5ca965ec177bd4",
+      "kind": "implemented",
+      "claim": "set_payment_endpoint writes through caller-supplied PubkySession and Pubky routing."
+    },
+    {
+      "id": "released-public-io",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/pubky_routing.rs",
+      "startLine": 136,
+      "endLine": 163,
+      "excerpt": "/// Writes or updates a payment endpoint document in the authenticated Pubky session.\n#[instrument(skip(session, payload), fields(identifier = %identifier))]\npub async fn upsert_payment_endpoint(\n    session: &PubkySession,\n    app_id: &PaykitAppId,\n    identifier: &PaymentEndpointIdentifier,\n    payload: &PaymentEndpointPayload,\n) -> Result<()> {\n    validate_payment_endpoint_payload(payload)?;\n    let path = payment_endpoint_path(app_id, identifier);\n    debug!(path = %path, \"writing payment endpoint to Pubky storage\");\n    with_write_lock(session, &path, |lock| async move {\n        session\n            .storage()\n            .put_locked(&lock, payload.as_str().to_string())\n            .await\n            .map_err(|err| {\n                log_payment_endpoint_storage_failure(\"put\", &err);\n                PaykitError::Transport {\n                    context: \"put endpoint\".into(),\n                    source: err.into(),\n                }\n            })\n            .map(|_| ())\n    })\n    .await?;\n    debug!(\"payment endpoint stored successfully\");\n    Ok(())",
+      "sourceHash": "b70554146ea98bc3a10886c9c84dd648bbb0bacdd2ca9bf2eb66d8b8187c395b",
+      "kind": "implemented",
+      "claim": "Public endpoint publication stores the payload text using authenticated Pubky storage without adding private-message encryption."
+    },
+    {
+      "id": "released-endpoint-read",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_endpoint.rs",
+      "startLine": 284,
+      "endLine": 298,
+      "excerpt": "#[instrument(skip(storage))]\npub async fn get_payment_list(\n    storage: &pubky::PublicStorage,\n    payee: &PublicKey,\n    app_id: &PaykitAppId,\n) -> Result<PaymentList> {\n    get_payment_list_with_limits(\n        storage,\n        payee,\n        app_id,\n        PAYMENT_LIST_MAX_ENDPOINTS,\n        PAYMENT_LIST_MAX_ENDPOINTS * PAYMENT_ENDPOINT_PAYLOAD_MAX_BYTES,\n    )\n    .await\n}",
+      "sourceHash": "9860a3615bbb64dfbc14c78ca2b17e31adcb6c1c39adb209df5ca965ec177bd4",
+      "kind": "implemented",
+      "claim": "get_payment_list reads an app-scoped public endpoint list through PublicStorage with default limits."
+    },
+    {
+      "id": "released-read-budget",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_endpoint.rs",
+      "startLine": 300,
+      "endLine": 336,
+      "excerpt": "/// Fetch an app's public Payment Endpoints within caller-supplied aggregate limits.\n///\n/// The fetch fails if the app publishes more endpoints or total payload bytes\n/// than the supplied limits. Per-endpoint protocol limits still apply.\n#[instrument(skip(storage))]\npub async fn get_payment_list_with_limits(\n    storage: &pubky::PublicStorage,\n    payee: &PublicKey,\n    app_id: &PaykitAppId,\n    max_endpoints: usize,\n    max_total_payload_bytes: usize,\n) -> Result<PaymentList> {\n    let mut remaining_requests = usize::MAX;\n    let mut remaining_endpoints = max_endpoints;\n    let mut remaining_payload_bytes = max_total_payload_bytes;\n    get_payment_list_with_budget(\n        storage,\n        payee,\n        app_id,\n        &mut remaining_endpoints,\n        &mut remaining_requests,\n        &mut remaining_payload_bytes,\n    )\n    .await\n}\n\n/// Fetch an app's public Payment Endpoints using a budget shared across app loads.\n///\n/// Each directory-page or endpoint request consumes one request before it starts.\n/// Each endpoint fetch also consumes one endpoint attempt, regardless of its result.\n/// Endpoint body bytes consume the byte budget as they are read, even if the list\n/// later fails validation. Missing and empty resources still consume requests.\n/// Counters are retained on failure; exhausting the aggregate byte budget saturates\n/// that counter at zero. Per-endpoint and per-list protocol limits still apply.\n///\n/// The caller owns client timeouts, session creation, capability scope, and key\n/// rotation. This read only requires public Pubky storage.",
+      "sourceHash": "9860a3615bbb64dfbc14c78ca2b17e31adcb6c1c39adb209df5ca965ec177bd4",
+      "kind": "implemented",
+      "claim": "Endpoint reads enforce supplied count/byte limits; timeout and session/key policy stay with the caller."
+    },
+    {
+      "id": "released-public-path-prefix",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/pubky_routing.rs",
+      "startLine": 33,
+      "endLine": 38,
+      "excerpt": "/// Conventional prefix for public Paykit data hosted on Pubky storage.\n///\npub const PAYKIT_PATH_PREFIX: &str = \"/pub/paykit/v0/\";\n\n/// Public path for the identity-wide Paykit App Registry.\npub const PAYKIT_APP_REGISTRY_PATH: &str = \"/pub/paykit/v0/app-registry.json\";",
+      "sourceHash": "b70554146ea98bc3a10886c9c84dd648bbb0bacdd2ca9bf2eb66d8b8187c395b",
+      "kind": "implemented",
+      "claim": "Public endpoint paths use the Paykit v0 path prefix."
+    },
+    {
+      "id": "released-public-path",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/pubky_routing.rs",
+      "startLine": 529,
+      "endLine": 540,
+      "excerpt": "pub(crate) fn payment_endpoint_path_prefix(app_id: &PaykitAppId) -> String {\n    format!(\"{PAYKIT_PATH_PREFIX}apps/{app_id}/endpoints/\")\n}\n\npub(crate) fn payment_endpoint_path(\n    app_id: &PaykitAppId,\n    identifier: &PaymentEndpointIdentifier,\n) -> String {\n    format!(\n        \"{}{}\",\n        payment_endpoint_path_prefix(app_id),\n        identifier.as_str()",
+      "sourceHash": "b70554146ea98bc3a10886c9c84dd648bbb0bacdd2ca9bf2eb66d8b8187c395b",
+      "kind": "implemented",
+      "claim": "Public endpoint storage is scoped to apps/{app_id}/endpoints beneath the Paykit prefix."
+    },
+    {
+      "id": "released-endpoint-test",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/tests/payment_endpoint.rs",
+      "startLine": 636,
+      "endLine": 667,
+      "excerpt": "async fn test_payment_list_fetch_limits_endpoint_count_and_payload_bytes() {\n    let setup = TestSetup::new().await;\n    for (identifier, payload) in [(\"endpoint-1\", \"payload-1\"), (\"endpoint-2\", \"payload-2\")] {\n        set_payment_endpoint(\n            &setup.session,\n            &app_id(),\n            PaymentEndpointIdentifier::new(identifier).unwrap(),\n            PaymentEndpointPayload::new(payload),\n        )\n        .await\n        .unwrap();\n    }\n\n    let list =\n        get_payment_list_with_limits(&setup.public_storage, &setup.public_key, &app_id(), 2, 18)\n            .await\n            .unwrap();\n    assert_eq!(list.payment_endpoints.len(), 2);\n\n    let endpoint_limit =\n        get_payment_list_with_limits(&setup.public_storage, &setup.public_key, &app_id(), 1, 18)\n            .await;\n    let endpoint_limit = endpoint_limit.unwrap_err();\n    assert!(matches!(endpoint_limit, PaykitError::InvalidData { .. }));\n    assert!(is_payment_list_limit_exceeded(&endpoint_limit));\n\n    let payload_limit =\n        get_payment_list_with_limits(&setup.public_storage, &setup.public_key, &app_id(), 2, 8)\n            .await;\n    let payload_limit = payload_limit.unwrap_err();\n    assert!(matches!(payload_limit, PaykitError::InvalidData { .. }));\n    assert!(is_payment_list_limit_exceeded(&payload_limit));",
+      "sourceHash": "1fb964917a1faeed9a8a72ba8616d76bbdcd57fe9a705558aaa9b957f5b49356",
+      "kind": "implemented",
+      "claim": "An upstream test publishes endpoints, reads the list, and asserts endpoint-count and payload-byte limit failures."
+    },
+    {
+      "id": "released-amount",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_amount.rs",
+      "startLine": 6,
+      "endLine": 14,
+      "excerpt": "/// Amount of value in a payment flow, expressed as decimal text plus asset.\n///\n/// # Validation\n///\n/// [`PaymentAmount::new`] accepts a `value` consisting only of ASCII digits and\n/// at most one decimal point, with at least one digit. Leading `+` and `-` signs\n/// are rejected. Values such as `.5` and `10.` are accepted. The `asset` must be\n/// non-empty and contain no control characters. Beyond these checks, Paykit\n/// defines no range, precision, scale, normalization, or asset-registry policy.",
+      "sourceHash": "e8dc2eaf068c22f10785412448b0ba697547cc7da1fd7bd671c868e68b1457c6",
+      "kind": "implemented",
+      "claim": "PaymentAmount validates decimal text and a nonempty asset, not exchange rates, asset precision, or economic policy."
+    },
+    {
+      "id": "released-amount-construction",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_amount.rs",
+      "startLine": 30,
+      "endLine": 58,
+      "excerpt": "impl PaymentAmount {\n    /// Access the preserved decimal spelling.\n    pub fn value(&self) -> &str {\n        &self.value\n    }\n    /// Access the exact asset text.\n    pub fn asset(&self) -> &str {\n        &self.asset\n    }\n\n    /// Create a Payment Amount after validating its value and asset fields.\n    pub fn new(value: impl Into<String>, asset: impl Into<String>) -> Result<Self> {\n        Self::new_with_label(value.into(), asset.into(), \"Payment Amount\")\n    }\n\n    pub(crate) fn new_with_label(\n        value: String,\n        asset: String,\n        label: &'static str,\n    ) -> Result<Self> {\n        let amount = Self { value, asset };\n        amount.validate_with_label(label)?;\n        Ok(amount)\n    }\n\n    pub(crate) fn validate_with_label(&self, label: &'static str) -> Result<()> {\n        validate_decimal_text(&self.value, format_args!(\"{label}.value\"))?;\n        validate_asset_text(&self.asset, \"Payment Amount asset\")\n    }",
+      "sourceHash": "e8dc2eaf068c22f10785412448b0ba697547cc7da1fd7bd671c868e68b1457c6",
+      "kind": "implemented",
+      "claim": "PaymentAmount::new validates decimal and asset text and preserves their spelling."
+    },
+    {
+      "id": "released-amount-test",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_amount.rs",
+      "startLine": 66,
+      "endLine": 77,
+      "excerpt": "    #[test]\n    fn payment_amount_accepts_decimal_value_and_asset() {\n        let amount = PaymentAmount::new(\"10.00\", \"usd\").unwrap();\n        assert_eq!(amount.value, \"10.00\");\n        assert_eq!(amount.asset, \"usd\");\n    }\n\n    #[test]\n    fn payment_amount_rejects_invalid_value() {\n        let err = PaymentAmount::new(\"ten\", \"usd\").unwrap_err();\n        assert!(matches!(err, PaykitError::Validation(msg) if msg.contains(\"decimal string\")));\n    }",
+      "sourceHash": "e8dc2eaf068c22f10785412448b0ba697547cc7da1fd7bd671c868e68b1457c6",
+      "kind": "implemented",
+      "claim": "The implementation tests accept 10.00 usd and reject the non-decimal value ten."
+    },
+    {
+      "id": "released-reference",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_reference.rs",
+      "startLine": 10,
+      "endLine": 33,
+      "excerpt": "impl PaymentReference {\n    /// Create a Payment Reference after validating that the input is non-empty,\n    /// bounded, and free of control characters.\n    pub fn new(reference: impl Into<String>) -> Result<Self> {\n        let reference = reference.into();\n        if reference.is_empty() {\n            return Err(PaykitError::Validation(\n                \"Payment Reference must not be empty\".into(),\n            ));\n        }\n        let char_count = reference.chars().count();\n        if char_count > PAYMENT_REFERENCE_MAX_LEN {\n            return Err(PaykitError::Validation(format!(\n                \"Payment Reference must not exceed {PAYMENT_REFERENCE_MAX_LEN} characters, got {char_count}\"\n            )));\n        }\n        if let Some((pos, ch)) = reference.char_indices().find(|&(_, ch)| ch.is_control()) {\n            return Err(PaykitError::Validation(format!(\n                \"Payment Reference must not contain control character U+{:04X} at byte {pos}\",\n                ch as u32\n            )));\n        }\n        Ok(Self(reference))\n    }",
+      "sourceHash": "1f09840f4bf5e0b779800f0b219ad336877dda288dffb959f18a42478a55f55c",
+      "kind": "implemented",
+      "claim": "PaymentReference::new validates a bounded nonempty correlation reference without control characters."
+    },
+    {
+      "id": "released-event-id",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/event.rs",
+      "startLine": 3,
+      "endLine": 21,
+      "excerpt": "/// UUID-v4 identifier for one Event Message.\n#[derive(Clone, Debug, PartialEq, Eq, Hash)]\npub struct EventId(String);\n\nimpl EventId {\n    /// Create an Event ID from a UUID-v4 string.\n    pub fn new(id: impl Into<String>) -> Result<Self> {\n        validate_uuid_v4(id.into(), \"Event ID\").map(Self)\n    }\n\n    /// Generate a fresh Event ID.\n    pub fn new_v4() -> Self {\n        Self(uuid::Uuid::new_v4().to_string())\n    }\n\n    /// Access the canonical UUID string.\n    pub fn as_str(&self) -> &str {\n        &self.0\n    }",
+      "sourceHash": "5c3338f52ddd1e2bdbdac19fc4d5e3123ef3dae0a9c052f83e3d1fc314badbcd",
+      "kind": "implemented",
+      "claim": "EventId is a UUID-v4 identifier and new_v4 generates a fresh event ID."
+    },
+    {
+      "id": "released-request-id",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/types.rs",
+      "startLine": 13,
+      "endLine": 31,
+      "excerpt": "/// UUID-v4 identifier for one Payment Request.\n#[derive(Clone, Debug, PartialEq, Eq, Hash)]\npub struct PaymentRequestId(String);\n\nimpl PaymentRequestId {\n    /// Create a Payment Request ID from a UUID-v4 string.\n    pub fn new(id: impl Into<String>) -> Result<Self> {\n        validate_uuid_v4(id.into(), \"Payment Request ID\").map(Self)\n    }\n\n    /// Generate a fresh Payment Request ID.\n    pub fn new_v4() -> Self {\n        Self(uuid::Uuid::new_v4().to_string())\n    }\n\n    /// Access the canonical UUID string.\n    pub fn as_str(&self) -> &str {\n        &self.0\n    }",
+      "sourceHash": "24c7330c2502bbfc64b1d9978e14fa206a0fc6eebe43bfe7714ceba8cbf8a6db",
+      "kind": "implemented",
+      "claim": "PaymentRequestId is a validated UUID-v4 identifier for a request."
+    },
+    {
+      "id": "released-terms",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/types.rs",
+      "startLine": 1105,
+      "endLine": 1127,
+      "excerpt": "impl PaymentRequestTerms {\n    /// Start constructing terms with their required amount, reference, and endpoints.\n    ///\n    /// Call [`PaymentRequestTermsBuilder::build`] to validate the complete terms.\n    pub fn builder(\n        amount: PaymentAmount,\n        payment_reference: PaymentReference,\n        accepted_payment_endpoint_identifiers: Vec<PaymentEndpointIdentifier>,\n    ) -> PaymentRequestTermsBuilder {\n        PaymentRequestTermsBuilder(Self {\n            amount,\n            payment_reference,\n            accepted_payment_endpoint_identifiers,\n            payment_endpoints: None,\n            required_app_id: None,\n            proposal_expires_at: None,\n            recurrence: None,\n            conversion: None,\n            payment_deadline: None,\n            metadata: JsonMap::new(),\n        })\n    }\n}",
+      "sourceHash": "24c7330c2502bbfc64b1d9978e14fa206a0fc6eebe43bfe7714ceba8cbf8a6db",
+      "kind": "implemented",
+      "claim": "PaymentRequestTerms::builder requires amount, reference and accepted endpoints; it defaults to one-time discovery-based terms without conversion."
+    },
+    {
+      "id": "released-bound-endpoints",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/types.rs",
+      "startLine": 1129,
+      "endLine": 1146,
+      "excerpt": "impl PaymentRequestTermsBuilder {\n    /// Bind payment to immutable Payment Endpoints owned by `required_app_id`.\n    ///\n    /// A supplied map must be nonempty, contain nonempty payloads, and use only\n    /// accepted Payment Endpoint Identifiers. `required_app_id` must be set.\n    /// `None` preserves endpoint discovery; `Some` forbids fallback outside the map.\n    pub fn payment_endpoints(\n        mut self,\n        value: Option<HashMap<PaymentEndpointIdentifier, PaymentEndpointPayload>>,\n    ) -> Self {\n        self.0.payment_endpoints = value;\n        self\n    }\n    /// Constrain payment to an endpoint owned by the specified payee App.\n    pub fn required_app_id(mut self, value: Option<crate::PaykitAppId>) -> Self {\n        self.0.required_app_id = value;\n        self\n    }",
+      "sourceHash": "24c7330c2502bbfc64b1d9978e14fa206a0fc6eebe43bfe7714ceba8cbf8a6db",
+      "kind": "implemented",
+      "claim": "Request-bound endpoints require a payee App ID and prohibit fallback outside the bound endpoint map."
+    },
+    {
+      "id": "released-terms-build",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/types.rs",
+      "startLine": 1172,
+      "endLine": 1176,
+      "excerpt": "    /// Validate the complete terms, including the non-empty endpoint list.\n    pub fn build(self) -> Result<PaymentRequestTerms> {\n        self.0.validate()?;\n        Ok(self.0)\n    }",
+      "sourceHash": "24c7330c2502bbfc64b1d9978e14fa206a0fc6eebe43bfe7714ceba8cbf8a6db",
+      "kind": "implemented",
+      "claim": "PaymentRequestTermsBuilder::build validates the complete terms before returning them."
+    },
+    {
+      "id": "released-request-construction",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/types.rs",
+      "startLine": 246,
+      "endLine": 270,
+      "excerpt": "impl PaymentRequest {\n    pub(super) fn validate(&self) -> Result<()> {\n        crate::validation::validate_outgoing_version_kind(\n            self.version,\n            self.kind,\n            PrivateMessageKind::PaymentRequest,\n            \"Payment Request\",\n        )?;\n        self.request.validate()\n    }\n\n    /// Construct a Payment Request proposal using protocol version 1.\n    pub fn new(\n        event_id: EventId,\n        payment_request_id: PaymentRequestId,\n        request: PaymentRequestTerms,\n    ) -> Self {\n        Self {\n            version: 1,\n            kind: PrivateMessageKind::PaymentRequest,\n            event_id,\n            payment_request_id,\n            request,\n        }\n    }",
+      "sourceHash": "24c7330c2502bbfc64b1d9978e14fa206a0fc6eebe43bfe7714ceba8cbf8a6db",
+      "kind": "implemented",
+      "claim": "PaymentRequest::new combines event ID, request ID and terms into a protocol-v1 proposal."
+    },
+    {
+      "id": "released-serialize",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/api.rs",
+      "startLine": 83,
+      "endLine": 98,
+      "excerpt": "/// Serialize a Payment Request protocol Event Message to canonical JSON.\npub fn serialize_payment_request_event(\n    app_id: &PaykitAppId,\n    event: &PaymentRequestEvent,\n) -> Result<String> {\n    match event {\n        PaymentRequestEvent::Request(event) => serialize_payment_request_json(app_id, event),\n        PaymentRequestEvent::Acceptance(event) => serialize_acceptance_json(app_id, event),\n        PaymentRequestEvent::Rejection(event) => serialize_rejection_json(app_id, event),\n        PaymentRequestEvent::Cancellation(event) => serialize_cancellation_json(app_id, event),\n        PaymentRequestEvent::Proof(event) => serialize_payment_proof_json(app_id, event),\n        PaymentRequestEvent::ConversionQuote(event) => {\n            serialize_conversion_quote_json(app_id, event)\n        }\n    }\n}",
+      "sourceHash": "8c9f7b9c7038c0ad74cef200aba8e95f466f6318a38b09fbcb08d699a5537c00",
+      "kind": "implemented",
+      "claim": "serialize_payment_request_event dispatches typed request protocol events to canonical JSON serializers."
+    },
+    {
+      "id": "released-parse",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/api.rs",
+      "startLine": 62,
+      "endLine": 81,
+      "excerpt": "/// Parse a raw Private Application Message as a Payment Request protocol event.\n///\n/// Returns `None` when the message kind is not one of the Payment Request\n/// protocol event kinds. Recognized but malformed Payment Request events return\n/// `Some` with [`PaymentRequestEventMessage::is_valid`] set to `false`.\npub fn parse_payment_request_event_message(\n    message: &PrivateApplicationMessage,\n) -> Option<PaymentRequestEventMessage> {\n    let kind = message.known_kind()?;\n    let event = parse_event(kind, &message.raw_json)?.map_err(|err| err.to_string());\n    let (app_id, event_id, payment_request_id) = parse_event_header(&message.raw_json);\n    Some(PaymentRequestEventMessage {\n        kind,\n        app_id,\n        event_id,\n        payment_request_id,\n        raw_json: message.raw_json.clone(),\n        event,\n    })\n}",
+      "sourceHash": "8c9f7b9c7038c0ad74cef200aba8e95f466f6318a38b09fbcb08d699a5537c00",
+      "kind": "implemented",
+      "claim": "The request event parser returns None for other kinds and a recognized result whose is_valid distinguishes malformed events."
+    },
+    {
+      "id": "released-parsed-access",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/types.rs",
+      "startLine": 708,
+      "endLine": 741,
+      "excerpt": "        self.app_id.as_ref()\n    }\n\n    /// Whether the recognized event message parsed successfully.\n    pub fn is_valid(&self) -> bool {\n        self.event.is_ok()\n    }\n\n    /// Access the parsed event when structural validation succeeded.\n    pub fn parsed_event(&self) -> Option<&PaymentRequestEvent> {\n        self.event.as_ref().ok()\n    }\n\n    /// Access the validation error when structural validation failed.\n    pub fn validation_error(&self) -> Option<&str> {\n        self.event.as_ref().err().map(String::as_str)\n    }\n\n    /// Access the Event ID.\n    ///\n    /// Returns `None` when the recognized message is malformed and the Event ID\n    /// could not be parsed as a valid Event ID.\n    pub fn event_id(&self) -> Option<&EventId> {\n        self.event_id.as_ref()\n    }\n\n    /// Access the Payment Request ID shared by this lifecycle event.\n    ///\n    /// Returns `None` when the recognized message is malformed and the Payment\n    /// Request ID could not be parsed as a valid Payment Request ID.\n    pub fn payment_request_id(&self) -> Option<&PaymentRequestId> {\n        self.payment_request_id.as_ref()\n    }\n}",
+      "sourceHash": "24c7330c2502bbfc64b1d9978e14fa206a0fc6eebe43bfe7714ceba8cbf8a6db",
+      "kind": "implemented",
+      "claim": "Request event message accessors expose validity, parsed event and optional correlation identifiers."
+    },
+    {
+      "id": "released-request-send",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/api.rs",
+      "startLine": 100,
+      "endLine": 131,
+      "excerpt": "/// Send a `paykit.payment_request` Event Message.\n///\n/// Payment Requests are payee-initiated; caller code must enforce the sender\n/// role.\n#[instrument(skip(link, event))]\npub async fn send_payment_request(\n    link: &mut EncryptedLink,\n    app_id: &PaykitAppId,\n    event: &PaymentRequest,\n) -> Result<()> {\n    let json = serialize_payment_request_json(app_id, event)\n        .map_err(|err| map_error(\"send_payment_request\", err))?;\n    link.send_payment_request_message(json.as_bytes())\n        .await\n        .map_err(|err| map_error(\"send_payment_request\", err))\n}\n\n/// Send a `paykit.payment_request_acceptance` Event Message.\n///\n/// Acceptances are payer-initiated; caller code must enforce the sender role.\n#[instrument(skip(link, event))]\npub async fn send_payment_request_acceptance(\n    link: &mut EncryptedLink,\n    app_id: &PaykitAppId,\n    event: &PaymentRequestAcceptance,\n) -> Result<()> {\n    let json = serialize_acceptance_json(app_id, event)\n        .map_err(|err| map_error(\"send_payment_request_acceptance\", err))?;\n    link.send_payment_request_acceptance_message(json.as_bytes())\n        .await\n        .map_err(|err| map_error(\"send_payment_request_acceptance\", err))\n}",
+      "sourceHash": "8c9f7b9c7038c0ad74cef200aba8e95f466f6318a38b09fbcb08d699a5537c00",
+      "kind": "implemented",
+      "claim": "A payee sends a request over EncryptedLink; a payer sends acceptance; caller code must enforce roles in the low-level API."
+    },
+    {
+      "id": "released-private-message",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/encrypted_link/private_application_message.rs",
+      "startLine": 124,
+      "endLine": 155,
+      "excerpt": "/// One Private Application Message received from an Encrypted Link.\n///\n/// This is the low-level receive item for the Private Application Message stream.\n/// It keeps the raw plaintext payload so callers can route and persist messages\n/// themselves. If decrypted bytes are not UTF-8, `raw_json` contains a local\n/// invalid-JSON marker with the bytes encoded as base64url. Higher layers should\n/// treat that marker as malformed input, not as a Private Application Message.\n#[derive(Clone, PartialEq, Eq)]\npub struct PrivateApplicationMessage {\n    /// Private Application Message version from the JSON `version` field, when\n    /// the field is present and can be represented as a `u8`.\n    pub version: Option<u8>,\n    /// Message kind string from the JSON `kind` field, when the field is a\n    /// string.\n    pub kind: Option<String>,\n    /// App ID string from the JSON `app_id` field, when the field is a string.\n    pub app_id: Option<String>,\n    /// Raw plaintext received over the Encrypted Link.\n    pub raw_json: String,\n}\n\nimpl std::fmt::Debug for PrivateApplicationMessage {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        f.debug_struct(\"PrivateApplicationMessage\")\n            .field(\"version\", &self.version)\n            .field(\"kind\", &self.kind)\n            .field(\"app_id\", &self.app_id)\n            .field(\n                \"raw_json\",\n                &format_args!(\"<redacted:{} bytes>\", self.raw_json.len()),\n            )\n            .finish()",
+      "sourceHash": "03585b6fa655b1c9709bb515dbeabc17e6b3800e63786b8cd8a930ad47751032",
+      "kind": "implemented",
+      "claim": "PrivateApplicationMessage contains raw plaintext and metadata; its Debug implementation redacts raw_json, not application logs or exported plaintext."
+    },
+    {
+      "id": "released-roundtrip-test",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/tests/payment_request.rs",
+      "startLine": 248,
+      "endLine": 258,
+      "excerpt": "#[test]\nfn payment_request_event_serialization_supports_outbound_idempotency() {\n    let request = payment_request();\n    let event = PaymentRequestEvent::Request(request.clone());\n\n    let serialized = serialize_payment_request_event(&test_app_id(), &event).unwrap();\n    let parsed = parse_payment_request_raw(PrivateMessageKind::PaymentRequest, &serialized);\n\n    assert_eq!(parsed.parsed_event(), Some(&event));\n    assert_eq!(parsed.event_id(), Some(request.event_id()));\n    assert!(serialized.contains(\"\\\"proposal_expires_at\\\"\"));",
+      "sourceHash": "1e87c6e22236448e884b80b9fa1703d739a87f225820790bd64587185c334078",
+      "kind": "implemented",
+      "claim": "An upstream test serializes a request event, parses it and checks event equality and correlation ID."
+    },
+    {
+      "id": "released-malformed-test",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/tests/payment_request.rs",
+      "startLine": 284,
+      "endLine": 318,
+      "excerpt": "#[test]\nfn payment_request_events_return_malformed_recognized_events_for_persistence() {\n    let malformed = r#\"{\"version\":1,\"kind\":\"paykit.payment_request\",\"app_id\":\"test-app\",\"event_id\":\"not-a-uuid\",\"payment_request_id\":\"b7f9c2a1-6d43-4b0e-a8d4-0fe2c712ab33\",\"request\":{\"amount\":{\"value\":\"0.001\",\"asset\":\"btc\"},\"payment_reference\":\"invoice-2026-0001\",\"proposal_expires_at\":null,\"recurrence\":null,\"accepted_payment_endpoint_identifiers\":[\"btc-lightning-bolt11\"],\"required_app_id\":null,\"metadata\":{}}}\"#;\n    let acceptance = PaymentRequestAcceptance::new(\n        EventId::new(\"8a0d8b4c-913f-4e31-9f2c-2a6f5bb4d102\").unwrap(),\n        request_id(),\n    );\n\n    let malformed_event = parse_payment_request_raw(PrivateMessageKind::PaymentRequest, malformed);\n    let acceptance_raw = json!({\n        \"version\": 1,\n        \"kind\": \"paykit.payment_request_acceptance\",\n        \"app_id\": test_app_id().as_str(),\n        \"event_id\": acceptance.event_id().as_str(),\n        \"payment_request_id\": acceptance.payment_request_id().as_str(),\n    })\n    .to_string();\n    let acceptance_event = parse_payment_request_raw(\n        PrivateMessageKind::PaymentRequestAcceptance,\n        &acceptance_raw,\n    );\n\n    assert_eq!(malformed_event.kind(), PrivateMessageKind::PaymentRequest);\n    assert_eq!(malformed_event.raw_json, malformed);\n    assert!(!malformed_event.is_valid());\n    assert!(malformed_event.parsed_event().is_none());\n    assert!(malformed_event\n        .validation_error()\n        .is_some_and(|err| err.contains(\"Event ID\")));\n    assert_eq!(malformed_event.event_id(), None);\n    assert_eq!(malformed_event.payment_request_id(), Some(&request_id()));\n    assert_eq!(\n        acceptance_event.parsed_event(),\n        Some(&PaymentRequestEvent::Acceptance(acceptance))\n    );",
+      "sourceHash": "1e87c6e22236448e884b80b9fa1703d739a87f225820790bd64587185c334078",
+      "kind": "implemented",
+      "claim": "An upstream test preserves a recognized malformed event and asserts is_valid false and no parsed event, rather than treating dispatch as validity."
+    },
+    {
+      "id": "released-sdk-new",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/mod.rs",
+      "startLine": 243,
+      "endLine": 245,
+      "excerpt": "    pub fn new(storage: S, pubky: K, payment: P, config: PaykitSdkConfig) -> Self {\n        Self::with_clock(storage, pubky, payment, config, SystemClock)\n    }",
+      "sourceHash": "29f5996bf72ea3783dad7b5b4d45bbc6a1aaed7f845159f5579152d340983110",
+      "kind": "implemented",
+      "claim": "PaykitSdk::new requires storage, Pubky session provider, payment adapter and app configuration."
+    },
+    {
+      "id": "released-sdk-lib",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/Cargo.toml",
+      "startLine": 27,
+      "endLine": 27,
+      "excerpt": "paykit-lib = { path = \"../paykit-lib\", version = \"0.1.0\" }",
+      "sourceHash": "845c624d99248339520ee8ab7794844fb927cbfe8b3fea2449d3fbe8f38c6f79",
+      "kind": "package",
+      "claim": "The stateful SDK depends on paykit-lib."
+    },
+    {
+      "id": "released-adapter-boundary",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/domain/adapters/mod.rs",
+      "startLine": 45,
+      "endLine": 51,
+      "excerpt": "/// Adapter for payment-method-specific public and private payment operations.\n///\n/// Paykit SDK routes endpoints and private messages, but payment execution,\n/// settlement detection, proof validation, balances, fees, and method-specific\n/// risk policy remain adapter or application responsibilities.\n#[async_trait]\npub trait PaymentAdapter: Send + Sync {",
+      "sourceHash": "359ab726d98c6110515c9ddbed4427c1fd3df1caccf9100d8afa9a347ee39843",
+      "kind": "application-responsibility",
+      "claim": "The PaymentAdapter boundary leaves execution, settlement detection, proof validation, balances, fees and risk policy with the app or adapter."
+    },
+    {
+      "id": "released-adapter-selection",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/domain/adapters/mod.rs",
+      "startLine": 104,
+      "endLine": 134,
+      "excerpt": "    /// Return payable public candidates in adapter-preferred order.\n    async fn select_public_payment_endpoints(\n        &self,\n        _request: &PublicPaymentEndpointSelectionRequest,\n    ) -> Result<Vec<PublicPaymentEndpointCandidate>> {\n        Err(unsupported_operation(\"public Payment Endpoint selection\"))\n    }\n\n    /// Build a payment target from a payable public endpoint.\n    async fn build_public_payment_target(\n        &self,\n        _endpoint: &PublicPaymentEndpointCandidate,\n    ) -> Result<PaymentTarget> {\n        Err(unsupported_operation(\"public payment target construction\"))\n    }\n\n    /// Return payable private candidates in adapter-preferred order.\n    async fn select_private_payment_endpoints(\n        &self,\n        _request: &PrivatePaymentEndpointSelectionRequest,\n    ) -> Result<Vec<PrivatePaymentEndpointCandidate>> {\n        Err(unsupported_operation(\"private Payment Endpoint selection\"))\n    }\n\n    /// Build a payment target from a payable private endpoint.\n    async fn build_private_payment_target(\n        &self,\n        _endpoint: &PrivatePaymentEndpointCandidate,\n    ) -> Result<PaymentTarget> {\n        Err(unsupported_operation(\"private payment target construction\"))\n    }",
+      "sourceHash": "359ab726d98c6110515c9ddbed4427c1fd3df1caccf9100d8afa9a347ee39843",
+      "kind": "implemented",
+      "claim": "PaymentAdapter supplies public/private candidate selection and payment-target construction, with unsupported defaults."
+    },
+    {
+      "id": "released-session-provider",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/domain/adapters/mod.rs",
+      "startLine": 9,
+      "endLine": 20,
+      "excerpt": "/// Provides one application's live access to an identity-wide Paykit runtime.\n///\n/// The provider is the boundary where the app or bindings expose current Pubky\n/// access from platform storage and auth flows.\n#[async_trait]\npub trait PubkySessionProvider: Send + Sync {\n    /// Load live Pubky access for storage and Encrypted Link workflows.\n    ///\n    /// Returning `None` means no live session access is currently available. It\n    /// does not sign the SDK out or clear identity-scoped storage; explicit\n    /// sign-out is a separate runtime operation.\n    async fn load_session_access(&self) -> Result<Option<PubkySessionAccess>>;",
+      "sourceHash": "359ab726d98c6110515c9ddbed4427c1fd3df1caccf9100d8afa9a347ee39843",
+      "kind": "implemented",
+      "claim": "PubkySessionProvider exposes current live access from app or platform authentication/storage."
+    },
+    {
+      "id": "released-storage-contract",
+      "anchor": {
+        "start": "/// Authoritative logical state boundary for Paykit SDK.",
+        "end": "pub trait StorageAdapter: Send + Sync {"
+      },
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/storage/mod.rs",
+      "startLine": 70,
+      "endLine": 78,
+      "excerpt": "/// Authoritative logical state boundary for Paykit SDK.\n///\n/// Production adapters must provide atomic transactions with monotonic id\n/// allocation, stable FIFO ordering for outbound/private-stream records, and\n/// lease-aware writes. Apps sharing one Pubky identity must use the same\n/// logical state backing. The SDK assumes all mutation methods called inside\n/// one transaction either commit together or roll back together.\n#[async_trait]\npub trait StorageAdapter: Send + Sync {",
+      "sourceHash": "a20d2ef190baf609035f03cc6b3f8f3a72b5c290b4a302bbbe199d1da59b5f4d",
+      "kind": "application-responsibility",
+      "claim": "SDK storage requires atomic transactions, durable ordering and one logical state shared by apps on the identity."
+    },
+    {
+      "id": "released-shared-state",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/storage/pubky_shared.rs",
+      "startLine": 97,
+      "endLine": 114,
+      "excerpt": "/// Encrypted identity-wide SDK state stored in Pubky.\n///\n/// All serving homeserver instances must run 0.16.2 or newer with GCS storage.\n/// Server versions and backends are not checked automatically; the caller must\n/// verify deployment independently of the client version and `webdav-locks`.\n/// All participating state writers must use lock tokens, and pre-upgrade writes\n/// must be drained before rollout. Direct backend edits are outside this contract.\n/// Each operation reads the latest complete state under a renewed homeserver\n/// write lock. Its transactions reuse that state and replace the encrypted\n/// resource whenever it changes, before returning. One instance serializes its\n/// own operations. State is never reused after releasing the homeserver lock.\n/// Encryption protects state contents and integrity, but not resource\n/// existence, size, update timing, or replay by the homeserver. Unconfirmed\n/// writes leave a remote marker. Before using that state, the next operation\n/// republishes its exact bytes under the renewed lock. The confirmed publication\n/// fences older GCS generations, including writes whose SQL transaction died.\n/// Cancellation or failed publication leaves recovery pending and exposes no\n/// unconfirmed state. HTTP metadata is not authoritative for state contents.",
+      "sourceHash": "9ff256f3c2be0fb5660783912cefdfe12812151f49bdf66bacd96413f3a1d218",
+      "kind": "application-responsibility",
+      "claim": "PubkySharedStateStorage encrypts identity-wide state; production requires independently verified Homeserver 0.16.2+ with GCS and correctly locked writers. It does not hide size/timing or prevent homeserver replay."
+    },
+    {
+      "id": "released-sdk-sync",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/public_endpoints.rs",
+      "startLine": 17,
+      "endLine": 38,
+      "excerpt": "    pub async fn sync_public_endpoints(&self) -> Result<EndpointSyncReport> {\n        let _identity_guard = self.claim_identity_operation(\"sync public endpoints\")?;\n        let (session_access, _, publication) = self\n            .load_session_access_and_refresh_identity_with(|tx| {\n                let lease = self.claim_paykit_app_operation_in_transaction(tx, false)?;\n                crate::storage::require_paykit_app_active(tx, &self.config.app_id)?;\n                Ok((lease, tx.public_endpoint_records()))\n            })\n            .await?;\n        let session_access = session_access.ok_or_else(|| PaykitSdkError::Identity {\n            context: \"no Pubky session available\".into(),\n            source: None,\n        })?;\n        let (lease, records) = publication.expect(\"active session loads App publication state\");\n        let result = async {\n            let details = self.payment.current_public_receiving_details().await?;\n            self.sync_public_endpoints_with_lease(details, records, &lease, &session_access)\n                .await\n        }\n        .await;\n        self.finish_public_endpoint_sync(lease, result).await\n    }",
+      "sourceHash": "b94cd4284f6c6b61f76dbf87d37ac52272b449e9e1be0f92d5a4d55bfc4c64e1",
+      "kind": "implemented",
+      "claim": "sync_public_endpoints requires live session and active app, calls the application receiving-details adapter, then synchronizes endpoints."
+    },
+    {
+      "id": "released-lifecycle",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/domain/payment_requests/mod.rs",
+      "startLine": 64,
+      "endLine": 89,
+      "excerpt": "/// SDK-derived Payment Request lifecycle state.\n///\n/// States are derived from the local durable stream and outbound queue. They do\n/// not imply counterparty visibility unless the related outbound status is\n/// [`OutboundPrivateMessageStatus::Sent`].\n#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]\n#[non_exhaustive]\npub enum PaymentRequestLifecycleState {\n    /// Proposal is known locally and remains actionable.\n    Proposed,\n    /// Proposal is past its expiry.\n    ProposalExpired,\n    /// Acceptance is present locally.\n    Accepted,\n    /// Rejection is present locally.\n    Rejected,\n    /// Cancellation is present locally.\n    Canceled,\n    /// A one-time Payment Proof is present locally.\n    ProofSubmitted,\n    /// Recurring request acceptance is present locally.\n    ActiveRecurring,\n    /// A local outbound event may have advanced the private link without a durable checkpoint.\n    RecoveryRequired,\n    /// Event ordering, dedupe, or lifecycle validation found an invalid state.\n    InvalidConflict,",
+      "sourceHash": "a11fdc8ffd9600622c181240b023bcd63b7fabca7355bf0ee140fa0fa3995ff2",
+      "kind": "implemented",
+      "claim": "SDK request states describe local durable events; Accepted is not payment and ProofSubmitted means a proof is present locally."
+    },
+    {
+      "id": "released-publish-app",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/app_registry.rs",
+      "startLine": 294,
+      "endLine": 312,
+      "excerpt": "    pub async fn publish_paykit_app(\n        &self,\n        app: paykit_lib::PaykitApp,\n    ) -> Result<paykit_lib::PaykitAppRegistry> {\n        let _identity_guard = self.claim_identity_operation(\"publish Paykit app\")?;\n        let (session, _, noop_sequence) = self\n            .load_session_access_and_refresh_identity_with(|tx| {\n                Ok(app_publication_noop_lease_sequence(\n                    tx,\n                    &self.config.app_id,\n                    app.capabilities(),\n                    self.clock.now(),\n                ))\n            })\n            .await?;\n        let session = session.ok_or_else(|| PaykitSdkError::Identity {\n            context: \"publishing a Paykit app requires an active Pubky session\".into(),\n            source: None,\n        })?;",
+      "sourceHash": "14488c36959f83d408dc04255751a0c2f4de425fd8a0a499cc124efba0839efb",
+      "kind": "implemented",
+      "claim": "publish_paykit_app enrolls the configured app using an active Pubky session and app capability checks."
+    },
+    {
+      "id": "released-propose",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/payment_requests.rs",
+      "startLine": 247,
+      "endLine": 254,
+      "excerpt": "    pub async fn propose_payment_request(\n        &self,\n        counterparty: PubkyPublicKey,\n        terms: PaymentRequestTerms,\n    ) -> Result<PaymentRequestRecord> {\n        let event = PaymentRequest::new(EventId::new_v4(), PaymentRequestId::new_v4(), terms);\n        self.enqueue_raw_payment_request(counterparty, &event).await\n    }",
+      "sourceHash": "b6d6d6f975c22f216adf2be3ee6bff0deea2d94c92ff4bbc98492abc82e60177",
+      "kind": "implemented",
+      "claim": "The SDK constructs a typed request and enqueues it; this is not rail execution."
+    },
+    {
+      "id": "released-idempotent-propose",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/payment_requests.rs",
+      "startLine": 256,
+      "endLine": 302,
+      "excerpt": "    /// Queue a Payment Request once using a caller-persisted Payment Request ID.\n    ///\n    /// Persist the ID, counterparty, and exact original `terms` before calling.\n    /// Within this identity's shared SDK state, the ID is bound to the creating\n    /// App, counterparty, and exact canonical terms (including metadata, decimal\n    /// text, timestamps, and endpoint order). Reusing it with different valid input\n    /// returns [`PaykitSdkError::Policy`], even after expiry or a terminal state.\n    /// IDs already used by received proposals cannot create a local proposal.\n    ///\n    /// A matching retry returns the current derived record with the original\n    /// proposal Event ID and outbound message ID, without enqueueing or resetting\n    /// delivery state. These IDs remain available if subsequent events invalidate\n    /// the lifecycle; they do not make the record actionable.\n    /// Lookup, insertion, and result derivation are atomic. Retry\n    /// with the same input after an uncertain commit or a caller restart. This\n    /// guarantee relies on retaining the identity's Event Message history; it\n    /// does not survive deleting that state or restoring a backup before creation.\n    ///\n    /// Every call requires current session, identity, App capability, and link\n    /// checks. Session creation, capability scope, and key rotation remain the\n    /// caller's responsibility. The caller must establish counterparty support\n    /// for conversion and payment deadlines. Success describes the local queue,\n    /// not delivery, payment authorization, or counterparty processing.\n    pub async fn propose_payment_request_with_id(\n        &self,\n        counterparty: PubkyPublicKey,\n        payment_request_id: PaymentRequestId,\n        terms: PaymentRequestTerms,\n    ) -> Result<PaymentRequestRecord> {\n        self.with_storage_operation(Box::pin(async {\n            let session = self.ensure_private_outbound_ready(&counterparty).await?;\n            let identity = session.public_key()?;\n            let request = PaymentRequest::new(EventId::new_v4(), payment_request_id, terms);\n            self.storage\n                .transaction(|tx| {\n                    crate::domain::payment_requests::enqueue_idempotent_payment_request(\n                        tx,\n                        &counterparty,\n                        &self.config.app_id,\n                        &request,\n                        &identity,\n                        self.clock.now(),\n                    )\n                })\n                .await\n        }))\n        .await",
+      "sourceHash": "b6d6d6f975c22f216adf2be3ee6bff0deea2d94c92ff4bbc98492abc82e60177",
+      "kind": "application-responsibility",
+      "claim": "Persist request ID, counterparty and exact terms before propose_payment_request_with_id; matching retries use retained shared history rather than enqueue a new proposal."
+    },
+    {
+      "id": "released-private-resolution",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/payment_resolution.rs",
+      "startLine": 290,
+      "endLine": 340,
+      "excerpt": "    /// Resolve payable private endpoints for one counterparty.\n    ///\n    /// This method only reads Private Payment Lists and only invokes the\n    /// private payment adapter callbacks. Public Payment Endpoints are never\n    /// considered as fallback candidates. Pass the last consumed\n    /// `private_payment_list_version` as `after_private_payment_list_version`\n    /// to require a newer list. When the current list is not newer, the result\n    /// is `WaitingForUpdatedPaymentList` and contains no payable endpoints.\n    ///\n    /// Versions are opaque local freshness tokens scoped to this SDK state and\n    /// counterparty. The application owns\n    /// consumption policy and should persist a payable result's version before\n    /// submitting a payment that consumes the whole Private Payment List.\n    pub async fn resolve_private_contact_payment(\n        &self,\n        counterparty: PubkyPublicKey,\n        amount: Option<PaymentAmountContext>,\n        after_private_payment_list_version: Option<u64>,\n    ) -> Result<PrivateContactPaymentResolution> {\n        self.resolve_private_contact_payment_with_request(\n            counterparty,\n            amount,\n            after_private_payment_list_version,\n            None,\n            None,\n        )\n        .await\n    }\n\n    /// Resolve private endpoints permitted by an actionable received Payment Request.\n    ///\n    /// The request amount is passed to the payment adapter. Candidates are\n    /// restricted to the request's accepted Payment Endpoint Identifiers and,\n    /// when present, its required payee App before adapter selection.\n    /// Request-bound Payment Endpoints replace list discovery and have no list\n    /// version; `after_private_payment_list_version` does not apply to them.\n    pub async fn resolve_private_payment_request(\n        &self,\n        counterparty: PubkyPublicKey,\n        payment_request_id: &PaymentRequestId,\n        after_private_payment_list_version: Option<u64>,\n    ) -> Result<PrivateContactPaymentResolution> {\n        self.resolve_private_contact_payment_with_request(\n            counterparty,\n            None,\n            after_private_payment_list_version,\n            Some(payment_request_id),\n            None,\n        )\n        .await\n    }",
+      "sourceHash": "2bec14349be775254bb8b603eb9fcf0e6f1c5b5f56fed4656f3ab43641aba8e5",
+      "kind": "implemented",
+      "claim": "Private resolution never falls back to public endpoints; request resolution restricts candidates to accepted identifiers and any required payee App."
+    },
+    {
+      "id": "released-public-resolution",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/payment_resolution.rs",
+      "startLine": 691,
+      "endLine": 721,
+      "excerpt": "    /// Resolve payable public Payment Endpoints for one counterparty.\n    ///\n    /// This method only reads public Pubky storage and only invokes the public\n    /// payment adapter callbacks. Encrypted Link state is never consulted.\n    pub async fn resolve_public_contact_payment(\n        &self,\n        counterparty: PubkyPublicKey,\n        amount: Option<PaymentAmountContext>,\n    ) -> Result<PublicContactPaymentResolution> {\n        self.resolve_public_contact_payment_with_terms(counterparty, amount, None)\n            .await\n    }\n\n    /// Resolve public endpoints permitted by an actionable received Payment Request.\n    ///\n    /// The request amount is passed to the payment adapter. Candidates are\n    /// restricted to the request's accepted Payment Endpoint Identifiers and,\n    /// when present, its required payee App before adapter selection.\n    /// Requests with bound Payment Endpoints have no public fallback; use\n    /// [`Self::resolve_private_payment_request`] for their private destinations.\n    pub async fn resolve_public_payment_request(\n        &self,\n        counterparty: PubkyPublicKey,\n        payment_request_id: &PaymentRequestId,\n    ) -> Result<PublicContactPaymentResolution> {\n        let terms = self\n            .payment_request_resolution_terms(&counterparty, payment_request_id)\n            .await?;\n        let amount = payment_request_amount(&terms);\n        self.resolve_public_contact_payment_with_terms(counterparty, Some(amount), Some(terms))\n            .await",
+      "sourceHash": "2bec14349be775254bb8b603eb9fcf0e6f1c5b5f56fed4656f3ab43641aba8e5",
+      "kind": "implemented",
+      "claim": "Public contact resolution uses public storage and adapter callbacks; request-bound private destinations have no public fallback."
+    },
+    {
+      "id": "released-noise-publish",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/noise_key_authorization.rs",
+      "startLine": 11,
+      "endLine": 27,
+      "excerpt": "    /// Publish this identity's signed current Noise key as its authorizer.\n    ///\n    /// Requires the local Pubky secret and separate authorizer write capability.\n    /// Call before publishing private app capabilities or handing Paykit access\n    /// to another app. This initializes or republishes the active generation;\n    /// use `rotate_paykit_identity_key` to change it with the shared state.\n    pub async fn publish_paykit_noise_key_authorization(\n        &self,\n    ) -> Result<PaykitNoiseKeyAuthorization> {\n        let (access, _) = self.load_session_access_and_refresh_identity().await?;\n        let access = access.ok_or_else(|| authorization_error(\"no active Pubky session\"))?;\n        let key = access\n            .paykit_identity_secret_key()\n            .ok_or_else(|| authorization_error(\"no Paykit identity key\"))?;\n        let record = sign_authorization(&access, &key)?;\n        paykit_lib::publish_paykit_noise_key_authorization(&access.session, &record).await?;\n        Ok(record)",
+      "sourceHash": "a5ab5e725bff728602af8456d784df8c93a1a4470db6d7e14644f62e75e5dd9d",
+      "kind": "implemented",
+      "claim": "The identity authorizer publishes signed Noise key authorization using current identity key material and separate authority capability."
+    },
+    {
+      "id": "released-noise-pin",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/noise_key_authorization.rs",
+      "startLine": 69,
+      "endLine": 89,
+      "excerpt": "pub(super) fn pin_authorization_in_transaction(\n    tx: &mut dyn StorageTransaction,\n    counterparty: &PubkyPublicKey,\n    authorization: &PaykitNoiseKeyAuthorization,\n) -> Result<()> {\n    if authorization.owner() != &counterparty.to_public_key()? {\n        return Err(authorization_error(\n            \"Noise key authorization belongs to another counterparty\",\n        ));\n    }\n    let mut peer = tx\n        .linked_peer(counterparty)\n        .unwrap_or_else(|| default_linked_peer(counterparty.clone()));\n    if let Some(previous) = &peer.noise_key_authorization {\n        authorization\n            .validate_against(previous)\n            .map_err(|error| super::recovery::link_observation_error(error.into()))?;\n    }\n    peer.noise_key_authorization = Some(authorization.clone());\n    tx.save_linked_peer(peer);\n    Ok(())",
+      "sourceHash": "a5ab5e725bff728602af8456d784df8c93a1a4470db6d7e14644f62e75e5dd9d",
+      "kind": "implemented",
+      "claim": "The SDK checks authorization owner and validates it against a prior peer pin before saving it."
+    },
+    {
+      "id": "released-noise-validate",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/src/runtime/noise_key_authorization.rs",
+      "startLine": 139,
+      "endLine": 170,
+      "excerpt": "pub(super) fn validate_key(\n    record: &PaykitNoiseKeyAuthorization,\n    key: &crate::PaykitIdentitySecretKey,\n) -> Result<()> {\n    if record.key_generation() != key.key_generation()\n        || *record.noise_public_key()\n            != crate::storage::paykit_noise_public_key(key).to_public_key()?\n        || *record.noise_static_public_key()\n            != pubky_noise::derive_static_public_key(&key.noise_secret_key())\n    {\n        return Err(authorization_error(\n            \"Paykit key does not match the identity's current signed authorization\",\n        ));\n    }\n    Ok(())\n}\n\npub(super) fn validate_remote_static_key(\n    authorization: &PaykitNoiseKeyAuthorization,\n    actual: Option<&[u8]>,\n    handshake_complete: bool,\n) -> Result<()> {\n    if actual.is_some_and(|key| key != authorization.noise_static_public_key())\n        || (handshake_complete && actual.is_none())\n    {\n        return Err(paykit_lib::PaykitError::InvalidData {\n            context: \"Noise handshake peer does not match its identity-signed static key\".into(),\n            source: None,\n        }\n        .into());\n    }\n    Ok(())",
+      "sourceHash": "a5ab5e725bff728602af8456d784df8c93a1a4470db6d7e14644f62e75e5dd9d",
+      "kind": "implemented",
+      "claim": "SDK validation matches key generation and routing/static keys to signed authorization and rejects mismatched handshake static keys."
+    },
+    {
+      "id": "released-ffi",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-ffi/src/lib.rs",
+      "startLine": 1,
+      "endLine": 1,
+      "excerpt": "#![doc = \"UniFFI bindings for Paykit SDK.\"]",
+      "sourceHash": "2eb28a103a79537927b29e4efce0850574f17f5f71fe829c95c31b7927586352",
+      "kind": "implemented",
+      "claim": "The FFI crate is a UniFFI binding layer over the SDK."
+    },
+    {
+      "id": "released-scope-policy",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-sdk/README.md",
+      "startLine": 18,
+      "endLine": 27,
+      "excerpt": "Payment execution, settlement detection, balances, route policy, product UI,\nand app backup transport stay outside the SDK and are provided by application\nor payment-adapter code.\n\nPaykit private communication is identity-wide. Apps sharing one Pubky identity\nuse one logical set of Encrypted Links, private stream checkpoints, outbound\nqueues, requests, receipts, recovery state, and backup data. Each SDK handle is\nconfigured with a `PaykitAppId` so public Payment Endpoints and private messages\nremain attributable to the app that owns or produced them; the App ID does not\ncreate a separate private channel.",
+      "sourceHash": "107695aefe5e5e8b33051681ac26ec9c0ee8b4fc651d62961780b1224aec754b",
+      "kind": "application-responsibility",
+      "claim": "Payment execution, settlement, balances, route policy, UI and backup transport remain app-owned; the App ID does not create a separate private channel."
+    },
+    {
+      "id": "released-skill-link",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "skills/paykit/SKILL.md",
+      "startLine": 1,
+      "endLine": 17,
+      "excerpt": "---\nname: paykit\ndescription: Integrate Paykit into wallets, payment processors, and apps using Rust or Swift/Kotlin. Use for shared-identity setup, public/private payments, session and key lifecycle, durable state and recovery, or assessing browser/custom-binding support.\n---\n\n# Paykit Integration\n\nPaykit coordinates payments over Pubky. The app owns funds, authorization,\nfinancial execution, settlement validation, scheduling, and product policy.\n\n## Establish the Surface\n\nCheck the application's dependency pin, source, and generated declarations.\nThis skill describes the shared-identity architecture in the accompanying\nsource. Repository links use `master` for navigation, not as a release guarantee;\nread the corresponding files at the application's actual version. Do not\nsilently upgrade dependencies or treat an unmerged change as an installed API.",
+      "sourceHash": "ac00aef17c2f69742292c5c6d27876df8767a8cabac4e4f2e5967745ed46ba2b",
+      "kind": "application-responsibility",
+      "claim": "The upstream integration skill accompanies the v0.1.0 source snapshot; apply its guidance against the application's matching dependency pin."
+    },
+    {
+      "id": "released-skill-privacy",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "skills/paykit/SKILL.md",
+      "startLine": 80,
+      "endLine": 82,
+      "excerpt": "Keep SDK backups encrypted by the app: exported blobs/strings contain sensitive\nplaintext private state even though the live Pubky shared resource is encrypted.\nDo not log keys, backup/state exports, endpoint payloads, or private messages.",
+      "sourceHash": "ac00aef17c2f69742292c5c6d27876df8767a8cabac4e4f2e5967745ed46ba2b",
+      "kind": "application-responsibility",
+      "claim": "SDK backup/state exports and raw private messages remain sensitive; applications must protect them and avoid logging secrets."
+    },
+    {
+      "id": "released-proof",
+      "version": "released",
+      "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+      "path": "paykit-lib/src/payment_request/types.rs",
+      "startLine": 396,
+      "endLine": 418,
+      "excerpt": "pub struct PaymentProof {\n    /// Message version. Currently always `1`.\n    pub(super) version: u8,\n    /// Private message kind. Currently [`PrivateMessageKind::PaymentProof`].\n    pub(super) kind: PrivateMessageKind,\n    /// Event ID for idempotent processing.\n    pub(super) event_id: EventId,\n    /// Stable Payment Request ID.\n    pub(super) payment_request_id: PaymentRequestId,\n    /// Payment Reference copied from the accepted Payment Request.\n    pub(super) payment_reference: PaymentReference,\n    /// Billing period. Required for recurring requests, `None` for one-time requests.\n    pub(super) billing_period: Option<BillingPeriod>,\n    /// Application whose endpoint was used for the payment.\n    pub(super) payment_app_id: crate::PaykitAppId,\n    /// Payment Endpoint Identifier used for the payment execution.\n    pub(super) payment_endpoint_identifier: PaymentEndpointIdentifier,\n    /// Optional Allowance used for this payment, scoped to the exact Encrypted Link.\n    pub(super) allowance_id: Option<AllowanceId>,\n    /// Event ID of the selected recurring conversion quote, when required.\n    pub(super) conversion_quote_id: Option<EventId>,\n    /// Method-specific proof object.\n    pub(super) proof: JsonMap<String, JsonValue>,",
+      "sourceHash": "24c7330c2502bbfc64b1d9978e14fa206a0fc6eebe43bfe7714ceba8cbf8a6db",
+      "kind": "implemented",
+      "claim": "PaymentProof correlates a request, reference, payment App and rail identifier with a method-specific JSON proof object; it is not a settlement verifier."
+    }
+  ],
+  "diagrams": [
+    {
+      "id": "components",
+      "mermaid": "flowchart TD\n  A[Your application] -->|constructs| B[paykit-sdk runtime]\n  B -->|uses| C[paykit-lib helpers]\n  C -->|reads and writes| D[Pubky storage]",
+      "caption": "A Rust integration layers durable SDK state over the lower-level Pubky helpers.",
+      "alt": "Your application constructs paykit-sdk with storage, session and payment adapters. The SDK uses paykit-lib. The library reads and writes Pubky storage. Payment-rail execution is outside this stack.",
+      "relationships": [
+        {
+          "text": "Your application constructs paykit-sdk with explicit adapters.",
+          "evidence": [
+            "released-sdk-new",
+            "released-session-provider",
+            "released-storage-contract",
+            "released-adapter-boundary"
+          ]
+        },
+        {
+          "text": "paykit-sdk uses paykit-lib.",
+          "evidence": [
+            "released-sdk-lib"
+          ]
+        },
+        {
+          "text": "paykit-lib reads and writes Pubky storage.",
+          "evidence": [
+            "released-endpoint-read",
+            "released-endpoint-write",
+            "released-public-io"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "public-discovery",
+      "mermaid": "flowchart TD\n  A[Payee app] -->|publishes| B[Public endpoint text]\n  B -->|read as a list| C[Payer app]\n  C -->|chooses using app policy| D[Supported rail]",
+      "caption": "Public discovery finds receiving details; it does not send a payment.",
+      "alt": "The payee app publishes app-scoped endpoint text to public Pubky storage. The payer reads the endpoint list for that payee and app. Payer-owned policy selects a supported rail; reading or selecting an endpoint does not execute that rail.",
+      "relationships": [
+        {
+          "text": "The payee app publishes app-scoped public endpoint text.",
+          "evidence": [
+            "released-public-io",
+            "released-public-path",
+            "released-public-path-prefix"
+          ]
+        },
+        {
+          "text": "The payer app reads the payee app endpoint list.",
+          "evidence": [
+            "released-endpoint-read",
+            "released-payload-list"
+          ]
+        },
+        {
+          "text": "The payer application or adapter selects supported payment endpoints.",
+          "evidence": [
+            "released-adapter-selection",
+            "released-adapter-boundary"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "private-request",
+      "mermaid": "flowchart TD\n  A[Payee terms] -->|send on encrypted link| B[Payer review]\n  B -->|app authorizes| C[App rail execution]\n  C -->|app verifies outcome| D[Settlement decision]",
+      "caption": "A private request coordinates terms. Authorization, rail execution and settlement checks belong to the application.",
+      "alt": "The payee sends typed request terms to the payer on an Encrypted Link. The payer application reviews and authorizes the payment before its own rail code executes it. The application verifies the rail outcome before deciding settlement; Paykit request acceptance and proof messages are not that verification.",
+      "relationships": [
+        {
+          "text": "The payee sends Payment Request terms to the payer over an Encrypted Link.",
+          "evidence": [
+            "released-request-construction",
+            "released-request-send"
+          ]
+        },
+        {
+          "text": "Payer application authorization precedes application-owned financial execution.",
+          "evidence": [
+            "released-skill-link",
+            "released-adapter-boundary"
+          ]
+        },
+        {
+          "text": "The application verifies the payment-rail outcome before a settlement decision.",
+          "evidence": [
+            "released-adapter-boundary",
+            "released-scope-policy"
+          ]
+        }
+      ]
+    }
+  ]
+}

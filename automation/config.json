@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "canonicalRepository": "pubky/paykit-rs",
+  "developmentBranch": "master",
+  "releasePolicy": "highest-published-stable-semver-metadata-and-tag",
+  "sections": {
+    "Understand Paykit": [
+      "overview",
+      "components",
+      "flows",
+      "boundaries"
+    ],
+    "Integrate Paykit": [
+      "wallets",
+      "point-of-sale"
+    ]
+  },
+  "publicSourceRepositories": [
+    "pubky/paykit-rs"
+  ],
+  "referenceOnlySources": [
+    "https://pubky.org/overview/",
+    "https://github.com/SeverinAlexB/technical-writing-skill"
+  ],
+  "packages": [
+    "paykit-lib",
+    "paykit-sdk",
+    "paykit-ffi"
+  ],
+  "examplePackage": "paykit-lib",
+  "toolchain": {
+    "rust": "1.91.1",
+    "rustup": "1.28.2"
+  },
+  "limits": {
+    "concurrentWorkers": 2,
+    "repairRounds": 2,
+    "runtimeSeconds": 3500,
+    "cargoJobs": 2
+  },
+  "publishing": {
+    "remote": "origin",
+    "branch": "docs-automation",
+    "deploymentTimeoutSeconds": 600
+  },
+  "privacy": {
+    "boundaryMode": "instruction-based-public-evidence-v1",
+    "requireNativeCoordinator": false,
+    "enforcedIsolationRequired": false,
+    "requirePublicSourceMapping": true,
+    "requireIndependentPublicEvidenceReview": true
+  },
+  "schedule": {
+    "cron": "0 5 * * *",
+    "timezone": "UTC"
+  },
+  "internalSkillVersions": {
+    "coordinator": "2.0.0",
+    "sources": "2",
+    "writing": "2",
+    "diagrams": "1",
+    "evaluation": "2"
+  }
+}

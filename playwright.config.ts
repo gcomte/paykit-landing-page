@@ -10,7 +10,7 @@ export default defineConfig({
     : {
         command: "npm start",
         url: "http://127.0.0.1:3000/",
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 30_000,
       },
   use: {

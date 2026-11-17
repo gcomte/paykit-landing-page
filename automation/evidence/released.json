@@ -433,6 +433,10 @@
   },
   {
     "id": "released-storage-contract",
+    "anchor": {
+      "start": "/// Authoritative logical state boundary for Paykit SDK.",
+      "end": "pub trait StorageAdapter: Send + Sync {"
+    },
     "version": "released",
     "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
     "path": "paykit-sdk/src/storage/mod.rs",
@@ -609,7 +613,7 @@
     "excerpt": "---\nname: paykit\ndescription: Integrate Paykit into wallets, payment processors, and apps using Rust or Swift/Kotlin. Use for shared-identity setup, public/private payments, session and key lifecycle, durable state and recovery, or assessing browser/custom-binding support.\n---\n\n# Paykit Integration\n\nPaykit coordinates payments over Pubky. The app owns funds, authorization,\nfinancial execution, settlement validation, scheduling, and product policy.\n\n## Establish the Surface\n\nCheck the application's dependency pin, source, and generated declarations.\nThis skill describes the shared-identity architecture in the accompanying\nsource. Repository links use `master` for navigation, not as a release guarantee;\nread the corresponding files at the application's actual version. Do not\nsilently upgrade dependencies or treat an unmerged change as an installed API.",
     "sourceHash": "ac00aef17c2f69742292c5c6d27876df8767a8cabac4e4f2e5967745ed46ba2b",
     "kind": "application-responsibility",
-    "claim": "The upstream integration skill exists in this snapshot and is development guidance tied to the dependency pin."
+    "claim": "The upstream integration skill accompanies the v0.1.0 source snapshot; apply its guidance against the application's matching dependency pin."
   },
   {
     "id": "released-skill-privacy",

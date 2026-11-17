@@ -59,7 +59,11 @@
         "yanked": false,
         "checksum": "4bd26723409b1eb06337183ec45de5d95d4ce6dbfad7238c29010c5a0a790111",
         "downloadUrl": "https://static.crates.io/crates/paykit-lib/paykit-lib-0.1.0.crate",
-        "referenceUrl": "https://docs.rs/paykit-lib/0.1.0/paykit_lib/"
+        "referenceUrl": "https://docs.rs/paykit-lib/0.1.0/paykit_lib/",
+        "verifiedSource": {
+          "sourceCommit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+          "verifiedRustFiles": 68
+        }
       },
       "paykit-sdk": {
         "version": "0.1.0",
@@ -141,7 +145,11 @@
         "yanked": false,
         "checksum": "250ab988ada2dd59c9e36b03d3eb0dd06e2709a48f10e62a31f13dd7bd8c4637",
         "downloadUrl": "https://static.crates.io/crates/paykit-sdk/paykit-sdk-0.1.0.crate",
-        "referenceUrl": "https://docs.rs/paykit-sdk/0.1.0/paykit_sdk/"
+        "referenceUrl": "https://docs.rs/paykit-sdk/0.1.0/paykit_sdk/",
+        "verifiedSource": {
+          "sourceCommit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+          "verifiedRustFiles": 182
+        }
       },
       "paykit-ffi": {
         "version": "0.1.0",
@@ -330,7 +338,7 @@
           "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/domain/adapters/mod.rs"
         },
         {
-          "label": "Official integration skill — development guidance only",
+          "label": "Official integration skill — v0.1.0 source snapshot",
           "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
         }
       ]
@@ -412,7 +420,7 @@
             "released-sdk-package"
           ],
           "paragraphs": [
-            "The tutorials use paykit-lib to expose a small protocol outcome. A production Rust app can adopt paykit-sdk for stateful workflows. Swift/Kotlin integrations use the source-matched FFI surface; these pages do not claim a tested mobile build."
+            "The tutorials use paykit-lib to expose a small protocol outcome. A stateful Rust app can integrate paykit-sdk for durable coordination workflows. Swift/Kotlin integrations use the source-matched FFI surface; these pages do not claim a tested mobile build."
           ]
         }
       ],
@@ -509,7 +517,8 @@
           "list": [
             "Accepted means acceptance is recorded locally, not that funds moved.",
             "ProofSubmitted means a one-time proof is present in local history. Validate method-specific evidence and the actual rail result before marking an order paid.",
-            "A queued proposal is local intent, not confirmed delivery. Persist request identity and exact terms so an uncertain retry does not create a new order or request."
+            "A queued proposal is local intent, not confirmed delivery. Persist the request ID, counterparty and exact original terms before proposing; retry with propose_payment_request_with_id as the same creating App and identity while retaining that identity's proposal/Event Message history.",
+            "Proposal idempotency searches retained shared history, not an independent permanent ID registry. Deleting state or restoring a backup from before creation loses that protection. After rollback, reconcile external order and payment-execution records before recreating a request or executing payment; the persisted ID alone does not prevent duplicates."
           ]
         },
         {
@@ -647,7 +656,7 @@
           "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/runtime/noise_key_authorization.rs"
         },
         {
-          "label": "Official integration skill — development guidance only",
+          "label": "Official integration skill — v0.1.0 source snapshot",
           "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
         }
       ]
@@ -845,7 +854,7 @@
           "href": "https://docs.rs/paykit-lib/0.1.0/paykit_lib/"
         },
         {
-          "label": "Official integration skill — development guidance only",
+          "label": "Official integration skill — v0.1.0 source snapshot",
           "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
         }
       ]
@@ -1082,7 +1091,7 @@
           ],
           "list": [
             "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Publish the app and complete signed-key authorization and an authenticated private link before trying to deliver requests.",
-            "Persist the order reference, exact terms, counterparty and a newly generated request ID. Use propose_payment_request_with_id with those same values after an uncertain retry; do not reuse the fixture's fixed ID across real orders.",
+            "Persist the order reference, exact terms, counterparty and a newly generated request ID. Use propose_payment_request_with_id with those same values as the same creating App and identity after an uncertain retry; do not reuse the fixture's fixed ID across real orders. Retain the identity's proposal/Event Message history: deleting it or restoring a pre-creation backup removes the idempotency binding. After rollback, reconcile external order and payment-execution records before recreating requests or executing payment; the persisted ID alone does not prevent duplicates.",
             "Define your own asset precision and conversion policy. The example usd amount and Lightning method do not establish conversion support or a payable destination.",
             "Track local queue and request state separately from delivery and payment state. The payer uses request-constrained resolution; acceptance or ProofSubmitted is not permission for the merchant to release goods.",
             "Bind method-specific proof to the order and request, and independently validate the rail outcome before marking an order paid. Exercise this with non-production infrastructure before adding funds."
@@ -1125,7 +1134,7 @@
           "href": "https://docs.rs/paykit-lib/0.1.0/paykit_lib/"
         },
         {
-          "label": "Official integration skill — development guidance only",
+          "label": "Official integration skill — v0.1.0 source snapshot",
           "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
         }
       ]

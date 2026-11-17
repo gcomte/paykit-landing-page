@@ -8,4 +8,4 @@ rust-version = "1.91.1"
 resolver = "3"
 
 [dependencies]
-paykit-lib = { git = "https://github.com/pubky/paykit-rs", rev = "1fdbedd29de28bd174529aa3da3c5b3c0471b1f6" }
+paykit-lib = { git = "https://github.com/pubky/paykit-rs", rev = "ddd699676ac18ad8c53d8bf8bac4266951b79c30" }

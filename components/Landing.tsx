@@ -3,6 +3,7 @@ import Image from "next/image";
 import { InquiryForm, Teaser } from "./Interactions";
 import Features from "./Features";
 import PaymentIllustration from "./PaymentIllustration";
+import DocsTeaser from "./docs/DocsTeaser";
 
 function Arrow({
   diagonal = false,
@@ -520,6 +521,8 @@ export default function Landing({
             </span>
           </a>
         </section>
+
+        <DocsTeaser />
 
         <section className="foundation" aria-labelledby="foundation-title">
           <div className="foundation-inner section-pad">

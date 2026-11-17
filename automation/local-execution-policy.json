@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "executionHost": "existing-user-controlled-always-on-server",
+  "githubHostedExecutionAllowed": false,
+  "modelProviderPolicy": "preserve-existing-provider-and-authentication",
+  "setupActor": "existing-hermes-runtime",
+  "sourceBoundaryMode": "instruction-based-public-evidence-v1",
+  "enforcedIsolationRequired": false,
+  "requiresProtectedRunnerSetup": false,
+  "grantHermesSudo": false,
+  "runModelOrBuildJobsAsRoot": false,
+  "runtimeApprovalGrantedByThisPolicy": false
+}
