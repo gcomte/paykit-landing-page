@@ -450,6 +450,11 @@ class SafetyTests(unittest.TestCase):
             blueprint.parent.mkdir(parents=True)
             blueprint.write_text('"unchanged wording"')
             lock = {"fixture": "same source pair"}
+            # User-authorized selector/verified-checkpoint schema migration only.
+            selector = {"schemaVersion": 1, "source": {"repository": "pubky/paykit-rs", "kind": "tag", "ref": "synthetic-tag"}, "defaultVersion": "coming-soon"}
+            p.save_json(root / "docs-generation.json", selector)
+            lock.update(repository="pubky/paykit-rs", defaultVersion="coming-soon", **{"coming-soon": {"commit": "a" * 40},
+                        "selectedSource": {**selector["source"], "qualifiedRef": "refs/tags/synthetic-tag", "object": "b" * 40, "commit": "a" * 40}})
             p.save_json(cache / "candidate-sources.json", lock)
             with patch.object(p, "ROOT", root), patch.object(p, "CACHE", cache), patch.object(p, "CONFIG", cfg), \
                  patch.object(p, "tool_versions", return_value={"fixture": "1"}), \
@@ -457,7 +462,8 @@ class SafetyTests(unittest.TestCase):
                  patch.object(p, "get_json", return_value={"fingerprint": p.input_fingerprint(lock, tools={"fixture": "1"})}), \
                  patch.object(p, "generate_docs", side_effect=AssertionError("No-change must not generate")):
                 fingerprint = p.input_fingerprint(lock, tools={"fixture": "1"})
-                p.save_json(cache / "last-success.json", {"fingerprint": fingerprint, "deploymentUrl": "https://fixture.vercel.app"})
+                p.save_json(cache / "last-success.json", {"fingerprint": fingerprint, "deploymentUrl": "https://fixture.vercel.app",
+                            "verifiedDeployment": True, "regenerationFingerprint": p.regeneration_fingerprint(lock, tools={"fixture": "1"})})
                 before = (blueprint.read_bytes(), blueprint.stat().st_mtime_ns)
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):

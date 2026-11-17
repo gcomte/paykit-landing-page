@@ -151,7 +151,7 @@ finally:
 sys.exit(124 if code is None else (128 - code if code < 0 else code))
 '''
 
-def bounded_process(args, cwd=None, timeout=300, env=None, check=False, run_id=None, cache=None):
+def bounded_process(args, cwd=None, timeout=300, env=None, check=False, run_id=None, cache=None, preserve_newlines=False, raw=False):
     cache = CACHE if cache is None else Path(cache)
     run_id = ACTIVE_RUN if run_id is None else run_id
     with state_lock(cache):
@@ -164,7 +164,7 @@ def bounded_process(args, cwd=None, timeout=300, env=None, check=False, run_id=N
         try:
             proc = subprocess.Popen([sys.executable, "-c", WORKER_PROGRAM, json.dumps(list(map(str, args))), str(time.time() + budget)],
                                     cwd=ROOT if cwd is None else cwd, env=env,
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=not (preserve_newlines or raw), start_new_session=True)
             if record:
                 record.setdefault("children", []).append({"pid": proc.pid, "start": process_identity(proc.pid)})
                 save_json(cache / "run.lock/owner.json", record)
@@ -177,6 +177,12 @@ def bounded_process(args, cwd=None, timeout=300, env=None, check=False, run_id=N
     try:
         try:
             stdout, stderr = proc.communicate(timeout=budget)
+        except subprocess.TimeoutExpired as error:
+            stop_group(proc.pid)
+            # A second communicate returns the complete captured streams, not
+            # just the exception's potentially earlier partial observation.
+            error.output, error.stderr = proc.communicate()
+            raise
         except BaseException:
             stop_group(proc.pid)
             proc.communicate()
@@ -189,6 +195,8 @@ def bounded_process(args, cwd=None, timeout=300, env=None, check=False, run_id=N
             guard_run(run_id, cache)
         if proc.returncode == 124:
             raise subprocess.TimeoutExpired(args, budget, stdout, stderr)
+        if preserve_newlines and not raw:
+            stdout, stderr = stdout.decode("utf-8"), stderr.decode("utf-8")
         result = subprocess.CompletedProcess(args, proc.returncode, stdout, stderr)
         if check:
             result.check_returncode()
@@ -313,14 +321,67 @@ def verify_published_package(package, info, commit):
         raise ValueError("Published package contains no verified implementation")
     return {"sourceCommit": commit, "verifiedRustFiles": count}
 
+def generation_config(root=None):
+    """The root selector is authoritative; never infer a ref from repository metadata."""
+    root = ROOT if root is None else Path(root)
+    cfg = read_json(root / "docs-generation.json")
+    if (not isinstance(cfg, dict) or set(cfg) != {"schemaVersion", "source", "defaultVersion"}
+            or type(cfg["schemaVersion"]) is not int or cfg["schemaVersion"] != 1
+            or cfg["defaultVersion"] != "coming-soon"):
+        raise ValueError("Invalid docs-generation configuration")
+    source = cfg["source"]
+    if (not isinstance(source, dict) or set(source) != {"repository", "ref", "kind"}
+            or source["repository"] != "pubky/paykit-rs" or source["kind"] not in ("branch", "tag")
+            or not isinstance(source["ref"], str)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*", source["ref"])
+            or source["ref"].startswith("refs/")):
+        raise ValueError("Invalid configured source repository/kind/ref")
+    qualified = "refs/" + ("heads/" if source["kind"] == "branch" else "tags/") + source["ref"]
+    try:
+        run(["git", "check-ref-format", qualified])
+    except subprocess.CalledProcessError as error:
+        raise ValueError("Invalid configured source ref") from error
+    return cfg
+
+
+def snapshot_ref(ref, kind):
+    """Bind exact advertised object and peeled commit to a task-owned local ref."""
+    import uuid
+    qualified = "refs/" + ("heads/" if kind == "branch" else "tags/") + ref
+    def advertised():
+        rows = run(["git", "ls-remote", "origin", qualified, qualified + "^{}"], cwd=REPO).splitlines()
+        refs = {}
+        for row in rows:
+            fields = row.split()
+            if (len(fields) != 2 or not re.fullmatch(r"[a-f0-9]{40}", fields[0])
+                    or fields[1] not in (qualified, qualified + "^{}") or fields[1] in refs):
+                raise ValueError("Invalid exact source ref advertisement")
+            refs[fields[1]] = fields[0]
+        if qualified not in refs:
+            raise ValueError("Configured source ref unavailable: " + qualified)
+        return refs
+    before = advertised()
+    local = "refs/paykit-snapshots/" + uuid.uuid4().hex
+    run(["git", "fetch", "--no-tags", "origin", "+" + qualified + ":" + local], cwd=REPO, timeout=300)
+    obj = run(["git", "rev-parse", "--verify", local], cwd=REPO)
+    commit = run(["git", "rev-parse", "--verify", local + "^{commit}"], cwd=REPO)
+    if (obj != before[qualified] or commit != before.get(qualified + "^{}", obj)
+            or advertised() != before):
+        raise ValueError("Source ref moved during snapshot binding: " + qualified)
+    return {"ref": ref, "kind": kind, "qualifiedRef": qualified, "object": obj, "commit": commit}
+
+
 def resolve_sources():
     cfg = read_json(CONFIG)
-    canonical = cfg["canonicalRepository"]
+    selected = generation_config()
+    canonical = selected["source"]["repository"]
+    if canonical != cfg["canonicalRepository"]:
+        raise ValueError("Configured source differs from approved canonical repository")
     metadata = get_json(f"https://api.github.com/repos/{canonical}")
     if metadata.get("private") is not False or metadata.get("full_name") != canonical:
         raise ValueError("Canonical source is not the approved public repository")
-    if metadata["default_branch"] != cfg["developmentBranch"]:
-        raise ValueError("Canonical development branch changed; investigate policy explicitly")
+    if not isinstance(metadata.get("default_branch"), str) or not metadata["default_branch"]:
+        raise ValueError("Canonical default branch metadata unavailable")
     releases = []
     page = 1
     while True:
@@ -340,17 +401,19 @@ def resolve_sources():
         run(["git", "remote", "set-url", "--push", "origin", "DISABLED"], cwd=REPO)
     if run(["git", "remote", "get-url", "origin"], cwd=REPO) != f"https://github.com/{canonical}.git":
         raise ValueError("Unexpected source clone origin")
-    run(["git", "fetch", "origin", "--tags", cfg["developmentBranch"]], cwd=REPO, timeout=300)
-    stable = run(["git", "rev-parse", release["tag_name"] + "^{}"], cwd=REPO)
-    dev = run(["git", "rev-parse", "FETCH_HEAD^{commit}"], cwd=REPO)
-    lock = {"schemaVersion": 1, "repository": canonical}
+    released_ref = snapshot_ref(release["tag_name"], "tag")
+    selected_ref = snapshot_ref(selected["source"]["ref"], selected["source"]["kind"])
+    stable, dev = released_ref["commit"], selected_ref["commit"]
+    lock = {"schemaVersion": 1, "repository": canonical, "defaultVersion": selected["defaultVersion"],
+            "selectedSource": {"repository": canonical, **selected_ref}}
     for name, commit in (("released", stable), ("coming-soon", dev)):
-        entry = {"label": release["tag_name"] if name == "released" else "Coming soon", "commit": commit,
+        entry = {"label": release["tag_name"] if name == "released" else selected_ref["ref"], "commit": commit,
                  "sourceUrl": f"https://github.com/{canonical}/tree/{commit}", "packages": {}}
         if name == "released":
-            entry.update(tag=release["tag_name"], releaseUrl=release["html_url"])
+            entry.update(tag=release["tag_name"], releaseUrl=release["html_url"], **released_ref)
         else:
-            entry["branch"] = cfg["developmentBranch"]
+            entry.update(selected_ref)
+            entry["tag" if selected_ref["kind"] == "tag" else "branch"] = selected_ref["ref"]
         for package in cfg["packages"]:
             manifest = tomllib.loads(source_text(commit, f"{package}/Cargo.toml"))
             version = manifest["package"]["version"]
@@ -373,6 +436,28 @@ def resolve_sources():
         if name == "released" and (not pkg["published"] or pkg.get("yanked")):
             raise ValueError("Released example package unavailable or yanked; retain last valid docs")
         lock[name] = entry
+    return lock
+
+
+def validate_source_selection(lock):
+    cfg = generation_config()
+    source = cfg["source"]
+    selected = lock.get("selectedSource", {})
+    displayed = lock.get("coming-soon", {})
+    qualified = "refs/" + ("heads/" if source["kind"] == "branch" else "tags/") + source["ref"]
+    if (not isinstance(selected, dict) or not isinstance(displayed, dict)
+            or lock.get("repository") != source["repository"] or lock.get("defaultVersion") != cfg["defaultVersion"]
+            or any(selected.get(key) != value for key, value in source.items())
+            or selected.get("qualifiedRef") != qualified
+            or not all(isinstance(selected.get(key), str) and re.fullmatch(r"[a-f0-9]{40}", selected[key]) for key in ("object", "commit"))):
+        raise ValueError("Selected source does not match configured repository/kind/ref/commit")
+    expected = {key: selected[key] for key in ("commit", "ref", "kind", "qualifiedRef", "object")}
+    expected.update(label=source["ref"], sourceUrl=f"https://github.com/{source['repository']}/tree/{selected['commit']}")
+    expected["branch" if source["kind"] == "branch" else "tag"] = source["ref"]
+    if (any(displayed.get(key) != value for key, value in expected.items())
+            or ("tag" if source["kind"] == "branch" else "branch") in displayed
+            or displayed.get("repository", source["repository"]) != source["repository"]):
+        raise ValueError("Selected source displayed identity does not match frozen repository/kind/ref/commit")
     return lock
 
 
@@ -444,22 +529,37 @@ def tool_versions():
         versions.update(native_runtime_versions(required=True))
     return versions
 
-def input_fingerprint(lock, root=ROOT, tools=None):
-    root = Path(root)
-    patterns = ["automation/*.py", "automation/*.mjs", "automation/config.json", "automation/corrections.json", "automation/SOURCE-BOUNDARY.md", "automation/LOCAL-EXECUTION.md", "automation/local-execution-policy.json", "automation/skills/*", "automation/tests/*.py",
-                "automation/bootstrap*", "automation/render*", "automation/recipes/*", "automation/COORDINATOR.md", "AGENTS.md", "package*.json", "next.config.ts",
-                "app/docs/**/*", "components/docs/**/*", "automation/blueprints/**/*.json", "tests/**/*",
-                "playwright.config.*", "tsconfig.json", "automation/README.md", "components/Landing.tsx", "app/page.tsx"]
-    files = {}
-    for pattern in patterns:
-        for path in sorted(root.glob(pattern)):
-            if path.is_file():
-                files[str(path.relative_to(root))] = digest(path.read_bytes())
-    return digest({"sources": lock, "files": files, "tools": tool_versions() if tools is None else tools})
+def generation_inputs(root, include_blueprints=False):
+    patterns = ["docs-generation.json", "automation/*.py", "automation/*.mjs", "automation/config.json", "automation/corrections.json", "automation/SOURCE-BOUNDARY.md", "automation/LOCAL-EXECUTION.md", "automation/local-execution-policy.json", "automation/skills/*", "automation/tests/*.py",
+                "automation/bootstrap*", "automation/render*", "automation/recipes/*", "automation/COORDINATOR.md", "AGENTS.md", "package*.json", "*config.*",
+                "app/**/*", "components/**/*", "tests/**/*", "automation/README.md"]
+    if include_blueprints:
+        patterns.append("automation/blueprints/**/*.json")
+    return {str(path.relative_to(root)): digest(path.read_bytes())
+            for pattern in patterns for path in sorted(root.glob(pattern))
+            if path.is_file() and "__pycache__" not in path.parts}
+
+
+def input_fingerprint(lock, root=None, tools=None):
+    root = ROOT if root is None else Path(root)
+    return digest({"sources": lock, "files": generation_inputs(root, include_blueprints=True),
+                   "tools": tool_versions() if tools is None else tools})
+
+
+def process_fingerprint(root=None, tools=None):
+    root = ROOT if root is None else Path(root)
+    return digest({"files": generation_inputs(root), "tools": tool_versions() if tools is None else tools})
+
+
+def regeneration_fingerprint(lock, root=None, tools=None):
+    # Observed stable-release/registry metadata and tag objects remain in the full
+    # source fingerprint, but only the selected *commit* drives source updates.
+    return digest({"selectedCommit": lock["coming-soon"]["commit"],
+                   "process": process_fingerprint(root, tools)})
 
 def acceptance_digest(root=None):
     root = ROOT if root is None else Path(root)
-    patterns = ("automation/*.py", "automation/*.mjs", "automation/tests/*.py", "automation/skills/evaluation.md",
+    patterns = ("docs-generation.json", "automation/*.py", "automation/*.mjs", "automation/tests/*.py", "automation/skills/evaluation.md",
                 "automation/config.json", "automation/corrections.json", "automation/SOURCE-BOUNDARY.md", "automation/LOCAL-EXECUTION.md", "automation/local-execution-policy.json", "automation/COORDINATOR.md", "AGENTS.md", "tests/**/*",
                 "package*.json", "playwright.config.*", "tsconfig.json", "next.config.*")
     files = {str(path.relative_to(root)): digest(path.read_bytes())
@@ -492,6 +592,11 @@ EXPECTED = {
     "point-of-sale": "order-demo-001: request validated and parsed; no payment was sent."
 }
 
+def stdout_matches_expected(stdout, expected):
+    """Exact text, optionally followed by one LF; never normalize the report."""
+    return isinstance(stdout, str) and stdout in (expected, expected + "\n")
+
+
 def test_examples(lock, create_locks=False, write_artifacts=True):
     import tarfile, gzip, io
     if create_locks and not write_artifacts:
@@ -512,13 +617,42 @@ def test_examples(lock, create_locks=False, write_artifacts=True):
             directory = ROOT / f"public/docs-examples/{version}/{audience}"
             if create_locks:
                 bounded_process([cargo, "+1.91.1", "generate-lockfile"], cwd=directory, env=env, check=True, timeout=300)
-            result = bounded_process([cargo, "+1.91.1", "run", "--locked", "--quiet"], cwd=directory, env=env, timeout=1200)
+            error = None
+            try:
+                result = bounded_process([cargo, "+1.91.1", "run", "--locked", "--quiet"], cwd=directory, env=env, timeout=1200, raw=True)
+                stdout, stderr, code = result.stdout, result.stderr, result.returncode
+            except subprocess.TimeoutExpired as caught:
+                error = caught
+                stdout = b"" if caught.stdout is None else caught.stdout
+                stderr = b"" if caught.stderr is None else caught.stderr
+                code = None
+            output = CACHE / "example-output" / f"{version}-{audience}"
+            write_artifact(output.with_suffix(".stdout"), stdout)
+            write_artifact(output.with_suffix(".stderr"), stderr)
+            decoded = []
+            decode_error = False
+            for stream in (stdout, stderr):
+                try:
+                    decoded.append(stream.decode("utf-8") if isinstance(stream, bytes) else stream)
+                except UnicodeDecodeError as caught:
+                    decoded.append(None)
+                    decode_error = True
+                    if error is None:
+                        error = caught
+            stdout, stderr = decoded
+            passed = error is None and type(code) is int and code == 0 and stdout_matches_expected(stdout, EXPECTED[audience])
             record = {"version": version, "audience": audience, "commit": lock[version]["commit"],
-                      "exitCode": result.returncode, "stdout": result.stdout.strip(), "stderr": result.stderr[-12000:],
+                      "exitCode": code, "stdout": stdout, "stderr": stderr[-12000:] if stderr is not None else None,
+                      "status": "pass" if passed else "fail", "decodeError": decode_error,
+                      "timedOut": isinstance(error, subprocess.TimeoutExpired),
+                      "errorType": type(error).__name__ if error else None,
+                      "stdoutPath": str(output.with_suffix(".stdout")), "stderrPath": str(output.with_suffix(".stderr")),
                       "lockHash": digest((directory / "Cargo.lock").read_bytes())}
             results.append(record)
-            save_json(CACHE / "example-results.json", results)
-            if result.returncode != 0 or result.stdout.strip() != EXPECTED[audience]:
+            write_artifact(CACHE / "example-results.json", json.dumps(results, indent=2, ensure_ascii=False) + "\n")
+            if error is not None:
+                raise error
+            if not passed:
                 raise ValueError("Example failed: " + json.dumps(record))
             if not write_artifacts:
                 continue
@@ -620,13 +754,15 @@ def readiness_metadata(commit, version="released"):
     warning_line = next((i for i, line in enumerate(lines, 1) if re.search(r"not\s+for\s+production", line, re.I)), None)
     if warning_line:
         status = "experimental"
-        notice = "Experimental software—not for production. A stable release label does not establish production readiness."
+        notice = "Upstream README: " + lines[warning_line - 1]
         line_number = warning_line
     else:
-        status = "unassessed"
-        notice = "A stable release label does not establish production readiness. Review upstream status before deployment."
-        line_number = 1
-    return {"status": status, "notice": notice,
+        # Preserve the caution, but do not launder operator policy through a
+        # README heading as if upstream asserted a readiness classification.
+        return {"status": "unassessed", "attribution": "documentation-policy",
+                "notice": "A stable release label does not establish production readiness. Review upstream status before deployment.",
+                "sourceUrl": f"https://github.com/pubky/paykit-rs/blob/{commit}/README.md"}
+    return {"status": status, "notice": notice, "attribution": "upstream",
             "sourceUrl": f"https://github.com/pubky/paykit-rs/blob/{commit}/README.md#L{line_number}",
             "evidence": {"id": version + "-readiness", "version": version, "commit": commit, "path": "README.md",
                 "startLine": line_number, "endLine": line_number, "excerpt": lines[line_number-1],
@@ -645,11 +781,11 @@ def validate_corrections(documents):
     slugs = landing["featuredSlugs"]
     if len(slugs) != 3 or len(set(slugs)) != 3:
         raise ValueError("Landing documentation requires exactly three distinct featured pages")
-    if landing["mainHref"] != "/docs" or landing["version"] != "released":
-        raise ValueError("Landing documentation must use the default Released docs")
+    if landing["mainHref"] != "/docs" or landing["version"] != "default":
+        raise ValueError("Landing documentation must use the configured default docs")
     if landing["beforeSectionAriaLabelledby"] != "foundation-title":
         raise ValueError("Landing documentation must immediately precede Your data. Your choice.")
-    pages = {page["slug"]: page for page in documents["released"]["pages"]}
+    pages = {page["slug"]: page for page in documents[generation_config()["defaultVersion"]]["pages"]}
     for slug in slugs:
         if slug not in pages or not pages[slug].get("title") or not pages[slug].get("description"):
             raise ValueError("Missing generated metadata for featured documentation page: " + slug)
@@ -668,7 +804,8 @@ def generate_docs(lock):
     for version, blueprint in blueprints.items():
         document = complete_document(blueprint, lock, version)
         save_json(ROOT / f"content/docs/{version}.json", document)
-        save_json(ROOT / f"automation/evidence/{version}.json", blueprint["evidence"] + [document["version"]["readiness"]["evidence"]])
+        readiness_evidence = document["version"]["readiness"].get("evidence")
+        save_json(ROOT / f"automation/evidence/{version}.json", blueprint["evidence"] + ([readiness_evidence] if readiness_evidence else []))
         for diagram in blueprint.get("diagrams", []):
             diagrams.append({"version": version, **diagram})
     save_json(CACHE / "diagram-input.json", diagrams)
@@ -892,8 +1029,10 @@ def require_approvals(artifact_hash, cache=None, run_id=None):
                 raise ValueError("Walkthrough identities must be four distinct sessions separate from author and reviewer")
             sessions.add(reporter)
     for result in walkthroughs:
-        if ((instruction_mode and type(result.get("exitCode")) is not int)
-                or result.get("exitCode") != 0 or result.get("artifactHash") != artifact_hash or result.get("stdout") != EXPECTED[result["audience"]]):
+        if (("status" in result and result["status"] != "pass")
+                or (instruction_mode and type(result.get("exitCode")) is not int)
+                or result.get("exitCode") != 0 or result.get("artifactHash") != artifact_hash
+                or not stdout_matches_expected(result.get("stdout"), EXPECTED[result["audience"]])):
             raise ValueError("Fresh walkthrough failed or is stale")
         if not result.get("runId") or (run_id and result["runId"] != run_id) or not result.get("reporterRunId"):
             raise ValueError("Fresh walkthrough run identity is required")
@@ -920,6 +1059,11 @@ def frozen_sources(run_id):
         save_json(CACHE / "run.lock/owner.json", record)
         save_json(CACHE / "runs" / run_id / "run.json", record)
         raise ValueError("Acceptance tool versions changed; explicit new run required")
+    if record.get("processFingerprint") and record["processFingerprint"] != process_fingerprint(tools=record.get("tools")):
+        record["acceptanceInvalidated"] = True
+        save_json(CACHE / "run.lock/owner.json", record)
+        save_json(CACHE / "runs" / run_id / "run.json", record)
+        raise ValueError("Generation process inputs changed; explicit new run required")
     lock = read_json(CACHE / "runs" / run_id / "sources.json")
     if digest(lock) != record["sourceHash"]:
         raise ValueError("Frozen source inputs changed during run")
@@ -941,11 +1085,20 @@ def credential_health():
                 warnings.append(f"GitHub token expires {date.date().isoformat()} ({days} days); renewal needed")
     return {"expiresAt": expiry, "warnings": warnings}
 
-def plan_changes(lock):
+def plan_changes(lock, reasons=None):
+    if reasons and any(reason in reasons for reason in ("generation-process", "explicit-force", "initial-or-legacy-checkpoint")):
+        pages = [slug for slugs in read_json(CONFIG)["sections"].values() for slug in slugs]
+        return {version: {"affectedPages": pages, "changedSourceFiles": [], "fullAuthoringRequired": True,
+                          "reason": ", ".join(reasons), "provenanceRefresh": True}
+                for version in ("released", "coming-soon")}
     previous_path = ROOT / "automation/sources.lock.json"
     if not previous_path.exists():
         return {v: {"affectedPages": [s for values in read_json(CONFIG)["sections"].values() for s in values], "reason": "initial generation"} for v in ("released", "coming-soon")}
-    previous = read_json(previous_path)
+    confirmed_path = CACHE / "last-success.json"
+    confirmed = read_json(confirmed_path) if confirmed_path.exists() else {}
+    previous = (confirmed["sources"] if confirmed.get("verifiedDeployment") is True and
+                all(version in confirmed.get("sources", {}) for version in ("released", "coming-soon"))
+                else read_json(previous_path))
     result = {}
     for version in ("released", "coming-soon"):
         before, after = previous[version]["commit"], lock[version]["commit"]
@@ -1061,7 +1214,7 @@ def fork_api(endpoint):
     env.pop("GH_TOKEN", None)
     return json.loads(run(["gh", "api", f"repos/{repo}/{endpoint}"], env=env, timeout=60))
 
-PUBLISH_PATHS = (".gitignore", "AGENTS.md", "automation", "content/docs", "app/docs", "components/docs",
+PUBLISH_PATHS = (".gitignore", "AGENTS.md", "docs-generation.json", "automation", "content/docs", "app/docs", "components/docs",
                  "components/Landing.tsx", "package.json", "package-lock.json", "playwright.config.ts", "tests",
                  "public/docs-examples", "public/docs-assets", "public/docs-manifest.json")
 
@@ -1250,6 +1403,10 @@ def _verify_publication(run_id):
         raise ValueError("Remote publication branch moved during deployment")
     checkpoint = {"fingerprint": pending["fingerprint"], "sources": lock, "gitCommit": sha, "deploymentUrl": url,
                   "runId": run_id, "verifiedDeployment": True, "stableDevelopmentUrl": stable_url}
+    owner = guard_run(run_id)
+    for key in ("regenerationFingerprint", "processFingerprint"):
+        if key in owner:
+            checkpoint[key] = owner[key]
     finalize_success(run_id, checkpoint)
     print(json.dumps({"published": sha, "url": url}, indent=2))
     return checkpoint
@@ -1263,24 +1420,35 @@ def begin_run(args):
         with run_scope(record["id"]):
             bind_native_context(record)
             lock = read_json(CACHE / "candidate-sources.json") if args.reuse_candidate else resolve_sources()
+            validate_source_selection(lock)
             health = credential_health()
             tools = tool_versions()
             fingerprint = input_fingerprint(lock, tools=tools)
-            record.update(tools=tools, sourceHash=digest(lock), fingerprint=fingerprint, credentialHealth=health)
+            trigger = regeneration_fingerprint(lock, tools=tools)
+            process = process_fingerprint(tools=tools)
+            record.update(tools=tools, sourceHash=digest(lock), fingerprint=fingerprint, credentialHealth=health,
+                          regenerationFingerprint=trigger, processFingerprint=process)
             save_json(CACHE / "run.lock/owner.json", record)
             save_json(CACHE / "runs" / record["id"] / "sources.json", lock)
             save_json(CACHE / "candidate-sources.json", lock)
             previous = read_json(CACHE / "last-success.json") if (CACHE / "last-success.json").exists() else {}
-            if previous.get("fingerprint") == fingerprint:
+            force = getattr(args, "force", False)
+            if not force and previous.get("verifiedDeployment") is True and previous.get("regenerationFingerprint") == trigger:
                 manifest = get_json(previous["deploymentUrl"] + "/docs-manifest.json", same_origin=True)
-                if manifest["fingerprint"] != fingerprint:
+                if manifest["fingerprint"] != previous["fingerprint"]:
                     raise ValueError("Previously published deployment provenance changed")
                 verify_stable_alias(manifest)
                 release_lease(record["id"], "no-change", health)
                 print(json.dumps({"action": "no-change", "warnings": health["warnings"]}))
                 return
+            record["updateReasons"] = (["initial-or-legacy-checkpoint"] if previous.get("verifiedDeployment") is not True or not previous.get("regenerationFingerprint")
+                                       else (["selected-source-commit"] if previous.get("sources", {}).get("coming-soon", {}).get("commit") != lock["coming-soon"]["commit"] else [])
+                                       + (["generation-process"] if previous.get("processFingerprint") != process else []))
+            if force:
+                record["updateReasons"].append("explicit-force")
             save_json(CACHE / "runs" / record["id"] / "run.json", record)
-            print(json.dumps({"action": "update", "runId": record["id"], "deadline": record["deadline"], "warnings": health["warnings"], "changes": plan_changes(lock)}, indent=2))
+            save_json(CACHE / "run.lock/owner.json", record)
+            print(json.dumps({"action": "update", "runId": record["id"], "deadline": record["deadline"], "warnings": health["warnings"], "reasons": record["updateReasons"], "changes": plan_changes(lock, record["updateReasons"])}, indent=2))
     except Exception as error:
         release_lease(record["id"], "failed", {"error": str(error)})
         raise
@@ -1291,9 +1459,12 @@ def main():
     parser.add_argument("command", choices=["resolve", "begin", "plan", "generate", "examples", "validate", "repair", "publish", "verify", "fail", "artifact-hash", "review-targets", "status"])
     parser.add_argument("--run")
     parser.add_argument("--reuse-candidate", action="store_true")
+    parser.add_argument("--force", action="store_true", help="Force begin to regenerate; all source, review and publication gates still apply")
     parser.add_argument("--create-locks", action="store_true")
     parser.add_argument("--reason", default="generation check failed")
     args = parser.parse_args()
+    if args.force and args.command != "begin":
+        parser.error("--force is only valid for begin")
     if args.command == "artifact-hash":
         print(artifact_digest())
         return
@@ -1326,7 +1497,7 @@ def dispatch_stage(args):
             raise ValueError("Artifacts changed while assembling public review targets")
         print(json.dumps({"runId": args.run, "artifactHash": artifact_hash, **inventory}, indent=2))
     elif args.command == "plan":
-        print(json.dumps(plan_changes(lock), indent=2))
+        print(json.dumps(plan_changes(lock, guard_run(args.run).get("updateReasons")), indent=2))
     elif args.command == "generate":
         def generate():
             generate_docs(lock)

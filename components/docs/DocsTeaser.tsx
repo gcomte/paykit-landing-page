@@ -1,6 +1,6 @@
 import "server-only";
 import corrections from "../../automation/corrections.json";
-import { documentationPath, getDocumentation } from "./content";
+import { defaultDocumentationVersion, documentationPath, getDocumentation } from "./content";
 import styles from "./DocsTeaser.module.css";
 
 function Arrow() {
@@ -14,14 +14,14 @@ function Arrow() {
 // Resolve the selection when the server module loads, including during build.
 // An invalid policy must stop the build, not render an undefined card later.
 const policy = corrections.landingDocs;
-if (policy.version !== "released" || policy.featuredSlugs.length !== 3 || new Set(policy.featuredSlugs).size !== 3) {
-  throw new Error("Homepage Docs requires three distinct released documentation pages.");
+if (policy.version !== "default" || policy.featuredSlugs.length !== 3 || new Set(policy.featuredSlugs).size !== 3) {
+  throw new Error("Homepage Docs requires three distinct selected documentation pages.");
 }
-const version = policy.version;
+const version = defaultDocumentationVersion;
 const documentation = await getDocumentation(version);
 const featuredPages = policy.featuredSlugs.map((slug) => {
   const page = documentation.pages.find((candidate) => candidate.slug === slug);
-  if (!page) throw new Error(`Homepage Docs: released documentation page not found: ${slug}`);
+  if (!page) throw new Error(`Homepage Docs: selected documentation page not found: ${slug}`);
   return page;
 });
 

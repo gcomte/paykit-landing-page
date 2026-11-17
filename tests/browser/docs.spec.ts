@@ -26,7 +26,7 @@ type Documentation = {
 };
 const versions: Version[] = ["released", "coming-soon"];
 const slugs = ["overview", "components", "flows", "boundaries", "wallets", "point-of-sale"];
-const warning = "Unreleased development version—may change.";
+const warning = "Selected source snapshot—check its ref and commit before integrating.";
 const documentPath = (version: Version, slug: string) => `/docs/${version}/${slug}`;
 const readDocumentation = async (version: Version): Promise<Documentation> =>
   JSON.parse(await readFile(path.join(process.cwd(), "content", "docs", `${version}.json`), "utf8"));
@@ -49,19 +49,19 @@ async function expectNoOverflow(page: Page) {
   }
 }
 
-test("docs entry serves the released overview", async ({ request }) => {
+test("docs entry serves the selected-source overview", async ({ request }) => {
   const response = await request.get("/docs");
   expect(response.status(), "the documentation entry point must exist").toBe(200);
-  expect(await response.text()).toContain('data-doc-version="released"');
+  expect(await response.text()).toContain('data-doc-version="coming-soon"');
 });
 
-test("docs entry renders the released overview rather than a version chooser", async ({ page }) => {
-  const documentation = await readDocumentation("released");
+test("docs entry renders the selected-source overview rather than a version chooser", async ({ page }) => {
+  const documentation = await readDocumentation("coming-soon");
   const overview = documentation.pages.find((entry) => entry.slug === "overview")!;
   await page.goto("/docs");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(overview.title);
   await expect(page.getByTestId("docs-version-marker")).toContainText(documentation.version.commit);
-  await expect(page.getByText(warning, { exact: true })).toHaveCount(0);
+  await expect(page.getByText(warning, { exact: true })).toHaveCount(1);
 });
 
 for (const version of versions) {
@@ -88,7 +88,7 @@ for (const version of versions) {
       }
       await expect(navigation.getByRole("link", { name: entry.title, exact: true })).toHaveAttribute("aria-current", "page");
       const marker = page.getByTestId("docs-version-marker");
-      await expect(marker).toContainText(version === "released" ? "Released" : "Coming soon");
+      await expect(marker).toContainText(version === "released" ? "Released" : "Selected source");
       expect(documentation.version.commit).toMatch(/^[a-f0-9]{40}$/);
       if (version === "released") expect(documentation.version.tag, "released docs identify the exact release tag").toBeTruthy();
       await expect(marker.locator("code")).toHaveText(documentation.version.commit);
@@ -97,7 +97,7 @@ for (const version of versions) {
       expect(new URL(documentation.version.sourceUrl).protocol).toBe("https:");
       expect(documentation.version.sourceUrl).toContain(documentation.version.commit);
       if (version === "coming-soon") {
-        await expect(page.getByRole("note", { name: "Development version" })).toHaveText(warning);
+        await expect(page.getByRole("note", { name: "Selected source version" })).toHaveText(warning);
       } else {
         await expect(page.getByText(warning, { exact: true })).toHaveCount(0);
       }
@@ -106,7 +106,7 @@ for (const version of versions) {
       await expect(readinessNotice).toContainText(readiness.notice);
       await expect(readinessNotice.getByRole("link")).toHaveAttribute("href", readiness.sourceUrl);
       expect(readiness.sourceUrl).toContain(documentation.version.commit);
-      if (readiness.status === "experimental") expect(readiness.notice).toContain("not for production");
+      if (readiness.status === "experimental") expect(readiness.notice.toLowerCase()).toContain("not for production");
       else {
         expect(readiness.status).toBe("unassessed");
         expect(readiness.notice).toContain("does not establish production readiness");
@@ -157,7 +157,7 @@ for (const version of versions) {
         }
         const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
         await expect(switcher.getByRole("link", { name: "Released", exact: true })).toBeVisible();
-        await expect(switcher.getByRole("link", { name: "Coming soon", exact: true })).toBeVisible();
+        await expect(switcher.getByRole("link", { name: "Selected source", exact: true })).toBeVisible();
         const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
         expect(accessibility.violations, `${route} at ${width}px: ${JSON.stringify(accessibility.violations)}`).toEqual([]);
       }
@@ -169,7 +169,7 @@ for (const version of versions) {
 for (const slug of slugs) {
   test(`version switch preserves ${slug} in both directions`, async ({ page }) => {
     await page.goto(documentPath("released", slug));
-    for (const [version, label] of [["coming-soon", "Coming soon"], ["released", "Released"]] as const) {
+    for (const [version, label] of [["coming-soon", "Selected source"], ["released", "Released"]] as const) {
       const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
       await switcher.getByRole("link", { name: label, exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`${documentPath(version, slug)}$`));
@@ -234,14 +234,14 @@ test("docs skip link, page navigation, version switching and code scrolling work
   await page.keyboard.press("Enter");
   await expect(page.getByRole("main")).toBeFocused();
   const navigation = page.getByRole("navigation", { name: "Documentation pages", exact: true });
-  const wallets = navigation.locator('a[href="/docs/released/wallets"]');
+  const wallets = navigation.locator('a[href="/docs/coming-soon/wallets"]');
   await wallets.focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/docs\/released\/wallets$/);
-  const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
-  await switcher.getByRole("link", { name: "Coming soon", exact: true }).focus();
-  await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/docs\/coming-soon\/wallets$/);
+  const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
+  await switcher.getByRole("link", { name: "Released", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/docs\/released\/wallets$/);
   const code = page.locator("pre").first();
   await expect(code).toBeVisible();
   await code.focus();

@@ -32,12 +32,16 @@ class EvidenceTests(unittest.TestCase):
         upstream = pipeline.source_text(lock["released"]["commit"], "README.md").lower()
         if "not for production" in upstream:
             self.assertEqual(notice["status"], "experimental")
-            self.assertIn("not for production", notice["notice"])
+            self.assertIn("not for production", notice["notice"].lower())
         else:
             self.assertEqual(notice["status"], "unassessed")
             self.assertIn("does not establish production readiness", notice["notice"])
         self.assertIn(lock["released"]["commit"], notice["sourceUrl"])
-        pipeline.validate_evidence([notice["evidence"]], lock, "released")
+        if "evidence" in notice:
+            pipeline.validate_evidence([notice["evidence"]], lock, "released")
+        else:
+            self.assertEqual(notice["attribution"], "documentation-policy")
+            self.assertEqual(notice["status"], "unassessed")
 
     def test_evidence_contract_anchors_resolve_per_snapshot_and_reject_wrong_ranges(self):
         self.assertTrue(hasattr(pipeline, "anchor_evidence"), "semantic evidence anchoring is missing")

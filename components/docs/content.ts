@@ -2,9 +2,20 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
+import generationConfig from "../../docs-generation.json";
 
 export const documentationVersions = ["released", "coming-soon"] as const;
 export type DocumentationVersion = (typeof documentationVersions)[number];
+// Never silently substitute older docs for an invalid source selector.
+if (generationConfig.schemaVersion !== 1 || generationConfig.source.repository !== "pubky/paykit-rs" ||
+    !["branch", "tag"].includes(generationConfig.source.kind) ||
+    !/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(generationConfig.source.ref) ||
+    generationConfig.source.ref.startsWith("refs/") || generationConfig.source.ref.includes("..") ||
+    generationConfig.source.ref.endsWith(".") || generationConfig.source.ref.split("/").some((part) => !part || part.startsWith(".") || part.endsWith(".lock")) ||
+    generationConfig.defaultVersion !== "coming-soon") {
+  throw new Error("Invalid docs-generation source selector.");
+}
+export const defaultDocumentationVersion: DocumentationVersion = generationConfig.defaultVersion;
 export const documentationSlugs = [
   "overview", "components", "flows", "boundaries", "wallets", "point-of-sale",
 ] as const;
@@ -34,9 +45,11 @@ export type Documentation = {
     label: string;
     commit: string;
     tag?: string;
+    ref?: string;
+    kind?: "branch" | "tag";
     sourceUrl: string;
     packages: Record<string, unknown>;
-    readiness: { notice: string; sourceUrl: string };
+    readiness: { notice: string; sourceUrl: string; attribution?: "upstream" | "documentation-policy" };
   };
   pages: DocumentationPage[];
 };

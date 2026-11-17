@@ -6,9 +6,9 @@
     "beforeSectionAriaLabelledby": "foundation-title",
     "beforeSectionHeading": "Your data. Your choice.",
     "mainHref": "/docs",
-    "version": "released",
+    "version": "default",
     "featuredSlugs": ["flows", "wallets", "point-of-sale"],
-    "copySource": "generated released page titles and descriptions",
+    "copySource": "generated selected page titles and descriptions",
     "responsiveWidths": [375, 768, 1440]
   },
   "privateContext": {
@@ -25,6 +25,26 @@
     "securityLimit": "The user's instruction-based correction supersedes mandatory enforced-isolation, protected-runner, native receipt, canary/privacy certification, restricted-tool/SDK grant, disabled-memory and credential-relay prerequisites and accepts reduced confidentiality assurance. Fresh tasks are hygiene, not access isolation; tools and runtime remain unchanged. Independent public-evidence review cannot prove absence of private influence or that no private knowledge was used. Historical rejected evidence, stopped components and exhausted run budgets remain preserved."
   },
   "requirements": [
+    {
+      "id": "configurable-documentation-source",
+      "requirement": "Root docs-generation.json is the single authoritative public source selector: exact repository pubky/paykit-rs, literal ref and explicit branch/tag kind. Initially follow v0.1.1-rc9 as an annotated tag, never pretend a branch exists or fall back to master/default_branch. Freeze the exact object, peeled commit, kind and literal ref with atomic movement checks. Keep the existing two version slots: released is strictly verified published stable; coming-soon follows the selected ref, is the default /docs and metadata source and supplies homepage main/three featured links. Retain separately labeled stable docs and unchanged page/card count, placement and responsive design. Config changes are generation/acceptance/publication inputs; invalid/missing/unavailable source fails closed.",
+      "enforcedBy": ["docs-generation.json", "automation/pipeline.py", "components/docs/content.ts", "app/docs/page.tsx", "components/docs/DocsTeaser.tsx", "automation/tests/test_generation_selection.py", "tests/docs-runner.test.mjs", "tests/browser/docs.spec.ts", "tests/browser/landing-docs.spec.ts"]
+    },
+    {
+      "id": "precise-regeneration-triggers",
+      "requirement": "Regenerate only when the selected source commit or generation-process input bytes/tools differ from the deployment-confirmed last-success, or an explicit begin --force requests a fresh full attempt. First/missing legacy trigger keys regenerate safely. Tag-object-only movement with the same commit, unrelated default branch/stable-release/registry observations, timestamps and ignored runtime state do not independently trigger generation. Preserve full immutable source/artifact fingerprints separately from the decision fingerprint. Failed/attempted inputs never become last-success; advance only after existing exact-SHA deployment and stable-alias checks. Process-only/forced runs require authoring and independent review of all pages even without source deltas. Force is attempt-local and bypasses no validation/review/lease/repair/publication gate; daily runs do not use --reuse-candidate. Preserve 3500 seconds, worker2, repair2; scheduling stays OFF during user review. No generated hand-fixes or old approval reuse.",
+      "enforcedBy": ["automation/pipeline.py", "automation/README.md", "automation/COORDINATOR.md", "automation/skills/coordinator.md", "automation/tests/test_generation_selection.py"]
+    },
+    {
+      "id": "truthful-readiness-metadata",
+      "requirement": "Do not infer global readiness from 0.x/stable/prerelease labels or absence of a warning. Preserve explicit upstream wording at its exact version/component scope and snapshot. Provenance questions alone do not approve warning removal. A README heading is not evidence for a renderer-injected readiness judgment: repair the producer/mapping, retain clearly attributed operator caution and omit fabricated upstream evidence. Independent review includes deterministic metadata, labels, warnings, source links and all rendered assertions, not only authored blueprints.",
+      "enforcedBy": ["automation/pipeline.py", "automation/skills/sources.md", "automation/skills/writing.md", "automation/skills/evaluation.md", "automation/tests/test_generation_selection.py"]
+    },
+    {
+      "id": "development-preview-hosting",
+      "requirement": "User authorizes early/incremental development previews and another accessible Vercel development project if necessary, superseding older project/location prohibitions. No new integration is implemented by this proposal. Verify an actual safe public preview URL and exact SHA; previews never advance successful-input checkpoints, waive acceptance or enable scheduling. Keep the official paykit.to domain untouched; do not broaden GitHub permissions or change runtime/authentication/security.",
+      "enforcedBy": ["automation/COORDINATOR.md", "automation/README.md", "automation/skills/coordinator.md", "automation/tests/test_generation_selection.py"]
+    },
     {
       "id": "server-local-unprivileged-documentation-jobs",
       "requirement": "Run orchestration, author/reviewer tasks, tests and eventual scheduling on the existing user-controlled always-on server, not GitHub-hosted Actions; GitHub is source control and Vercel is hosting. Preserve existing provider/authentication, broad tools, profile and Docker backend/image/mount/security. Supersedes the earlier protected-runner/separate-administrator setup requirement: use the existing Hermes runtime and ordinary bounded delegation/CLI without new service setup, sudo or root model/build/review jobs. Preserve independent evidence review, task-owned cleanup, publication gates and original shared repair/deadline accounting; historical rejected work remains stopped.",
@@ -49,7 +69,7 @@
     },
     {
       "id": "generated-teaser-copy",
-      "requirement": "Featured card titles, descriptions and default released links come from the generated documentation and this selection policy; no parallel hand-maintained documentation copy.",
+      "requirement": "Featured card titles, descriptions and default selected-source links come from generated documentation, with the single selector in root docs-generation.json; no parallel hand-maintained copy or Released-only default. Preserve placement, design, responsive checks and exactly three featured pages plus the main Docs link.",
       "enforcedBy": ["components/docs/DocsTeaser.tsx", "automation/pipeline.py"]
     },
     {
@@ -66,6 +86,18 @@
       "id": "temporary-preview-is-not-acceptance",
       "requirement": "The one-time user-requested early preview is not a successful automated trial, must not advance successful inputs, and does not enable scheduling or relax subsequent validation.",
       "enforcedBy": ["automation/pipeline.py", "automation/COORDINATOR.md"]
+    },
+    {
+      "id": "lossless-stdout-optional-single-lf",
+      "requirement": "User-authorized prospective correction: preserve raw stdout including its terminator in returned/saved reports and per-command raw files. Distinguish raw-byte equality from protocol match; accept only string stdout equal to exact expected text or that exact text plus one U+000A LF. Keep legacy no-LF reports; reject every other whitespace/content/type difference without strip/rstrip/splitlines normalization. If optional walkthrough status is supplied it must be exactly pass; absence remains legacy-compatible. Preserve existing exact integer-zero instruction-mode exit codes, independent identities, artifact/run, guide/archive and public-evidence audit gates. All old failed/late/incomplete reports retain their original outcomes; changed acceptance-source bytes require fresh reports under new actual run/artifact/role IDs, not relabeled old receipts.",
+      "enforcedBy": ["automation/pipeline.py", "automation/COORDINATOR.md", "automation/skills/evaluation.md", "automation/README.md", "automation/tests/test_stdout_contract.py"],
+      "enforcementScope": "Prospective protocol and policy regressions only; not independent review, a generation lease, publication or scheduling approval."
+    },
+    {
+      "id": "measured-review-shared-deadline",
+      "requirement": "User-authorized prospective guidance: estimate future phases from measured end-to-end startup, reads, final hash checks and report-finalization costs plus uncertainty and cleanup/full-validation reserve. Phase targets are planning only; propagate the actual shared absolute run deadline instead of ad hoc 120/300-second phase approval cutoffs rejecting completed reviews within the genuine lease. Keep whole-run 3500 seconds, two concurrent workers, two shared repairs and bounded owned cleanup unchanged. Never extend/reopen old/current hard deadlines, relabel old failed/late outcomes, borrow reviews, reset repairs or waive publication/stable-alias/exact-source/other gates. Insufficient real remaining time fails honestly; this correction grants no new lease.",
+      "enforcedBy": ["automation/COORDINATOR.md", "automation/skills/evaluation.md", "automation/README.md", "automation/tests/test_stdout_contract.py"],
+      "enforcementScope": "Future planning and executable policy regression only; existing deadlines, repair ledgers and failed/withheld verdicts remain unchanged."
     }
   ]
 }

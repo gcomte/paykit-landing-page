@@ -107,8 +107,8 @@ class LocalExecutionPolicyTests(unittest.TestCase):
         self.assertEqual(register["landingDocs"], {
             "sectionId": "docs-teaser", "beforeSectionAriaLabelledby": "foundation-title",
             "beforeSectionHeading": "Your data. Your choice.", "mainHref": "/docs",
-            "version": "released", "featuredSlugs": ["flows", "wallets", "point-of-sale"],
-            "copySource": "generated released page titles and descriptions", "responsiveWidths": [375, 768, 1440],
+            "version": "default", "featuredSlugs": ["flows", "wallets", "point-of-sale"],
+            "copySource": "generated selected page titles and descriptions", "responsiveWidths": [375, 768, 1440],
         })
 
     def test_correction_register_preserves_execution_and_administration_choice(self):

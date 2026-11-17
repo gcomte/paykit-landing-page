@@ -26,6 +26,7 @@ class UserCorrectionsTests(unittest.TestCase):
     def test_generation_rejects_missing_featured_pages_and_wrong_card_count(self):
         self.assertTrue(hasattr(p, "validate_corrections"), "persistent correction enforcement is missing")
         original = p.read_json(p.ROOT / "automation/corrections.json")
+        selector = p.generation_config()
         pages = [{"slug": slug, "title": slug, "description": "Test fixture description"}
                  for slug in original["landingDocs"]["featuredSlugs"]]
         with tempfile.TemporaryDirectory() as directory:
@@ -33,14 +34,15 @@ class UserCorrectionsTests(unittest.TestCase):
             file = root / "automation/corrections.json"
             file.parent.mkdir(parents=True)
             file.write_text(json.dumps(original))
+            p.save_json(root / "docs-generation.json", selector)
             with patch.object(p, "ROOT", root):
-                p.validate_corrections({"released": {"pages": pages}})
+                p.validate_corrections({"coming-soon": {"pages": pages}})
                 with self.assertRaisesRegex(ValueError, "featured|missing"):
-                    p.validate_corrections({"released": {"pages": pages[:-1]}})
+                    p.validate_corrections({"coming-soon": {"pages": pages[:-1]}})
                 original["landingDocs"]["featuredSlugs"] = ["wallets"]
                 file.write_text(json.dumps(original))
                 with self.assertRaisesRegex(ValueError, "three"):
-                    p.validate_corrections({"released": {"pages": pages}})
+                    p.validate_corrections({"coming-soon": {"pages": pages}})
 
     @contextlib.contextmanager
     def native_publication_fixture(self, alias=None):
@@ -144,7 +146,15 @@ class UserCorrectionsTests(unittest.TestCase):
             cfg = p.read_json(p.CONFIG)
             cfg["limits"] = {"runtimeSeconds": 10}
             p.save_json(p.CONFIG, cfg)
-            p.save_json(p.CACHE / "candidate-sources.json", {"fixture": "public sources"})
+            selector = {"schemaVersion": 1, "source": {"repository": "pubky/paykit-rs", "kind": "tag", "ref": "synthetic-tag"}, "defaultVersion": "coming-soon"}
+            p.save_json(p.ROOT / "docs-generation.json", selector)
+            lock = {"repository": "pubky/paykit-rs", "defaultVersion": "coming-soon", "coming-soon": {"commit": "a" * 40},
+                    "selectedSource": {**selector["source"], "qualifiedRef": "refs/tags/synthetic-tag", "object": "b" * 40, "commit": "a" * 40}}
+            p.save_json(p.CACHE / "candidate-sources.json", lock)
+            confirmed = p.read_json(checkpoint)
+            confirmed.update(verifiedDeployment=True, regenerationFingerprint=p.regeneration_fingerprint(lock, tools={}))
+            p.save_json(checkpoint, confirmed)
+            before = checkpoint.read_bytes()
             fetch.return_value = {"fingerprint": "fixture-last-good"}
             with patch.object(p, "bind_native_context"), patch.object(p, "tool_versions", return_value={}), \
                  patch.object(p, "credential_health", return_value={"warnings": []}), \

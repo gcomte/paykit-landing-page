@@ -99,7 +99,7 @@ export default function DocsPage({
   documentation, page, version,
 }: { documentation: Documentation; page: DocumentationPage; version: DocumentationVersion }) {
   const comingSoon = version === "coming-soon";
-  const versionName = comingSoon ? "Coming soon" : "Released";
+  const versionName = comingSoon ? "Selected source" : "Released";
   const pageIndex = documentation.pages.findIndex((entry) => entry.slug === page.slug);
   const previous = documentation.pages[pageIndex - 1];
   const next = documentation.pages[pageIndex + 1];
@@ -125,13 +125,13 @@ export default function DocsPage({
             <span className={styles.versionLabel}>Documentation version</span>
             <nav aria-label="Documentation version" className={styles.versionSwitcher}>
               <a href={documentationPath("released", page.slug)} aria-current={!comingSoon ? "page" : undefined}>Released</a>
-              <a href={documentationPath("coming-soon", page.slug)} aria-current={comingSoon ? "page" : undefined}>Coming soon</a>
+              <a href={documentationPath("coming-soon", page.slug)} aria-current={comingSoon ? "page" : undefined}>Selected source</a>
             </nav>
           </div>
-          {comingSoon && <p role="note" aria-label="Development version" className={styles.warning}>Unreleased development version—may change.</p>}
+          {comingSoon && <p role="note" aria-label="Selected source version" className={styles.warning}>Selected source snapshot—check its ref and commit before integrating.</p>}
           <aside role="note" aria-label="Software readiness" className={styles.warning} data-testid="readiness-notice">
             <p>{documentation.version.readiness.notice}</p>
-            <ExternalLink href={documentation.version.readiness.sourceUrl}>Upstream readiness status</ExternalLink>
+            <ExternalLink href={documentation.version.readiness.sourceUrl}>{documentation.version.readiness.attribution === "documentation-policy" ? "Read upstream README" : "Upstream readiness statement"}</ExternalLink>
           </aside>
           <article aria-labelledby="docs-title">
             <div className={styles.articleHeader}>
@@ -144,7 +144,9 @@ export default function DocsPage({
               <div className={styles.provenanceHeading}>
                 <strong>{versionName}</strong>
                 {documentation.version.label !== versionName && documentation.version.label !== documentation.version.tag && <span>{documentation.version.label}</span>}
-                {documentation.version.tag && <span className={styles.tag}>Tag: {documentation.version.tag}</span>}
+                {documentation.version.ref
+                  ? <span className={styles.tag}>{documentation.version.kind === "tag" ? "Tag" : "Branch"}: {documentation.version.ref}</span>
+                  : documentation.version.tag && <span className={styles.tag}>Tag: {documentation.version.tag}</span>}
               </div>
               <p className={styles.commit}><span>Source commit</span> <code>{documentation.version.commit}</code></p>
               <ExternalLink href={documentation.version.sourceUrl}>View exact source</ExternalLink>

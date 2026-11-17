@@ -9,17 +9,17 @@ const widths = [375, 768, 1440];
 type GeneratedPage = { slug: string; title: string; description: string };
 
 for (const width of widths) {
-  test(`homepage Docs is a released, accessible reading entry at ${width}px`, async ({ page, request }) => {
+  test(`homepage Docs is a selected-source, accessible reading entry at ${width}px`, async ({ page, request }) => {
     const corrections = JSON.parse(await readFile(path.join(process.cwd(), "automation/corrections.json"), "utf8"));
     const policy = corrections.landingDocs;
     // These fixed user invariants must not silently move with implementation or policy drift.
     expect(policy.sectionId).toBe("docs-teaser");
     expect(policy.beforeSectionAriaLabelledby).toBe("foundation-title");
     expect(policy.mainHref).toBe("/docs");
-    expect(policy.version).toBe("released");
+    expect(policy.version).toBe("default");
     expect(policy.featuredSlugs).toEqual(featuredSlugs);
     expect(policy.responsiveWidths).toEqual(widths);
-    const documentation = JSON.parse(await readFile(path.join(process.cwd(), "content/docs/released.json"), "utf8")) as { pages: GeneratedPage[] };
+    const documentation = JSON.parse(await readFile(path.join(process.cwd(), "content/docs/coming-soon.json"), "utf8")) as { pages: GeneratedPage[] };
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -34,15 +34,15 @@ for (const width of widths) {
     const mainLink = section.locator('a[href="/docs"]');
     await expect(mainLink).toBeVisible();
     await expect(mainLink).toHaveAccessibleName(/docs/i);
-    const cards = section.locator('a[href^="/docs/released/"]');
+    const cards = section.locator('a[href^="/docs/coming-soon/"]');
     await expect(cards).toHaveCount(3);
     await expect(section.getByRole("link")).toHaveCount(4);
-    await expect(section.locator('a[href*="coming-soon"]')).toHaveCount(0);
+    await expect(section.locator('a[href*="released"]')).toHaveCount(0);
     for (const [index, slug] of featuredSlugs.entries()) {
       const entry = documentation.pages.find((candidate) => candidate.slug === slug);
-      expect(entry, `generated released metadata must include ${slug}`).toBeTruthy();
+      expect(entry, `generated selected metadata must include ${slug}`).toBeTruthy();
       const card = cards.nth(index);
-      await expect(card).toHaveAttribute("href", `/docs/released/${slug}`);
+      await expect(card).toHaveAttribute("href", `/docs/coming-soon/${slug}`);
       await expect(card.getByRole("heading", { level: 3 })).toHaveText(entry!.title);
       await expect(card.locator("p")).toHaveText(entry!.description);
     }
@@ -86,12 +86,12 @@ for (const width of widths) {
       expect((await request.get(href)).status(), href).toBe(200);
       await page.keyboard.press("Tab");
     }
-    for (const href of ["/docs", ...featuredSlugs.map((slug) => `/docs/released/${slug}`)]) {
+    for (const href of ["/docs", ...featuredSlugs.map((slug) => `/docs/coming-soon/${slug}`)]) {
       const link = section.locator(`a[href="${href}"]`);
       await link.focus();
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(new RegExp(`${href}$`));
-      await expect(page.getByRole("main")).toHaveAttribute("data-doc-version", "released");
+      await expect(page.getByRole("main")).toHaveAttribute("data-doc-version", "coming-soon");
       await page.goto("/");
     }
     expect(errors).toEqual([]);

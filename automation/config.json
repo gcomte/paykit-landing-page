@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
   "canonicalRepository": "pubky/paykit-rs",
-  "developmentBranch": "master",
   "releasePolicy": "highest-published-stable-semver-metadata-and-tag",
   "sections": {
     "Understand Paykit": [
