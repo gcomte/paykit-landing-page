@@ -34,8 +34,20 @@
   "limits": {
     "concurrentWorkers": 2,
     "repairRounds": 2,
-    "runtimeSeconds": 3500,
+    "runtimeSeconds": 21600,
     "cargoJobs": 2
+  },
+  "budget": {
+    "schemaVersion": 1,
+    "implementationCheckpointSeconds": 14400,
+    "phasePlanningSeconds": {
+      "generation_build": 3600,
+      "independent_review": 10800,
+      "correction_retest": 5400,
+      "exports_qa_deploy": 1800
+    },
+    "requireEveryRunReport": true,
+    "reportNoChange": true
   },
   "publishing": {
     "remote": "origin",

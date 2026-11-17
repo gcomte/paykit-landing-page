@@ -150,7 +150,7 @@ class SelectionPolicyTests(unittest.TestCase):
             self.assertIn("docs-generation.json", text)
             self.assertIn("selected", text.lower())
             if "coordinator" in name.lower() or "evaluation" in name.lower() or "README" in name:
-                self.assertIn("3500", text)
+                self.assertIn("21600", text)
         review = (p.ROOT / "automation/skills/evaluation.md").read_text()
         self.assertIn("deterministic metadata", review)
         self.assertIn("README heading", review)

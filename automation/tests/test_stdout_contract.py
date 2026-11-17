@@ -201,7 +201,12 @@ class ProspectivePolicyTests(unittest.TestCase):
         # Released-only selection. Normalize that authorized migration to retain
         # the original byte-contract assertion for every unrelated correction.
         selection_additions = {"configurable-documentation-source", "precise-regeneration-triggers", "truthful-readiness-metadata", "development-preview-hosting"}
-        existing["requirements"] = [r for r in existing["requirements"] if r["id"] not in additions | selection_additions]
+        # User-approved review/output/budget additions are checked independently;
+        # retain the original canonical assertion for every unrelated correction.
+        review_budget_additions = {"expanded-independent-review-coverage", "generated-glossary-and-resources",
+                                  "every-page-markdown-and-reviewed-llm-exports", "sandboxed-doc-execution-playgrounds",
+                                  "six-hour-budgets-and-every-run-accounting"}
+        existing["requirements"] = [r for r in existing["requirements"] if r["id"] not in additions | selection_additions | review_budget_additions]
         existing["landingDocs"]["version"] = "released"
         existing["landingDocs"]["copySource"] = "generated released page titles and descriptions"
         next(r for r in existing["requirements"] if r["id"] == "generated-teaser-copy")["requirement"] = "Featured card titles, descriptions and default released links come from the generated documentation and this selection policy; no parallel hand-maintained documentation copy."
@@ -219,7 +224,7 @@ class ProspectivePolicyTests(unittest.TestCase):
     def test_original_limits_protected_instructions_and_guard_order_remain(self):
         limits = json.loads((ROOT / "automation/config.json").read_text())["limits"]
         self.assertEqual({key: limits[key] for key in ("runtimeSeconds", "concurrentWorkers", "repairRounds")},
-                         {"runtimeSeconds": 3500, "concurrentWorkers": 2, "repairRounds": 2})
+                         {"runtimeSeconds": 21600, "concurrentWorkers": 2, "repairRounds": 2})
         self.assertEqual(hashlib.sha256((ROOT / "AGENTS.md").read_bytes()).hexdigest(),
                          "4ecd73b84ae564248bfc6227326817fa8b37cff802407faadbffab64619a8441")
         tree = ast.parse((ROOT / "automation/pipeline.py").read_text())

@@ -455,6 +455,8 @@ class SafetyTests(unittest.TestCase):
             p.save_json(root / "docs-generation.json", selector)
             lock.update(repository="pubky/paykit-rs", defaultVersion="coming-soon", **{"coming-soon": {"commit": "a" * 40},
                         "selectedSource": {**selector["source"], "qualifiedRef": "refs/tags/synthetic-tag", "object": "b" * 40, "commit": "a" * 40}})
+            lock["coming-soon"].update({k: v for k, v in lock["selectedSource"].items() if k != "repository"})
+            lock["coming-soon"].update(tag="synthetic-tag", label="synthetic-tag", sourceUrl="https://github.com/pubky/paykit-rs/tree/" + "a" * 40)
             p.save_json(cache / "candidate-sources.json", lock)
             with patch.object(p, "ROOT", root), patch.object(p, "CACHE", cache), patch.object(p, "CONFIG", cfg), \
                  patch.object(p, "tool_versions", return_value={"fixture": "1"}), \

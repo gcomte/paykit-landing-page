@@ -150,6 +150,8 @@ class UserCorrectionsTests(unittest.TestCase):
             p.save_json(p.ROOT / "docs-generation.json", selector)
             lock = {"repository": "pubky/paykit-rs", "defaultVersion": "coming-soon", "coming-soon": {"commit": "a" * 40},
                     "selectedSource": {**selector["source"], "qualifiedRef": "refs/tags/synthetic-tag", "object": "b" * 40, "commit": "a" * 40}}
+            lock["coming-soon"].update({k: v for k, v in lock["selectedSource"].items() if k != "repository"})
+            lock["coming-soon"].update(tag="synthetic-tag", label="synthetic-tag", sourceUrl="https://github.com/pubky/paykit-rs/tree/" + "a" * 40)
             p.save_json(p.CACHE / "candidate-sources.json", lock)
             confirmed = p.read_json(checkpoint)
             confirmed.update(verifiedDeployment=True, regenerationFingerprint=p.regeneration_fingerprint(lock, tools={}))

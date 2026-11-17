@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed public-source documentation coordinator helpers (Python stdlib)."""
+import time
+CLI_IMPORTED_AT = time.time()  # Include module/parser startup for a new CLI run.
 import re
 import argparse
 import hashlib
@@ -8,7 +10,6 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import time
 import tomllib
 import urllib.request
 from urllib.error import HTTPError
@@ -24,6 +25,75 @@ import fcntl
 import signal
 
 ACTIVE_RUN = None
+
+def budget_module():
+    # Spec-loaded pipelines and legacy CLI fixtures need no package/sys.path edits.
+    import importlib.util
+    source = Path(__file__).with_name("run_budget.py")
+    if not source.is_file():
+        return None
+    spec = importlib.util.spec_from_file_location("pipeline_run_budget", source)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+def budget_start(run_id, phase, role, task_id, allocation=None, kind="worker", cache=None, started_at=None):
+    cache = CACHE if cache is None else Path(cache)
+    module = budget_module()
+    if not module or phase not in module.PHASES or kind not in ("worker", "coordinator"):
+        raise ValueError("Budget work requires a valid phase and worker/coordinator kind")
+    with state_lock(cache):
+        guard_run(run_id, cache)
+        return module.start(cache, run_id, role, phase=phase, kind=kind,
+            role=role, task_id=task_id, allocation=allocation, started_at=started_at)
+
+def budget_finish(run_id, observation, status=None, cache=None, assessment=None):
+    # Finishing telemetry after expiry cannot authorize another pipeline effect.
+    cache = CACHE if cache is None else Path(cache)
+    return budget_module().finish(cache, run_id, observation, status, assessment=assessment)
+
+def budget_assess(run_id, assessment, phase=None, observation=None, cache=None):
+    cache = CACHE if cache is None else Path(cache)
+    return budget_module().assess(cache, run_id, assessment, phase=phase, observation=observation)
+
+def budget_report(run_id, cache=None):
+    cache = CACHE if cache is None else Path(cache)
+    module = budget_module()
+    if not module:
+        return {"runId": run_id, "outcome": "unavailable", "policySnapshot": None,
+                "reason": "Budget helper unavailable in this legacy fixture"}
+    return module.report(cache, run_id)
+
+@contextlib.contextmanager
+def budget_span(run_id, stage, cache=None, phase=None):
+    cache = CACHE if cache is None else Path(cache)
+    module = budget_module()
+    observation = None
+    reporting = {"publicationAccepted": False}
+    if module and (cache / "runs" / run_id / "budget-state.json").exists():
+        phase = phase or {"begin": "generation_build", "generate": "generation_build",
+            "examples": "generation_build", "validate": "exports_qa_deploy",
+            "publish": "exports_qa_deploy", "verify": "exports_qa_deploy",
+            "finalize": "exports_qa_deploy"}.get(stage)
+        observation = module.start(cache, run_id, stage, phase=phase)
+    try:
+        yield reporting
+    except BaseException as error:
+        if observation:
+            try:
+                finished = module.finish(cache, run_id, observation, "failed", {"errorType": type(error).__name__, "error": str(error)})
+                for failure in finished.get("projectionErrors", []):
+                    error.add_note("Budget span projection also failed: " + failure["file"] + ": " + failure["error"])
+            except BaseException as telemetry_error:
+                error.add_note("Budget telemetry also failed: " + str(telemetry_error))
+        raise
+    else:
+        if observation:
+            if reporting["publicationAccepted"]:
+                module.published_tail(cache, run_id, "finish:" + stage,
+                    lambda: module.finish(cache, run_id, observation))
+            else:
+                module.finish(cache, run_id, observation)
 
 @contextlib.contextmanager
 def state_lock(cache=None):
@@ -815,12 +885,19 @@ def generate_docs(lock):
         "contentHashes": {v: digest((ROOT / f"content/docs/{v}.json").read_bytes()) for v in blueprints}})
     print("Generated 12 version-isolated pages; evidence verified against immutable source blobs")
 
-def acquire_lease(cache=None, now=None, duration=7200):
+def acquire_lease(cache=None, now=None, duration=21600, budget_policy=None):
+    now = time.time() if now is None else now
     cache = CACHE if cache is None else Path(cache)
+    if budget_module():
+        budget_module().number(duration, "runtimeSeconds")
+    if budget_policy is not None:
+        if not budget_module():
+            raise ValueError("Budget helper is required for a budget policy")
+        budget_policy = budget_module().validate(budget_policy, duration)
     with state_lock(cache):
-        return _acquire_lease(cache, now, duration)
+        return _acquire_lease(cache, now, duration, budget_policy)
 
-def _acquire_lease(cache, now, duration):
+def _acquire_lease(cache, now, duration, budget_policy=None):
     import uuid
     now = time.time() if now is None else now
     cache = Path(cache)
@@ -833,11 +910,15 @@ def _acquire_lease(cache, now, duration):
         if existing["deadline"] > now:
             raise ValueError("Documentation run already active: " + existing["id"])
         cleanup_children(existing)
+        if budget_module() and (cache / "runs" / existing["id"] / "budget-state.json").exists():
+            budget_module().close(cache, existing["id"], "expired-reclaimed")
         lease.rename(cache / ("expired-" + existing["id"]))
         lease.mkdir()
-    record = {"id": uuid.uuid4().hex, "started": now, "deadline": now + duration, "repairs": 0, "stages": []}
+    record = {"id": uuid.uuid4().hex, "started": now, "leaseAcquiredAt": time.time(), "deadline": now + duration, "repairs": 0, "stages": []}
     save_json(lease / "owner.json", record)
     save_json(cache / "runs" / record["id"] / "run.json", record)
+    if budget_module():
+        budget_module().create(cache, record, budget_policy)
     return record
 
 def guard_run(run_id, cache=None, now=None):
@@ -865,7 +946,7 @@ def record_stage(run_id, stage, details, cache=None):
     save_json(Path(cache) / "runs" / run_id / "run.json", record)
     return record
 
-def release_lease(run_id, status, details=None, cache=None):
+def release_lease(run_id, status, details=None, cache=None, primary_error=None):
     cache = CACHE if cache is None else Path(cache)
     with state_lock(cache):
         record = read_json(cache / "run.lock/owner.json")
@@ -878,18 +959,31 @@ def release_lease(run_id, status, details=None, cache=None):
         save_json(cache / "runs" / run_id / "run.json", record)
         (cache / "run.lock/owner.json").unlink()
         (cache / "run.lock").rmdir()
+        if budget_module() and (cache / "runs" / run_id / "budget-state.json").exists():
+            try:
+                report = budget_module().close(cache, run_id, status)
+                if primary_error is not None:
+                    for failure in report.get("projectionErrors", []):
+                        primary_error.add_note("Budget terminal projection also failed: " + failure["file"] + ": " + failure["error"])
+            except OSError as telemetry_error:
+                # Ownership checks and process/lease cleanup above remain fatal.
+                # Only terminal telemetry may be secondary to an action error.
+                if primary_error is None:
+                    raise
+                primary_error.add_note("Budget terminal telemetry also failed: " + str(telemetry_error))
 
 def execute_stage(run_id, stage, action, cache=None):
     cache = CACHE if cache is None else Path(cache)
     record = guard_run(run_id, cache)
     if record.get("needsRepair"):
         raise ValueError("Failed stage requires an accounted repair before retry")
+    phase = "correction_retest" if record.get("repairs", 0) and stage in ("generate", "examples", "validate") else None
     try:
-        with run_scope(run_id) if cache == CACHE else contextlib.nullcontext():
+        with budget_span(run_id, stage, cache, phase=phase), run_scope(run_id) if cache == CACHE else contextlib.nullcontext():
             result = action()
-        guard_run(run_id, cache)
+            guard_run(run_id, cache)
         return result
-    except Exception as error:
+    except BaseException as error:
         with state_lock(cache):
             owner = cache / "run.lock/owner.json"
             if owner.exists():
@@ -1243,7 +1337,7 @@ def stage_reviewed_candidate(expected_hash, base=None):
     return run(["git", "write-tree"])
 
 def publish(run_id):
-    with run_scope(run_id):
+    with budget_span(run_id, "publish"), run_scope(run_id):
         return _publish(run_id)
 
 def _publish(run_id):
@@ -1299,6 +1393,16 @@ def _publish(run_id):
 
 def finalize_success(run_id, checkpoint, cache=None):
     cache = CACHE if cache is None else Path(cache)
+    with budget_span(run_id, "finalize", cache) as reporting:
+        _finalize_success(run_id, checkpoint, cache)
+        # Set only after checkpoint, authoritative run write AND owned cleanup.
+        reporting["publicationAccepted"] = True
+        if budget_module() and (cache / "runs" / run_id / "budget-state.json").exists():
+            module = budget_module()
+            module.published_tail(cache, run_id, "close",
+                lambda: module.close(cache, run_id, "published"))
+
+def _finalize_success(run_id, checkpoint, cache):
     with state_lock(cache):
         record = guard_run(run_id, cache)
         cleanup_children(record)
@@ -1360,8 +1464,12 @@ def verify_stable_alias(expected_manifest):
     return url
 
 def verify_publication(run_id):
-    with run_scope(run_id):
-        return _verify_publication(run_id)
+    with budget_span(run_id, "verify") as reporting, run_scope(run_id):
+        checkpoint = _verify_publication(run_id)
+        reporting["publicationAccepted"] = True
+    print(json.dumps({"published": checkpoint["gitCommit"], "url": checkpoint["deploymentUrl"],
+        "budgetReport": budget_paths(run_id), "budgetSummary": budget_report(run_id)}, indent=2))
+    return checkpoint
 
 def _verify_publication(run_id):
     lock = frozen_sources(run_id)
@@ -1408,61 +1516,114 @@ def _verify_publication(run_id):
         if key in owner:
             checkpoint[key] = owner[key]
     finalize_success(run_id, checkpoint)
-    print(json.dumps({"published": sha, "url": url}, indent=2))
     return checkpoint
 
+def budget_paths(run_id, cache=None):
+    cache = CACHE if cache is None else Path(cache)
+    directory = cache / "runs" / run_id
+    return {kind: str(directory / ("budget-report." + suffix)) for kind, suffix in (("json", "json"), ("text", "txt"))}
+
+
 def begin_run(args):
-    record = acquire_lease(duration=read_json(CONFIG)["limits"]["runtimeSeconds"])
-    record["acceptanceHash"] = acceptance_digest()
-    save_json(CACHE / "run.lock/owner.json", record)
-    save_json(CACHE / "runs" / record["id"] / "run.json", record)
+    admitted_at = getattr(args, "_admitted_at", time.time())
+    cfg = read_json(CONFIG)
+    if "budget" in cfg or "schemaVersion" in cfg:
+        if not budget_module():
+            raise ValueError("Budget helper is required for a budget policy")
+        budget_module().validate(cfg.get("budget"), cfg.get("limits", {}).get("runtimeSeconds"))
+    record = acquire_lease(now=admitted_at, duration=cfg["limits"]["runtimeSeconds"], budget_policy=cfg.get("budget"))
     try:
-        with run_scope(record["id"]):
-            bind_native_context(record)
-            lock = read_json(CACHE / "candidate-sources.json") if args.reuse_candidate else resolve_sources()
-            validate_source_selection(lock)
-            health = credential_health()
-            tools = tool_versions()
-            fingerprint = input_fingerprint(lock, tools=tools)
-            trigger = regeneration_fingerprint(lock, tools=tools)
-            process = process_fingerprint(tools=tools)
-            record.update(tools=tools, sourceHash=digest(lock), fingerprint=fingerprint, credentialHealth=health,
-                          regenerationFingerprint=trigger, processFingerprint=process)
-            save_json(CACHE / "run.lock/owner.json", record)
-            save_json(CACHE / "runs" / record["id"] / "sources.json", lock)
-            save_json(CACHE / "candidate-sources.json", lock)
-            previous = read_json(CACHE / "last-success.json") if (CACHE / "last-success.json").exists() else {}
-            force = getattr(args, "force", False)
-            if not force and previous.get("verifiedDeployment") is True and previous.get("regenerationFingerprint") == trigger:
-                manifest = get_json(previous["deploymentUrl"] + "/docs-manifest.json", same_origin=True)
-                if manifest["fingerprint"] != previous["fingerprint"]:
-                    raise ValueError("Previously published deployment provenance changed")
-                verify_stable_alias(manifest)
-                release_lease(record["id"], "no-change", health)
-                print(json.dumps({"action": "no-change", "warnings": health["warnings"]}))
-                return
-            record["updateReasons"] = (["initial-or-legacy-checkpoint"] if previous.get("verifiedDeployment") is not True or not previous.get("regenerationFingerprint")
-                                       else (["selected-source-commit"] if previous.get("sources", {}).get("coming-soon", {}).get("commit") != lock["coming-soon"]["commit"] else [])
-                                       + (["generation-process"] if previous.get("processFingerprint") != process else []))
-            if force:
-                record["updateReasons"].append("explicit-force")
-            save_json(CACHE / "runs" / record["id"] / "run.json", record)
-            save_json(CACHE / "run.lock/owner.json", record)
-            print(json.dumps({"action": "update", "runId": record["id"], "deadline": record["deadline"], "warnings": health["warnings"], "reasons": record["updateReasons"], "changes": plan_changes(lock, record["updateReasons"])}, indent=2))
-    except Exception as error:
-        release_lease(record["id"], "failed", {"error": str(error)})
+        record["acceptanceHash"] = acceptance_digest()
+        save_json(CACHE / "run.lock/owner.json", record)
+        save_json(CACHE / "runs" / record["id"] / "run.json", record)
+        with budget_span(record["id"], "begin"), run_scope(record["id"]):
+            result = _begin_inputs(args, record)
+        if result["action"] == "no-change":
+            release_lease(record["id"], "no-change", record["credentialHealth"])
+        result["budgetReport"] = budget_paths(record["id"])
+        result["budgetSummary"] = budget_report(record["id"])
+        print(json.dumps(result, indent=2))
+    except BaseException as error:
+        owner = CACHE / "run.lock/owner.json"
+        if owner.exists() and read_json(owner)["id"] == record["id"]:
+            release_lease(record["id"], "failed", {"errorType": type(error).__name__, "error": str(error)}, primary_error=error)
+        if budget_module() and (CACHE / "runs" / record["id"] / "budget-state.json").exists():
+            try:
+                report = budget_report(record["id"])
+                for failure in report.get("projectionErrors", []):
+                    error.add_note("Budget report projection also failed: " + failure["file"] + ": " + failure["error"])
+                print(budget_module().text(report), file=sys.stderr, end="")
+            except BaseException as telemetry_error:
+                error.add_note("Budget report emission also failed: " + str(telemetry_error))
         raise
-    return
+
+
+def _begin_inputs(args, record):
+    bind_native_context(record)
+    lock = read_json(CACHE / "candidate-sources.json") if args.reuse_candidate else resolve_sources()
+    validate_source_selection(lock)
+    health = credential_health()
+    tools = tool_versions()
+    fingerprint = input_fingerprint(lock, tools=tools)
+    trigger = regeneration_fingerprint(lock, tools=tools)
+    process = process_fingerprint(tools=tools)
+    record.update(tools=tools, sourceHash=digest(lock), fingerprint=fingerprint, credentialHealth=health,
+                  regenerationFingerprint=trigger, processFingerprint=process)
+    save_json(CACHE / "run.lock/owner.json", record)
+    save_json(CACHE / "runs" / record["id"] / "sources.json", lock)
+    save_json(CACHE / "candidate-sources.json", lock)
+    previous = read_json(CACHE / "last-success.json") if (CACHE / "last-success.json").exists() else {}
+    force = getattr(args, "force", False)
+    if not force and previous.get("verifiedDeployment") is True and previous.get("regenerationFingerprint") == trigger:
+        manifest = get_json(previous["deploymentUrl"] + "/docs-manifest.json", same_origin=True)
+        if manifest["fingerprint"] != previous["fingerprint"]:
+            raise ValueError("Previously published deployment provenance changed")
+        verify_stable_alias(manifest)
+        return {"action": "no-change", "runId": record["id"], "warnings": health["warnings"]}
+    record["updateReasons"] = (["initial-or-legacy-checkpoint"] if previous.get("verifiedDeployment") is not True or not previous.get("regenerationFingerprint")
+                               else (["selected-source-commit"] if previous.get("sources", {}).get("coming-soon", {}).get("commit") != lock["coming-soon"]["commit"] else [])
+                               + (["generation-process"] if previous.get("processFingerprint") != process else []))
+    if force:
+        record["updateReasons"].append("explicit-force")
+    save_json(CACHE / "runs" / record["id"] / "run.json", record)
+    save_json(CACHE / "run.lock/owner.json", record)
+    return {"action": "update", "runId": record["id"], "deadline": record["deadline"], "warnings": health["warnings"], "reasons": record["updateReasons"], "changes": plan_changes(lock, record["updateReasons"])}
 
 def main():
+    admitted_at = CLI_IMPORTED_AT if __name__ == "__main__" else time.time()
+    import threading
+    if threading.current_thread() is not threading.main_thread():
+        return _main(admitted_at)
+    previous = signal.getsignal(signal.SIGTERM)
+    def terminated(signum, frame):
+        raise SystemExit(128 + signum)
+    signal.signal(signal.SIGTERM, terminated)
+    try:
+        return _main(admitted_at)
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
+def _main(admitted_at=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["resolve", "begin", "plan", "generate", "examples", "validate", "repair", "publish", "verify", "fail", "artifact-hash", "review-targets", "status"])
+    parser.add_argument("command", choices=["resolve", "begin", "plan", "generate", "examples", "validate", "repair", "publish", "verify", "fail", "artifact-hash", "review-targets", "status", "budget-start", "budget-finish", "budget-assess", "budget-report"])
     parser.add_argument("--run")
     parser.add_argument("--reuse-candidate", action="store_true")
     parser.add_argument("--force", action="store_true", help="Force begin to regenerate; all source, review and publication gates still apply")
     parser.add_argument("--create-locks", action="store_true")
     parser.add_argument("--reason", default="generation check failed")
+    parser.add_argument("--phase", choices=("generation_build", "independent_review", "correction_retest", "exports_qa_deploy"))
+    parser.add_argument("--role")
+    parser.add_argument("--task-id", help="Actual coordinator/delegated task or session ID, not an invented role label")
+    parser.add_argument("--kind", choices=("worker", "coordinator"), default="worker")
+    parser.add_argument("--allocation", type=float, help="Planning seconds, never a per-role hard deadline")
+    parser.add_argument("--started-at", type=float, help="Actual observed delegation/request epoch, within this run; include startup without guessing")
+    parser.add_argument("--observation")
+    parser.add_argument("--outcome", choices=("completed", "failed", "blocked", "unknown"))
+    parser.add_argument("--assessment", help="JSON assessment file, using the documented strict schema")
+    parser.add_argument("--format", choices=("json", "text"), default="text")
     args = parser.parse_args()
+    args._admitted_at = time.time() if admitted_at is None else admitted_at
     if args.force and args.command != "begin":
         parser.error("--force is only valid for begin")
     if args.command == "artifact-hash":
@@ -1477,13 +1638,46 @@ def main():
         return begin_run(args)
     if not args.run:
         parser.error("--run is required for this stage")
+    if args.command.startswith("budget-"):
+        if args.command == "budget-start":
+            if not all((args.phase, args.role, args.task_id)):
+                parser.error("budget-start requires --phase, --role and --task-id")
+            observation = budget_start(args.run, args.phase, args.role, args.task_id,
+                allocation=args.allocation, kind=args.kind, started_at=args.started_at)
+            print(json.dumps({"runId": args.run, "observation": observation, "budgetReport": budget_paths(args.run)}))
+        elif args.command == "budget-finish":
+            if not args.observation or not args.outcome:
+                parser.error("budget-finish requires --observation and explicit --outcome")
+            print(json.dumps(budget_finish(args.run, args.observation, args.outcome,
+                assessment=read_json(args.assessment) if args.assessment else None), indent=2))
+        elif args.command == "budget-assess":
+            if not args.assessment:
+                parser.error("budget-assess requires --assessment")
+            budget_assess(args.run, read_json(args.assessment), phase=args.phase, observation=args.observation)
+            print(json.dumps({"runId": args.run, "budgetReport": budget_paths(args.run)}))
+        else:
+            report = budget_report(args.run)
+            if args.format == "json":
+                print(json.dumps(report, indent=2))
+            else:
+                module = budget_module()
+                print(module.text(report) if module else f"Run {args.run}: unavailable\n{report['reason']}\n", end="")
+        return
     if args.command == "review-targets":
         # frozen_sources guards the existing run. No active write scope: hashing
         # must not register child bookkeeping or change reports/checkpoints.
         return dispatch_stage(args)
     if args.command == "fail":
         release_lease(args.run, "failed", {"error": args.reason})
+        print(json.dumps({"runId": args.run, "action": "failed", "budgetReport": budget_paths(args.run),
+                          "budgetSummary": budget_report(args.run)}, indent=2))
         return
+    # These public helpers own their guarded scope and frozen-source checks.
+    # A redundant outer guard would bypass refusal telemetry before entry.
+    if args.command == "publish":
+        return publish(args.run)
+    if args.command == "verify":
+        return verify_publication(args.run)
     with run_scope(args.run):
         return dispatch_stage(args)
 
