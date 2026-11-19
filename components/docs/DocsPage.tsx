@@ -96,8 +96,8 @@ function Section({ section, version }: { section: DocumentationSection; version:
 }
 
 export default function DocsPage({
-  documentation, page, version,
-}: { documentation: Documentation; page: DocumentationPage; version: DocumentationVersion }) {
+  documentation, page, version, markdownHref,
+}: { documentation: Documentation; page: DocumentationPage; version: DocumentationVersion; markdownHref?: string }) {
   const comingSoon = version === "coming-soon";
   const versionName = comingSoon ? "Selected source" : "Released";
   const pageIndex = documentation.pages.findIndex((entry) => entry.slug === page.slug);
@@ -139,6 +139,7 @@ export default function DocsPage({
               <h1 id="docs-title">{page.title}</h1>
               <p className={styles.description} data-testid="docs-description"><InlineCode text={page.description} /></p>
               <p className={styles.kind} data-testid="docs-page-kind">{page.kind === "tutorial" ? "Integration tutorial" : "Explanation"}</p>
+              <a href={markdownHref ?? `${documentationPath(version, page.slug)}/markdown`} className={styles.markdownAction}>View as Markdown</a>
             </div>
             <aside className={styles.provenance} aria-label="Documentation source" data-testid="docs-version-marker">
               <div className={styles.provenanceHeading}>
@@ -175,6 +176,7 @@ export default function DocsPage({
               <ul>{page.sourceLinks.map((link) => <li key={link.href}><ExternalLink href={link.href}>{link.label}</ExternalLink></li>)}</ul>
             </nav>
             <a href="#docs-content" className={styles.backToTop}>Back to top <span aria-hidden="true">↑</span></a>
+            <a href="/llms.txt" className={styles.backToTop}>llms.txt</a>
           </footer>
         </main>
       </div>

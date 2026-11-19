@@ -128,6 +128,12 @@
       "requirement": "User-authorized prospective guidance: estimate future phases from measured end-to-end startup, reads, final hash checks and report-finalization costs plus uncertainty and cleanup/full-validation reserve. Phase targets are planning only; propagate the actual shared absolute run deadline instead of ad hoc 120/300-second phase approval cutoffs rejecting completed reviews within the genuine lease. Keep whole-run 21600 seconds, two concurrent workers, two shared repairs and bounded owned cleanup unchanged. Never extend/reopen old/current hard deadlines, relabel old failed/late outcomes, borrow reviews, reset repairs or waive publication/stable-alias/exact-source/other gates. Insufficient real remaining time fails honestly; this correction grants no new lease.",
       "enforcedBy": ["automation/COORDINATOR.md", "automation/skills/evaluation.md", "automation/README.md", "automation/tests/test_stdout_contract.py"],
       "enforcementScope": "Future planning and executable policy regression only; existing deadlines, repair ledgers and failed/withheld verdicts remain unchanged."
+    },
+    {
+      "id": "iterative-small-public-preview-first",
+      "requirement": "The user prefers early, small incremental public website previews and useful parallel work within the existing two-worker limit, rather than waiting for complete automation replacement. Preserve the exact last deployed public content and source mapping; independent review and parent-owned build/browser/publication remain required for this preview. A preview is not strict-profile approval, normal generation, accepted automated publication or documentation execution evidence. All SDK, guide walkthrough and playground checks are not_run_deferred and nonblocking until explicitly resumed. Previews never advance successful inputs, alter old failed strategies/counters, import rejected candidates or weaken normal publication authority; scheduling stays OFF. Deliver only working visible links and disclose the exact shipped and pending route scope.",
+      "enforcedBy": ["automation/ITERATIVE-PREVIEW.md", "tests/iterative-preview-policy.test.mjs", "tests/docs-markdown.test.mjs"],
+      "enforcementScope": "Operator preference and focused read-only presentation tests for the separately labeled development preview only. No approval/generation/helper/policy mechanism is changed or certified."
     }
   ]
 }

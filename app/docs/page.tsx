@@ -10,5 +10,5 @@ export async function generateMetadata() {
 export default async function DocumentationEntry() {
   const documentation = await getDocumentation(defaultDocumentationVersion);
   const page = documentation.pages.find((entry) => entry.slug === "overview")!;
-  return <DocsPage documentation={documentation} page={page} version={defaultDocumentationVersion} />;
+  return <DocsPage documentation={documentation} page={page} version={defaultDocumentationVersion} markdownHref="/docs/markdown" />;
 }
