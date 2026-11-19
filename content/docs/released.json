@@ -240,21 +240,27 @@
     {
       "slug": "overview",
       "title": "What Paykit does",
-      "description": "Understand payment coordination, then run a safe local wallet or point-of-sale fixture.",
+      "description": "Discover what Paykit coordinates, what a payment endpoint contains, and what your application still owns.",
       "group": "Understand Paykit",
       "kind": "explanation",
       "sections": [
         {
           "id": "purpose",
-          "title": "Coordinate a payment, not custody it",
+          "title": "Discover payment details and coordinate messages",
           "evidence": [
             "released-lib-scope",
             "released-adapter-boundary",
-            "released-scope-policy"
+            "released-scope-policy",
+            "released-overview-refresh-purpose",
+            "released-overview-refresh-endpoint",
+            "released-overview-refresh-ownership",
+            "released-overview-refresh-status"
           ],
           "paragraphs": [
-            "Paykit helps applications discover how a counterparty can receive payment and exchange payment-related messages over Pubky. A payment endpoint is receiving-detail text identified by a payment method; a rail is the payment system your application uses to act on it.",
-            "Paykit is not a wallet balance or settlement service. Your application retains funds, user authorization, rail execution and settlement checks. Start with a local fixture before adding identity, storage or network access."
+            "Paykit helps applications discover how someone can receive a payment through their Pubky identity and exchange payment-related messages, including payment requests and receipts.",
+            "A payment endpoint pairs an identifier for a payment-detail type with the receiving details, called its payload. It describes how to receive a payment; it does not execute the payment.",
+            "Your application owns funds, payment authorization and product policy. Payment execution and settlement checks remain with your application or its payment adapter.",
+            "This v0.1.0 snapshot is experimental and not for production. Start with a local fixture before adding identity, storage or network access."
           ],
           "links": [
             {
@@ -269,18 +275,20 @@
         },
         {
           "id": "surface",
-          "title": "Choose the integration surface",
+          "title": "Choose an integration layer",
           "evidence": [
             "released-lib-scope",
             "released-sdk-new",
             "released-sdk-lib",
             "released-ffi",
             "released-ffi-package",
-            "released-storage-contract"
+            "released-storage-contract",
+            "released-overview-refresh-sdk-state",
+            "released-overview-refresh-sdk-inputs"
           ],
           "list": [
-            "paykit-lib: validated values, app-scoped public discovery and private protocol helpers. You manage sessions and durable state when using this layer directly.",
-            "paykit-sdk: a stateful Rust runtime with storage, live-session and payment-adapter boundaries. Prefer this for a durable application rather than rebuilding request and link state.",
+            "paykit-lib: stateless Rust helpers for public payment endpoints and private payment messages. Your code supplies Pubky authentication and sessions.",
+            "paykit-sdk: the stateful Rust runtime built on paykit-lib. It manages durable Paykit state for endpoints, links and payment-related messages; your app supplies storage, live Pubky access and a payment adapter.",
             "paykit-ffi: the Swift/Kotlin-facing UniFFI layer in the source tree. Binding availability is separate from a Rust crate version; the Rust fixtures below do not exercise mobile bindings."
           ],
           "links": [

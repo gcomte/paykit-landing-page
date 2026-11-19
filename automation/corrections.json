@@ -1,15 +1,23 @@
 {
   "schemaVersion": 1,
-  "policy": "Every user correction is recorded here and enforced on generation, source import and publication. One-time preview requests do not waive normal acceptance gates.",
+  "policy": "Preserve every user requirement, but deliver small agreed increments rather than treating the whole backlog as a prerequisite for each release. The simple-iterative-delivery correction governs scope and sequencing. Keep public-source confidentiality, truthful version/content claims, existing authorization and the last working deployment.",
   "landingDocs": {
     "sectionId": "docs-teaser",
     "beforeSectionAriaLabelledby": "foundation-title",
     "beforeSectionHeading": "Your data. Your choice.",
     "mainHref": "/docs",
     "version": "default",
-    "featuredSlugs": ["flows", "wallets", "point-of-sale"],
+    "featuredSlugs": [
+      "flows",
+      "wallets",
+      "point-of-sale"
+    ],
     "copySource": "generated selected page titles and descriptions",
-    "responsiveWidths": [375, 768, 1440]
+    "responsiveWidths": [
+      375,
+      768,
+      1440
+    ]
   },
   "privateContext": {
     "talosConsultationRequired": true,
@@ -26,113 +34,227 @@
   },
   "requirements": [
     {
+      "id": "simple-iterative-delivery",
+      "requirement": "Return to the initial goal: automatically maintained public documentation. Prefer simple existing tools and small useful releases. Keep all requirements as a backlog, agree the next small increment, implement only that scope, run proportionate source/review/build checks, ship it, then discuss the result and next increment with the user. Do not implement all requirements at once or make speculative edge cases, transaction systems, universal semantic codecs, exhaustive adversarial qualification or multi-hour review machinery prerequisites. Stop the current complex engineering lanes; preserve their history without adopting or resuming them from late results. Do not manually fix generated prose; improve the generation inputs/process. Scheduling and additional features wait for their own agreed increment.",
+      "enforcedBy": [
+        "automation/COORDINATOR.md"
+      ],
+      "enforcementScope": "Coordinator operating policy; no claim of new runtime enforcement or completed automated publication."
+    },
+    {
       "id": "expanded-independent-review-coverage",
       "requirement": "User-approved mandatory perspectives: source/version factual accuracy; newcomer discovery and successful docs-only use; four separate wallet/POS hands-on guide walkthroughs across the two documented versions; security/privacy; failure/recovery; editorial clarity; usability/accessibility; visual design; and diagram correctness and explanatory value. Visual/design reviewers inspect actual rendered pages and diagrams, including readability, modern comfortable hierarchy, mobile layout and unnecessary noise. Diagram review checks semantic correctness, directed relationships, usefulness, removal/improvement opportunities and missing helpful diagrams, not only successful rendering. Independent actual task identities and exact artifact/source binding are required. Reviewers report evidence-backed findings rather than silently rewriting and approving their own fixes; the author improves generation inputs/process, regenerates and obtains independent retesting. Begin with isolated examples; later end-to-end wallet/POS infrastructure is separate future scope. All mandatory review evidence and output gates must be implemented and exercised before accepted publication; policies and role names alone are not running reviewers or approval.",
-      "enforcedBy": ["automation/COORDINATOR.md", "automation/skills/coordinator.md", "automation/skills/evaluation.md", "automation/tests/test_review_budget_policy.py"],
+      "enforcedBy": [
+        "automation/COORDINATOR.md",
+        "automation/skills/coordinator.md",
+        "automation/skills/evaluation.md",
+        "automation/tests/test_review_budget_policy.py"
+      ],
       "enforcementScope": "Approved mandatory scope and policy/preservation regression at this increment; expanded runtime review consumers and actual new reviewer receipts are not yet installed or accepted."
     },
     {
       "id": "generated-glossary-and-resources",
       "requirement": "Automatically generate a glossary and Paykit resources page from approved, exact-version public sources with claim/link-description mappings and useful cross-links. The glossary explains terms as used in the selected documentation and distinguishes version-dependent meanings. Resources are categorized, relevant to Paykit, truthfully labeled and described from supporting sources; a successful HTTP response alone does not establish relevance or description accuracy. pubky.org/resources is information-design inspiration, not permission to copy its content or import unapproved/private facts. Keep the six core documentation pages and add the reference pages without creating a Develop/contribution/API-reference section. User corrections change the durable generation process, not hand-maintained generated prose.",
-      "enforcedBy": ["automation/COORDINATOR.md", "automation/skills/writing.md", "automation/skills/evaluation.md", "automation/tests/test_review_budget_policy.py"],
+      "enforcedBy": [
+        "automation/COORDINATOR.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "automation/tests/test_review_budget_policy.py"
+      ],
       "enforcementScope": "Approved mandatory generation scope; implementation, generated reference content and source-bound review are pending and not implied by this policy entry."
     },
     {
       "id": "every-page-markdown-and-reviewed-llm-exports",
       "requirement": "Every public content page, including the homepage, versioned docs, glossary and resources, has a corresponding Markdown version and visible View as Markdown action. API endpoints and internal error responses are not content pages. The global footer links to llms.txt. After the human-facing content passes required review, a deterministic packaging job derives Markdown and the llms.txt index from that same reviewed content without new model-authored facts or unreviewed summaries. Validate complete page/index coverage, version/source identity, links, code blocks, warnings and meaningful diagram alternatives; exports must not silently drop qualifications or code. llms-full.txt is recommended but optional until separately selected. Match the behavior of the public Pubky knowledge-base reference without requiring a framework rewrite. New artifacts, footer links and parity checks must actually exist before claiming delivery.",
-      "enforcedBy": ["automation/COORDINATOR.md", "automation/skills/writing.md", "automation/skills/evaluation.md", "automation/tests/test_review_budget_policy.py"],
+      "enforcedBy": [
+        "automation/COORDINATOR.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "automation/tests/test_review_budget_policy.py"
+      ],
       "enforcementScope": "Approved mandatory export scope and policy regression only here; no Markdown endpoints, footer export link or generated LLM exports are installed by recording this requirement."
     },
     {
       "id": "sandboxed-doc-execution-playgrounds",
       "requirement": "Actual documentation execution reviewers use disposable, verified execution playgrounds with no production credentials or sensitive host mounts, controlled network access and bounded CPU/memory/disk/time, separate state per attempt and task-owned cleanup. A fresh directory, scrubbed environment or an instruction to avoid dangerous actions is not verified execution containment. Start with isolated examples and no real payments. If a suitable facility is unavailable, execution review is blocked rather than silently running on the working server or treating unexecuted checks as passed. This testing requirement is separate from the accepted instruction-based public/private knowledge boundary: keep the existing Hermes runtime/provider/authentication, broad tools, backend/image/mounts/security unchanged, do not resurrect retired privacy-runner qualification or build a privileged substitute as an assumed prerequisite. Verify any needed new access/scope before enabling a testing facility. Extra allocation alone does not resolve missing containment access.",
-      "enforcedBy": ["automation/COORDINATOR.md", "automation/skills/coordinator.md", "automation/skills/evaluation.md", "automation/tests/test_review_budget_policy.py"],
+      "enforcedBy": [
+        "automation/COORDINATOR.md",
+        "automation/skills/coordinator.md",
+        "automation/skills/evaluation.md",
+        "automation/tests/test_review_budget_policy.py"
+      ],
       "enforcementScope": "Mandatory execution-review prerequisite; sandbox availability and negative controls must be verified before an execution claim. No sandbox is created or certified by this entry."
     },
     {
       "id": "six-hour-budgets-and-every-run-accounting",
       "requirement": "User-approved prospective doubling: newly started full generation/review cycles have a 21600-second (six-hour) overall cap. Phase planning targets are generation/build 3600 seconds, independent review 10800 seconds, correction/retest 5400 seconds, and exports/final QA/deployment 1800 seconds. Initial implementation has a separate 14400-second (four-hour) checkpoint, never charged silently to the generation lease. Two concurrent workers and two shared repair rounds remain unchanged. Phase/reviewer allocations are planning targets, not extra approval deadlines, and cannot extend the shared cap. Preserve all historical/current run deadlines, repair ledgers and failed/late verdicts; do not backfill historical timings or invent approvals. Every run, including success, failure, timeout, blocked and no-change, produces a user-visible budget report: observed elapsed versus allocated by phase and reviewer/task, remaining/overrun, outcome, coverage left unfinished, and an evidence-based more-allocation assessment with reason and any justified suggested extra time. Distinguish wall-clock phase/run time from aggregate overlapping worker time, and mark missing observations or assessments unknown rather than measured zero or completed. Include startup, queue/wait, tools, retries and finalization within the observed clock; expose untracked time. Distinguish time shortages from tooling/access/dependency/quality blockers; more time is not a cure for unavailable sandbox access. Recommendations affect future planning only, never silently extend a current run. This every-run notification requirement supersedes the former silent no-change policy without enabling model work, generation, commits or successful-input changes on no-change. Reports do not confer acceptance or activate scheduling.",
-      "enforcedBy": ["automation/config.json", "automation/pipeline.py", "automation/COORDINATOR.md", "automation/README.md", "automation/skills/coordinator.md", "automation/skills/evaluation.md", "automation/tests/test_review_budget_policy.py", "automation/tests/test_run_budget.py"],
+      "enforcedBy": [
+        "automation/config.json",
+        "automation/pipeline.py",
+        "automation/COORDINATOR.md",
+        "automation/README.md",
+        "automation/skills/coordinator.md",
+        "automation/skills/evaluation.md",
+        "automation/tests/test_review_budget_policy.py",
+        "automation/tests/test_run_budget.py"
+      ],
       "enforcementScope": "Prospective budget/reporting implementation and regression checks; historical records are untouched. New review/output features still require their own implementation and independent verification before accepted publication."
     },
     {
       "id": "configurable-documentation-source",
       "requirement": "Root docs-generation.json is the single authoritative public source selector: exact repository pubky/paykit-rs, literal ref and explicit branch/tag kind. Initially follow v0.1.1-rc9 as an annotated tag, never pretend a branch exists or fall back to master/default_branch. Freeze the exact object, peeled commit, kind and literal ref with atomic movement checks. Keep the existing two version slots: released is strictly verified published stable; coming-soon follows the selected ref, is the default /docs and metadata source and supplies homepage main/three featured links. Retain separately labeled stable docs and unchanged page/card count, placement and responsive design. Config changes are generation/acceptance/publication inputs; invalid/missing/unavailable source fails closed.",
-      "enforcedBy": ["docs-generation.json", "automation/pipeline.py", "components/docs/content.ts", "app/docs/page.tsx", "components/docs/DocsTeaser.tsx", "automation/tests/test_generation_selection.py", "tests/docs-runner.test.mjs", "tests/browser/docs.spec.ts", "tests/browser/landing-docs.spec.ts"]
+      "enforcedBy": [
+        "docs-generation.json",
+        "automation/pipeline.py",
+        "components/docs/content.ts",
+        "app/docs/page.tsx",
+        "components/docs/DocsTeaser.tsx",
+        "automation/tests/test_generation_selection.py",
+        "tests/docs-runner.test.mjs",
+        "tests/browser/docs.spec.ts",
+        "tests/browser/landing-docs.spec.ts"
+      ]
     },
     {
       "id": "precise-regeneration-triggers",
       "requirement": "Regenerate only when the selected source commit or generation-process input bytes/tools differ from the deployment-confirmed last-success, or an explicit begin --force requests a fresh full attempt. First/missing legacy trigger keys regenerate safely. Tag-object-only movement with the same commit, unrelated default branch/stable-release/registry observations, timestamps and ignored runtime state do not independently trigger generation. Preserve full immutable source/artifact fingerprints separately from the decision fingerprint. Failed/attempted inputs never become last-success; advance only after existing exact-SHA deployment and stable-alias checks. Process-only/forced runs require authoring and independent review of all pages even without source deltas. Force is attempt-local and bypasses no validation/review/lease/repair/publication gate; daily runs do not use --reuse-candidate. Preserve 21600 seconds, worker2, repair2; scheduling stays OFF during user review. No generated hand-fixes or old approval reuse.",
-      "enforcedBy": ["automation/pipeline.py", "automation/README.md", "automation/COORDINATOR.md", "automation/skills/coordinator.md", "automation/tests/test_generation_selection.py"]
+      "enforcedBy": [
+        "automation/pipeline.py",
+        "automation/README.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/coordinator.md",
+        "automation/tests/test_generation_selection.py"
+      ]
     },
     {
       "id": "truthful-readiness-metadata",
       "requirement": "Do not infer global readiness from 0.x/stable/prerelease labels or absence of a warning. Preserve explicit upstream wording at its exact version/component scope and snapshot. Provenance questions alone do not approve warning removal. A README heading is not evidence for a renderer-injected readiness judgment: repair the producer/mapping, retain clearly attributed operator caution and omit fabricated upstream evidence. Independent review includes deterministic metadata, labels, warnings, source links and all rendered assertions, not only authored blueprints.",
-      "enforcedBy": ["automation/pipeline.py", "automation/skills/sources.md", "automation/skills/writing.md", "automation/skills/evaluation.md", "automation/tests/test_generation_selection.py"]
+      "enforcedBy": [
+        "automation/pipeline.py",
+        "automation/skills/sources.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "automation/tests/test_generation_selection.py"
+      ]
     },
     {
       "id": "development-preview-hosting",
       "requirement": "User authorizes early/incremental development previews and another accessible Vercel development project if necessary, superseding older project/location prohibitions. No new integration is implemented by this proposal. Verify an actual safe public preview URL and exact SHA; previews never advance successful-input checkpoints, waive acceptance or enable scheduling. Keep the official paykit.to domain untouched; do not broaden GitHub permissions or change runtime/authentication/security.",
-      "enforcedBy": ["automation/COORDINATOR.md", "automation/README.md", "automation/skills/coordinator.md", "automation/tests/test_generation_selection.py"]
+      "enforcedBy": [
+        "automation/COORDINATOR.md",
+        "automation/README.md",
+        "automation/skills/coordinator.md",
+        "automation/tests/test_generation_selection.py"
+      ]
     },
     {
       "id": "server-local-unprivileged-documentation-jobs",
       "requirement": "Run orchestration, author/reviewer tasks, tests and eventual scheduling on the existing user-controlled always-on server, not GitHub-hosted Actions; GitHub is source control and Vercel is hosting. Preserve existing provider/authentication, broad tools, profile and Docker backend/image/mount/security. Supersedes the earlier protected-runner/separate-administrator setup requirement: use the existing Hermes runtime and ordinary bounded delegation/CLI without new service setup, sudo or root model/build/review jobs. Preserve independent evidence review, task-owned cleanup, publication gates and original shared repair/deadline accounting; historical rejected work remains stopped.",
-      "enforcedBy": ["automation/local-execution-policy.json", "automation/LOCAL-EXECUTION.md", "automation/tests/test_local_execution_policy.py", "automation/COORDINATOR.md"],
+      "enforcedBy": [
+        "automation/local-execution-policy.json",
+        "automation/LOCAL-EXECUTION.md",
+        "automation/tests/test_local_execution_policy.py",
+        "automation/COORDINATOR.md"
+      ],
       "enforcementScope": "Policy regression and ordinary existing-runtime scope only; not runtime isolation certification, content approval, publication or scheduling approval. Protected-runner qualification is no longer a prerequisite."
     },
     {
       "id": "instruction-boundary-public-evidence-review",
       "requirement": "Supersedes hard-isolation/root-runner prerequisites with instruction-based-public-evidence-v1, accepting reduced confidentiality assurance and leaving existing runtime/tools unchanged. The private coordinator still consults Talos every run/material investigation; public author/reviewer must not query Talos/private storage or use prior conversations, memory, pretrained Paykit facts or private excerpts/summaries/titles/links/queries/hashes as evidence. Use separate fresh public tasks and only independently anonymously fetched approved immutable public primary sources. Reuse per-claim/example API/expected behavior/diagram node and directed-edge mapping with canonical repo/commit/path/lines/excerpt/full-file SHA/evidence ID/classification and occurrence location; a section citation is not blanket support. A different agent gets the complete candidate/mapping/exact artifact hash and independently enumerates material claims from prose/examples/diagrams to find unmapped claims, then checks actual public source context, entailment, qualifications, facts versus specification intent, version/readiness/application responsibility and package availability. Report missing/unsupported/overstated/contradicted claims with locations/evidence IDs/public-source explanations; omit unsupported assertions, never paraphrase/declassify private knowledge. No author self-approval. Active review uses real different authorRunId/reviewerRunId, four distinct walker reporterRunIds separate from both, and publicEvidenceAudit with exactly checkedTargets/checkedEvidenceIds/unmappedClaims/unsupportedClaims/nonempty notes; read-only review-targets returns exact current duplicate-free inventories, never PASS. Coordinator writes reports directly from actual delegate output, not retired nativebridge review_submission. Inventory attestation is not technical proof of each claim. Public review can establish support but provides no proof of private-knowledge absence. Preserve all prior design, walkthrough, validation, publication, exact-SHA stable-alias checkpoint and scheduling requirements and original budgets; no privacy certification/native receipt/protected setup is prerequisite.",
-      "enforcedBy": ["automation/local-execution-policy.json", "automation/SOURCE-BOUNDARY.md", "automation/COORDINATOR.md", "automation/LOCAL-EXECUTION.md", "automation/skills/sources.md", "automation/skills/writing.md", "automation/skills/diagrams.md", "automation/skills/evaluation.md", "automation/tests/test_local_execution_policy.py"],
+      "enforcedBy": [
+        "automation/local-execution-policy.json",
+        "automation/SOURCE-BOUNDARY.md",
+        "automation/COORDINATOR.md",
+        "automation/LOCAL-EXECUTION.md",
+        "automation/skills/sources.md",
+        "automation/skills/writing.md",
+        "automation/skills/diagrams.md",
+        "automation/skills/evaluation.md",
+        "automation/tests/test_local_execution_policy.py"
+      ],
       "enforcementScope": "Explicit role instructions, public source mapping, independent semantic review and policy regression; no enforced tool/storage isolation or absence-of-private-influence claim."
     },
     {
       "id": "mandatory-talos-public-source-boundary",
       "requirement": "Consult Talos for every Paykit run and material development/process investigation, while treating all retrieved context as private until independently verified from approved public snapshots. Private facts, including paraphrases, never become public documentation evidence.",
-      "enforcedBy": ["automation/SOURCE-BOUNDARY.md", "automation/COORDINATOR.md", "automation/skills/sources.md"]
+      "enforcedBy": [
+        "automation/SOURCE-BOUNDARY.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/sources.md"
+      ]
     },
     {
       "id": "landing-docs-section",
       "requirement": "The URL root has a dedicated, visually consistent, responsive Docs section immediately before Your data. Your choice., with the main Docs entry plus exactly three noteworthy documentation pages.",
-      "enforcedBy": ["components/docs/DocsTeaser.tsx", "tests/browser/landing-docs.spec.ts"]
+      "enforcedBy": [
+        "components/docs/DocsTeaser.tsx",
+        "tests/browser/landing-docs.spec.ts"
+      ]
     },
     {
       "id": "generated-teaser-copy",
       "requirement": "Featured card titles, descriptions and default selected-source links come from generated documentation, with the single selector in root docs-generation.json; no parallel hand-maintained copy or Released-only default. Preserve placement, design, responsive checks and exactly three featured pages plus the main Docs link.",
-      "enforcedBy": ["components/docs/DocsTeaser.tsx", "automation/pipeline.py"]
+      "enforcedBy": [
+        "components/docs/DocsTeaser.tsx",
+        "automation/pipeline.py"
+      ]
     },
     {
       "id": "persistent-user-corrections",
       "requirement": "Read this register on every import/regeneration. Preserve prior corrections, add new ones with executable checks, and include the register and affected site components in change detection. Do not rely only on conversation memory.",
-      "enforcedBy": ["AGENTS.md", "automation/COORDINATOR.md", "automation/pipeline.py"]
+      "enforcedBy": [
+        "AGENTS.md",
+        "automation/COORDINATOR.md",
+        "automation/pipeline.py"
+      ]
     },
     {
       "id": "existing-stable-development-alias",
       "requirement": "The existing development project's stable alias must serve the intended working branch, not merely its preview URL. The actual personal alias and account settings stay in ignored deployment configuration, never portable upstream files.",
-      "enforcedBy": [".automation/deployment.json", "automation/COORDINATOR.md"]
+      "enforcedBy": [
+        ".automation/deployment.json",
+        "automation/COORDINATOR.md"
+      ]
     },
     {
       "id": "temporary-preview-is-not-acceptance",
       "requirement": "The one-time user-requested early preview is not a successful automated trial, must not advance successful inputs, and does not enable scheduling or relax subsequent validation.",
-      "enforcedBy": ["automation/pipeline.py", "automation/COORDINATOR.md"]
+      "enforcedBy": [
+        "automation/pipeline.py",
+        "automation/COORDINATOR.md"
+      ]
     },
     {
       "id": "lossless-stdout-optional-single-lf",
       "requirement": "User-authorized prospective correction: preserve raw stdout including its terminator in returned/saved reports and per-command raw files. Distinguish raw-byte equality from protocol match; accept only string stdout equal to exact expected text or that exact text plus one U+000A LF. Keep legacy no-LF reports; reject every other whitespace/content/type difference without strip/rstrip/splitlines normalization. If optional walkthrough status is supplied it must be exactly pass; absence remains legacy-compatible. Preserve existing exact integer-zero instruction-mode exit codes, independent identities, artifact/run, guide/archive and public-evidence audit gates. All old failed/late/incomplete reports retain their original outcomes; changed acceptance-source bytes require fresh reports under new actual run/artifact/role IDs, not relabeled old receipts.",
-      "enforcedBy": ["automation/pipeline.py", "automation/COORDINATOR.md", "automation/skills/evaluation.md", "automation/README.md", "automation/tests/test_stdout_contract.py"],
+      "enforcedBy": [
+        "automation/pipeline.py",
+        "automation/COORDINATOR.md",
+        "automation/skills/evaluation.md",
+        "automation/README.md",
+        "automation/tests/test_stdout_contract.py"
+      ],
       "enforcementScope": "Prospective protocol and policy regressions only; not independent review, a generation lease, publication or scheduling approval."
     },
     {
       "id": "measured-review-shared-deadline",
       "requirement": "User-authorized prospective guidance: estimate future phases from measured end-to-end startup, reads, final hash checks and report-finalization costs plus uncertainty and cleanup/full-validation reserve. Phase targets are planning only; propagate the actual shared absolute run deadline instead of ad hoc 120/300-second phase approval cutoffs rejecting completed reviews within the genuine lease. Keep whole-run 21600 seconds, two concurrent workers, two shared repairs and bounded owned cleanup unchanged. Never extend/reopen old/current hard deadlines, relabel old failed/late outcomes, borrow reviews, reset repairs or waive publication/stable-alias/exact-source/other gates. Insufficient real remaining time fails honestly; this correction grants no new lease.",
-      "enforcedBy": ["automation/COORDINATOR.md", "automation/skills/evaluation.md", "automation/README.md", "automation/tests/test_stdout_contract.py"],
+      "enforcedBy": [
+        "automation/COORDINATOR.md",
+        "automation/skills/evaluation.md",
+        "automation/README.md",
+        "automation/tests/test_stdout_contract.py"
+      ],
       "enforcementScope": "Future planning and executable policy regression only; existing deadlines, repair ledgers and failed/withheld verdicts remain unchanged."
     },
     {
       "id": "iterative-small-public-preview-first",
       "requirement": "The user prefers early, small incremental public website previews and useful parallel work within the existing two-worker limit, rather than waiting for complete automation replacement. Preserve the exact last deployed public content and source mapping; independent review and parent-owned build/browser/publication remain required for this preview. A preview is not strict-profile approval, normal generation, accepted automated publication or documentation execution evidence. All SDK, guide walkthrough and playground checks are not_run_deferred and nonblocking until explicitly resumed. Previews never advance successful inputs, alter old failed strategies/counters, import rejected candidates or weaken normal publication authority; scheduling stays OFF. Deliver only working visible links and disclose the exact shipped and pending route scope.",
-      "enforcedBy": ["automation/ITERATIVE-PREVIEW.md", "tests/iterative-preview-policy.test.mjs", "tests/docs-markdown.test.mjs"],
+      "enforcedBy": [
+        "automation/ITERATIVE-PREVIEW.md",
+        "tests/iterative-preview-policy.test.mjs",
+        "tests/docs-markdown.test.mjs"
+      ],
       "enforcementScope": "Operator preference and focused read-only presentation tests for the separately labeled development preview only. No approval/generation/helper/policy mechanism is changed or certified."
     }
   ]

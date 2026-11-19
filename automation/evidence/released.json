@@ -650,5 +650,77 @@
     "sourceHash": "ae0c87ef9db22e3664bacba261f336e323eef3a1ab4728a1e6f6c21557b16e39",
     "kind": "application-responsibility",
     "claim": "Experimental software—not for production. A stable release label does not establish production readiness."
+  },
+  {
+    "id": "released-overview-refresh-endpoint",
+    "version": "released",
+    "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+    "path": "README.md",
+    "startLine": 76,
+    "endLine": 85,
+    "excerpt": "- **Payment Method**: the broad human/domain concept for how value can move,\n  such as Bitcoin, Lightning, SEPA, ACH, or a card rail.\n- **Payment Endpoint Identifier**: the machine-readable identifier for a\n  Payment Endpoint type, such as `btc-lightning-bolt12`.\n- **Payment Endpoint Payload**: the receiving handle/details for that\n  identifier, such as an address, invoice, offer, IBAN, tag, or JSON descriptor.\n- **Payment Endpoint**: the pairing of a Payment Endpoint Identifier and a\n  Payment Endpoint Payload.\n- **Payment List**: a collection of Payment Endpoints published by a payee or\n  shared privately with a counterparty.",
+    "sourceHash": "ae0c87ef9db22e3664bacba261f336e323eef3a1ab4728a1e6f6c21557b16e39",
+    "kind": "implemented",
+    "claim": "A Payment Endpoint pairs a machine-readable endpoint-type identifier with receiving details called its payload."
+  },
+  {
+    "id": "released-overview-refresh-ownership",
+    "version": "released",
+    "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+    "path": "skills/paykit/SKILL.md",
+    "startLine": 8,
+    "endLine": 9,
+    "excerpt": "Paykit coordinates payments over Pubky. The app owns funds, authorization,\nfinancial execution, settlement validation, scheduling, and product policy.",
+    "sourceHash": "ac00aef17c2f69742292c5c6d27876df8767a8cabac4e4f2e5967745ed46ba2b",
+    "kind": "application-responsibility",
+    "claim": "The application owns funds, authorization, financial execution, settlement validation, scheduling and product policy."
+  },
+  {
+    "id": "released-overview-refresh-purpose",
+    "version": "released",
+    "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+    "path": "README.md",
+    "startLine": 10,
+    "endLine": 24,
+    "excerpt": "Paykit helps apps discover where someone can receive a payment through their\nPubky identity. As a meta payment protocol, it also provides a layer for\npayment-related metadata such as Payment Requests, Payment Proofs, receipts,\nReceipt Access, and Allowances.\n\nA payee can publish public payment details under their Pubky public key, or\nshare a Private Payment List with another person over an Encrypted Link. Paykit\nhandles the common Pubky storage layout, encrypted message formats, Payment\nRequest messages, receipts, and language bindings needed for that exchange.\n\nWallets, payment processors, and apps keep control of payment execution,\nbusiness rules, payment selection, local storage, key rotation, recurring\nPayment Request scheduling, and timeouts. The SDK derives Paykit Payment\nRequest lifecycle state from the shared private event stream and outbound\nqueue. Paykit is the discovery and exchange layer those systems can integrate.",
+    "sourceHash": "ae0c87ef9db22e3664bacba261f336e323eef3a1ab4728a1e6f6c21557b16e39",
+    "kind": "implemented",
+    "claim": "Paykit provides payment discovery through Pubky identities and payment-related data exchange; applications keep execution and business rules."
+  },
+  {
+    "id": "released-overview-refresh-sdk-inputs",
+    "version": "released",
+    "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+    "path": "paykit-sdk/README.md",
+    "startLine": 94,
+    "endLine": 103,
+    "excerpt": "## Integration Shape\n\nApps construct `PaykitSdk` with three pieces:\n\n- a `StorageAdapter` that provides atomic transactions over the identity's\n  shared logical state\n- a `PubkySessionProvider` that returns live Pubky session access and clears it\n  during sign-out\n- a `PaymentAdapter` that supplies receiving details, endpoint selection, and\n  payment-target construction",
+    "sourceHash": "107695aefe5e5e8b33051681ac26ec9c0ee8b4fc651d62961780b1224aec754b",
+    "kind": "application-responsibility",
+    "claim": "Applications supply storage, live Pubky session access and a payment adapter when constructing the SDK."
+  },
+  {
+    "id": "released-overview-refresh-sdk-state",
+    "version": "released",
+    "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+    "path": "paykit-sdk/README.md",
+    "startLine": 3,
+    "endLine": 12,
+    "excerpt": "Stateful Rust runtime for Paykit integrations.\n\n`paykit-sdk` builds on `paykit-lib` and owns durable Paykit state for Pubky\nidentity status, public Payment Endpoint sync, Encrypted Link state, private\nstream intake, Private Payment List derivation, contact payment resolution, and\noutbound Private Application Message delivery. It also derives Payment Request\nstate, indexes Receipt Access events, retrieves/decrypts Encrypted Receipts,\ntracks local receipt issuance, tracks optional Payment Endpoint Reservations,\nmanages Paykit-facing profile and Contact Records, and exports/restores\nSDK-managed backup state.",
+    "sourceHash": "107695aefe5e5e8b33051681ac26ec9c0ee8b4fc651d62961780b1224aec754b",
+    "kind": "implemented",
+    "claim": "paykit-sdk is a stateful Rust runtime built on paykit-lib that manages durable Paykit state for endpoints, links and payment-related messages."
+  },
+  {
+    "id": "released-overview-refresh-status",
+    "version": "released",
+    "commit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df",
+    "path": "README.md",
+    "startLine": 1,
+    "endLine": 3,
+    "excerpt": "# Paykit\n\n> WIP - not for production.",
+    "sourceHash": "ae0c87ef9db22e3664bacba261f336e323eef3a1ab4728a1e6f6c21557b16e39",
+    "kind": "application-responsibility",
+    "claim": "The pinned source warns that Paykit is work in progress and not for production; the overview describes this qualification as experimental."
   }
 ]

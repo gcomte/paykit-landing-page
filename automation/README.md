@@ -1,5 +1,19 @@
 # Documentation automation
 
+## Current small-increment workflow
+
+Follow `COORDINATOR.md`: agree one small release, generate it, check/review/build, deploy, then discuss the next increment. The larger pipeline below is reference material, not a prerequisite for this workflow.
+
+The first manual command supports one existing overview page:
+
+    python automation/refresh_page.py --version released --page overview
+
+Hermes first reads the pinned public sources and generates the selected page and source mappings in `automation/blueprints/released.json`. The command renders only that page into the existing document, adds its referenced evidence, and updates the content hash plus a `pageRefresh` marker in the public manifest. Existing HTML and Markdown routes consume the same generated page. It preserves the source version, readiness warning and all other pages; a different source commit is refused. Do not hand-edit generated output. The previous whole-generation fingerprint is retained as historical metadata, not claimed as a fresh full-site run.
+
+Run the focused check with `python -m unittest discover -s automation/tests -p test_refresh_page.py`, then the relevant site tests and build. This increment does not run SDK examples, move source refs, enable scheduling or provide unattended authoring. Those remain separate backlog items.
+
+## Earlier full-pipeline reference (not the current delivery checklist)
+
 Internal operation material, not a public Develop Paykit section. Read COORDINATOR.md, SOURCE-BOUNDARY.md, LOCAL-EXECUTION.md, config.json, local-execution-policy.json, corrections.json and all five skills before a run. AGENTS.md is read-only. Public output under /docs is generated; correct instructions/mappings/recipes and regenerate, never patch generated pages.
 
 ## Configured source and regeneration
