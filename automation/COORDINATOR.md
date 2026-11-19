@@ -10,7 +10,7 @@ The former transaction/semantic-export/review-framework engineering is stopped. 
 
 ## For each agreed increment
 
-1. State the small scope and what is deferred.
+1. State the small scope and what is deferred. Before authoring an overview, run `python automation/check_source.py --version released --page overview` (or `--version coming-soon` for the configured source). On `skip`, stop without model work, generation or a commit. On lookup `error`, report the failure rather than skipping. Use `--force` for an explicit refresh or generation-process change; automatic process-change detection is not part of this first check. A changed upstream commit is a signal for a source-specific update, not permission to relabel stale content.
 2. Update the generation inputs or a simple script; do not hand-maintain generated documentation.
 3. Check the changed content against the correct public source/version. Keep private Talos context out of public output and public worker inputs.
 4. Run relevant checks and the site build. Use a bounded independent review of the changed scope, not a new certification system.

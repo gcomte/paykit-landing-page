@@ -4,7 +4,13 @@
 
 Follow `COORDINATOR.md`: agree one small release, generate it, check/review/build, deploy, then discuss the next increment. The larger pipeline below is reference material, not a prerequisite for this workflow.
 
-The first manual command supports one existing overview page:
+Before authoring, run the read-only source check from the last deployed checkout:
+
+    python automation/check_source.py --version released --page overview
+
+`skip` means the upstream commit matches the documented source: do not start authoring, regeneration or a commit. `refresh_needed` identifies a changed source. Released checks its recorded release tag; coming-soon checks the exact branch/tag in `docs-generation.json`. Lookup failures return `error` with exit code 1, never a false skip. Add `--force` for an explicit refresh or after changing generation instructions. This first check does not automatically fingerprint process changes, write checkpoints, regenerate content or enable scheduling. A changed source is a signal, not permission to reuse an old blueprint under a new version label; source-version updating remains a separate step.
+
+The existing manual refresh command supports one overview page:
 
     python automation/refresh_page.py --version released --page overview
 

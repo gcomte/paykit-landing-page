@@ -34,6 +34,11 @@
   },
   "requirements": [
     {
+      "id": "simple-source-change-check",
+      "requirement": "Before overview authoring, compare the exact chosen public branch/tag commit with its documented source. Skip unchanged source without model/generation/commit work; report lookup errors rather than treating them as no change. Keep a force option for explicit refreshes or generation-process changes. The first increment is read-only source checking, not automatic process fingerprinting, source-version migration, unattended generation or scheduling.",
+      "enforcedBy": ["automation/check_source.py", "automation/tests/test_check_source.py", "automation/COORDINATOR.md"]
+    },
+    {
       "id": "simple-iterative-delivery",
       "requirement": "Return to the initial goal: automatically maintained public documentation. Prefer simple existing tools and small useful releases. Keep all requirements as a backlog, agree the next small increment, implement only that scope, run proportionate source/review/build checks, ship it, then discuss the result and next increment with the user. Do not implement all requirements at once or make speculative edge cases, transaction systems, universal semantic codecs, exhaustive adversarial qualification or multi-hour review machinery prerequisites. Stop the current complex engineering lanes; preserve their history without adopting or resuming them from late results. Do not manually fix generated prose; improve the generation inputs/process. Scheduling and additional features wait for their own agreed increment.",
       "enforcedBy": [
