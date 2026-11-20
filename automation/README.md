@@ -30,7 +30,23 @@ For an agreed development-source update, regenerate all existing development pag
 
 The snapshot contains its `index.json` selection and version metadata, the referenced public source files, and `previous/paykit-lib/Cargo.toml` from the prior documented commit. This command updates development content, evidence, source lock, manifest and downloadable fixture pins; released files are preserved. It retains the historical whole-run fingerprint and records the limited version refresh separately. Dependency locks are deterministically repinned only when the complete library manifest is unchanged except its package version; other manifest changes require a new dependency resolution instead. Repacking and source inspection do not mean Cargo, SDK examples or walkthroughs were executed. Keep those checks honestly deferred. The source-check command should report `skip` after this snapshot has been reviewed, shipped and verified.
 
+## Weekly Sunday automation
+
+The user approved Sunday 05:00 UTC (`0 5 * * 0`, timezone UTC), not daily. `WEEKLY.md` is the current self-contained coordinator runbook. After that runbook/helpers are reviewed, published and deployment-verified, register exactly one native Hermes agent job and verify it; registration does not prove its future run has executed. Preserve unrelated jobs. CLI-origin reports are saved history notes, not external messages.
+
+    python -B automation/weekly_check.py --started-at ORIGINAL_START_EPOCH
+
+This read-only command requires a clean checkout and matching live development manifest/content hash. It resolves only the configured literal upstream source and compares active generation inputs to the latest committed development-document revision. New source or process bytes require fresh complete authoring/review; unrelated commits skip. It writes no processed-state/date/output. Failures remain failures and cannot checkpoint attempts. Same-day byte-identical process-only generation can conservatively be retried; do not fabricate a content edit to clear it. The original six-hour start/deadline accompanies the result and must not reset on retries.
+
+When refresh is needed, prepare the public inputs before fresh authorship:
+
+    python -B automation/prepare_development.py --output /task-owned/sources --commit EXACT_GATE_COMMIT
+
+The helper freezes the selected ref/object/commit, exact public source files/hashes, previous library manifest and fresh registry observations for `refresh_development.py`. It does not author/review docs or execute SDK code. The coordinator runs the existing public author -> renderer -> independent reviewer -> tests/build/browser -> allowed fork push -> exact-SHA Vercel/live-readback sequence, with no successful attempted-input checkpoint. Unchanged runs skip those workers/generation/date bumps/commits, not the agent coordinator itself. Every outcome reports actual scope and time. Pinned tags remain pinned until configuration is explicitly changed.
+
 ## Earlier full-pipeline reference (not the current delivery checklist)
+
+Everything below is historical reference for the stopped large pipeline; its daily/no-model/four-walkthrough clauses do not override the current small workflow, Sunday cadence, agent coordinator or deferred SDK execution.
 
 Internal operation material, not a public Develop Paykit section. Read COORDINATOR.md, SOURCE-BOUNDARY.md, LOCAL-EXECUTION.md, config.json, local-execution-policy.json, corrections.json and all five skills before a run. AGENTS.md is read-only. Public output under /docs is generated; correct instructions/mappings/recipes and regenerate, never patch generated pages.
 

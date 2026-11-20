@@ -1,0 +1,162 @@
+"""Small synthetic Git histories for the read-only weekly gate."""
+import importlib.util
+import json
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+import hashlib
+import sys
+
+SCRIPT = Path(__file__).parents[1] / 'weekly_check.py'
+COMMIT = 'a' * 40
+
+
+class WeeklyCheckTests(unittest.TestCase):
+    def fixture(self):
+        self.assertTrue(SCRIPT.exists(), 'The weekly source/process check is missing')
+        sys.path.insert(0, str(SCRIPT.parent))
+        spec = importlib.util.spec_from_file_location('weekly_check', SCRIPT)
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        (root / 'content/docs').mkdir(parents=True); (root / 'automation').mkdir()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': {'repository': 'pubky/paykit-rs', 'kind': 'tag', 'ref': 'v-test'}, 'defaultVersion': 'coming-soon'}))
+        (root / 'content/docs/coming-soon.json').write_text(json.dumps({'version': {'commit': COMMIT}, 'lastUpdated': '2026-11-20', 'pages': []}))
+        (root / 'automation/COORDINATOR.md').write_text('Public author and independent review.\n')
+        (root / 'app').mkdir()
+        for name in ['layout.tsx', 'globals.css']:
+            (root / 'app' / name).write_text('Shared application input\n')
+        self.git(root, 'init', '--initial-branch=docs-automation')
+        self.git(root, 'config', 'user.name', 'Fixture')
+        self.git(root, 'config', 'user.email', 'fixture@example.invalid')
+        self.git(root, 'add', '.')
+        self.git(root, 'commit', '-m', 'fixture published documentation')
+        manifest = {'sources': {'coming-soon': {'commit': COMMIT}}, 'contentHashes': {'coming-soon': hashlib.sha256((root / 'content/docs/coming-soon.json').read_bytes()).hexdigest()}}
+        return root, module, manifest
+
+    def git(self, root, *args):
+        return subprocess.check_output(['git', '-C', str(root), *args], text=True, stderr=subprocess.DEVNULL).strip()
+
+    def test_unchanged_deployed_source_and_process_skip_without_writes(self):
+        root, module, manifest = self.fixture()
+        before = (root / 'content/docs/coming-soon.json').read_bytes()
+        result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+        self.assertEqual(result['action'], 'skip')
+        self.assertEqual(result['reasons'], [])
+        self.assertEqual(result['processFilesChanged'], [])
+        self.assertEqual((root / 'content/docs/coming-soon.json').read_bytes(), before)
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+    def test_unpublished_or_unknown_baseline_refuses_before_upstream_lookup(self):
+        root, module, manifest = self.fixture()
+        for group, field in [('sources', 'commit'), ('contentHashes', None)]:
+            wrong = json.loads(json.dumps(manifest))
+            if field:
+                wrong[group]['coming-soon'][field] = 'b' * 40
+            else:
+                wrong[group]['coming-soon'] = '0' * 64
+            with self.subTest(group=group), self.assertRaisesRegex(ValueError, 'deployed'):
+                module.check_weekly(root, wrong, resolver=lambda *args: self.fail('Unpublished inputs must not reach upstream'))
+
+    def test_a_new_selected_commit_requires_refresh(self):
+        root, module, manifest = self.fixture()
+        result = module.check_weekly(root, manifest, resolver=lambda *args: 'b' * 40)
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['reasons'], ['source_changed'])
+        self.assertEqual(result['sourceCommit'], 'b' * 40)
+        self.assertEqual(result['documentationCommit'], COMMIT)
+
+    def test_committed_generation_inputs_trigger_but_unrelated_commits_do_not(self):
+        root, module, manifest = self.fixture()
+        (root / 'notes.txt').write_text('unrelated note')
+        self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'unrelated')
+        self.assertEqual(module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)['action'], 'skip')
+        names = ['automation/COORDINATOR.md', 'automation/WEEKLY.md', 'components/docs/DocsPage.tsx', 'automation/blueprints/coming-soon.json', 'docs-generation.json', 'automation/weekly_check.py', 'playwright.config.ts', 'public/docs-examples/coming-soon/wallet/Cargo.lock']
+        for name in names:
+            file = root / name; file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text((file.read_text() if file.exists() else '') + '\n')
+        self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'generation inputs changed')
+        result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['reasons'], ['generation_process_changed'])
+        self.assertEqual(result['processFilesChanged'], sorted(names))
+        self.assertEqual(result['documentationRevision'], self.git(root, 'log', '-1', '--format=%H', '--', 'content/docs/coming-soon.json'))
+
+    def test_committed_shared_app_inputs_require_refresh_without_source_changes(self):
+        for name in ['app/layout.tsx', 'app/globals.css']:
+            with self.subTest(path=name):
+                root, module, manifest = self.fixture()
+                document = root / 'content/docs/coming-soon.json'
+                before = document.read_bytes()
+                revision = self.git(root, 'rev-parse', 'HEAD')
+                self.assertEqual(module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)['action'], 'skip')
+                target = root / name
+                target.write_text(target.read_text() + '\n')
+                self.git(root, 'add', name)
+                self.git(root, 'commit', '-m', 'shared docs rendering input changed')
+                result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+                self.assertEqual(result['action'], 'refresh_needed')
+                self.assertEqual(result['reasons'], ['generation_process_changed'])
+                self.assertEqual(result['processFilesChanged'], [name])
+                self.assertEqual(result['documentationRevision'], revision)
+                self.assertEqual(result['sourceCommit'], COMMIT)
+                self.assertEqual(result['documentationCommit'], COMMIT)
+                self.assertEqual(document.read_bytes(), before)
+                self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_dirty_checkout_refuses_before_upstream_lookup(self):
+        root, module, manifest = self.fixture()
+        file = root / 'automation/COORDINATOR.md'; file.write_text('Uncommitted instructions')
+        with self.assertRaisesRegex(ValueError, 'clean'):
+            module.check_weekly(root, manifest, resolver=lambda *args: self.fail('Dirty inputs reached upstream'))
+
+    def test_force_requests_fresh_work_without_writing_any_state(self):
+        root, module, manifest = self.fixture()
+        before = (root / 'content/docs/coming-soon.json').read_bytes()
+        result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT, force=True)
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['reasons'], ['forced'])
+        self.assertEqual((root / 'content/docs/coming-soon.json').read_bytes(), before)
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_fixed_six_hour_budget_cannot_be_reset_by_an_expired_check(self):
+        root, module, manifest = self.fixture()
+        from unittest.mock import patch
+        with patch.object(module.time, 'time', return_value=100000):
+            result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+            self.assertEqual(result['startedEpoch'], 100000)
+            self.assertEqual(result['deadlineEpoch'] - result['startedEpoch'], 21600)
+            with self.assertRaisesRegex(TimeoutError, 'budget'):
+                module.check_weekly(root, manifest, resolver=lambda *args: self.fail('Expired check reached upstream'), started_at=78399)
+
+    def test_cli_reports_real_decision_and_rejects_unknown_site(self):
+        root, module, manifest = self.fixture()
+        import contextlib
+        import io
+        from unittest.mock import patch
+        self.assertTrue(callable(getattr(module, 'main', None)), 'Weekly CLI entry point is missing')
+        stream = io.StringIO()
+        with patch.object(module.urllib.request, 'urlopen', return_value=io.BytesIO(json.dumps(manifest).encode())) as fetch, patch.object(module, 'resolve_source', return_value=COMMIT), contextlib.redirect_stdout(stream):
+            module.main(['--root', str(root)])
+        result = json.loads(stream.getvalue())
+        self.assertEqual(result['action'], 'skip')
+        self.assertEqual(fetch.call_args.kwargs['timeout'], 30)
+        self.assertEqual(fetch.call_args.args[0].full_url, module.SITE_URLS[0] + '/docs-manifest.json')
+        stream = io.StringIO()
+        with contextlib.redirect_stdout(stream), self.assertRaises(SystemExit) as exit_result:
+            module.main(['--root', str(root), '--site-url', 'https://not-approved.example'])
+        self.assertEqual(exit_result.exception.code, 1)
+        self.assertEqual(json.loads(stream.getvalue())['action'], 'error')
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_invalid_start_times_cannot_bypass_the_run_budget(self):
+        root, module, manifest = self.fixture()
+        from unittest.mock import patch
+        with patch.object(module.time, 'time', return_value=100000):
+            for start in [float('nan'), float('inf'), 100001]:
+                with self.subTest(start=start), self.assertRaisesRegex(ValueError, 'start'):
+                    module.check_weekly(root, manifest, resolver=lambda *args: COMMIT, started_at=start)
+
+
+if __name__ == '__main__':
+    unittest.main()
