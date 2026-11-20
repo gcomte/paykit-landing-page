@@ -11,6 +11,7 @@ from pathlib import Path
 import tarfile
 import tomllib
 from release_source import POLICY, validate_frozen
+from refresh_glossary import _validate_resources
 
 
 def encode(value):
@@ -106,6 +107,10 @@ def refresh_development(root, sources):
     document = {'version': metadata, 'pages': copy.deepcopy(blueprint['pages']),
                 'lastUpdated': datetime.now(timezone.utc).date().isoformat()}
     for page in document['pages']:
+        if page['slug'] == 'resources':
+            ids = {key for section in page['sections'] for key in section['evidence']}
+            _validate_resources(page, document, 'coming-soon', sources, index,
+                                [row for row in blueprint['evidence'] if row['id'] in ids])
         for section in page['sections']:
             for block in section.get('code', []):
                 if 'artifact' in block:

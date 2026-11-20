@@ -1569,6 +1569,160 @@
           "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/README.md"
         }
       ]
+    },
+    {
+      "slug": "resources",
+      "title": "Resources",
+      "group": "Reference",
+      "kind": "reference",
+      "description": "Version-pinned upstream reading for choosing an integration layer and checking application responsibilities.",
+      "sections": [
+        {
+          "id": "protocol-overview",
+          "title": "Start with the protocol overview",
+          "paragraphs": [
+            "The repository overview explains public and private payment discovery, core vocabulary and the division between Paykit and application code. Read it first for context; this v0.1.0 snapshot explicitly warns that it is work in progress and not for production."
+          ],
+          "evidence": [
+            "released-resources-overview",
+            "released-resources-vocabulary",
+            "released-resources-readiness"
+          ],
+          "links": [
+            {
+              "label": "Repository overview — v0.1.0",
+              "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/README.md"
+            },
+            {
+              "label": "Related: What Paykit does",
+              "href": "/docs/released/overview"
+            }
+          ]
+        },
+        {
+          "id": "rust-library",
+          "title": "Use the stateless Rust library",
+          "paragraphs": [
+            "The library README covers stateless Rust protocol helpers and caller-owned Pubky sessions, keys and timeouts. Use it for lower-level protocol work, where your code supplies the live Pubky access."
+          ],
+          "evidence": [
+            "released-resources-library-scope",
+            "released-resources-library-callers"
+          ],
+          "links": [
+            {
+              "label": "Library README — v0.1.0",
+              "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/README.md"
+            }
+          ]
+        },
+        {
+          "id": "rust-sdk",
+          "title": "Plan a stateful Rust integration",
+          "paragraphs": [
+            "The SDK README introduces durable state, shared-identity coordination and the storage, live-session and payment-adapter boundaries. Use it when planning a stateful Rust integration; payment execution and settlement detection remain application or adapter responsibilities."
+          ],
+          "evidence": [
+            "released-resources-sdk-state",
+            "released-resources-sdk-inputs"
+          ],
+          "links": [
+            {
+              "label": "SDK README — v0.1.0",
+              "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/README.md"
+            },
+            {
+              "label": "Related: Application adapters",
+              "href": "/docs/released/components#adapters"
+            }
+          ]
+        },
+        {
+          "id": "mobile-bindings",
+          "title": "Explore the mobile binding surface",
+          "paragraphs": [
+            "The FFI README covers Swift/Kotlin SDK bindings, platform callbacks and mobile workflows. Use its build and initialization sections when planning a mobile integration."
+          ],
+          "evidence": [
+            "released-resources-ffi-surface",
+            "released-resources-ffi-workflows",
+            "released-resources-ffi-building"
+          ],
+          "links": [
+            {
+              "label": "Mobile binding README — v0.1.0",
+              "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-ffi/README.md"
+            }
+          ]
+        },
+        {
+          "id": "official-skill",
+          "title": "Consult the official integration skill",
+          "paragraphs": [
+            "The official upstream integration skill outlines shared-identity setup and application-owned payment responsibilities. Read this pinned original alongside your dependency pin; its internal branch links are navigation aids, not release guarantees."
+          ],
+          "evidence": [
+            "released-resources-skill-scope",
+            "released-resources-skill-identity"
+          ],
+          "links": [
+            {
+              "label": "Official upstream Paykit skill — v0.1.0",
+              "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit/SKILL.md"
+            }
+          ]
+        },
+        {
+          "id": "shared-state-deployment",
+          "title": "Check shared-state deployment constraints",
+          "paragraphs": [
+            "The storage contract sets out homeserver and GCS prerequisites, locked-writer rules and encryption limits for shared identity state. Read it before multi-app deployment; Paykit does not automatically check the server version or backend."
+          ],
+          "evidence": [
+            "released-resources-shared-state"
+          ],
+          "links": [
+            {
+              "label": "Shared-state storage contract — v0.1.0",
+              "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/storage/pubky_shared.rs"
+            },
+            {
+              "label": "Related: Deployment prerequisites",
+              "href": "/docs/released/boundaries#deployment"
+            }
+          ]
+        },
+        {
+          "id": "change-history",
+          "title": "Compare the snapshot's change history",
+          "paragraphs": [
+            "Use the pinned changelog to compare recorded changes when planning an update. Its 0.1.0 entry records dependency, authentication and shared-state recovery changes."
+          ],
+          "evidence": [
+            "released-resources-changelog"
+          ],
+          "links": [
+            {
+              "label": "Snapshot changelog — v0.1.0",
+              "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/CHANGELOG.md"
+            }
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "Protocol overview — v0.1.0",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/README.md"
+        },
+        {
+          "label": "Stateful Rust integration — v0.1.0",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/README.md"
+        },
+        {
+          "label": "Official integration skill — v0.1.0",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit/SKILL.md"
+        }
+      ]
     }
   ],
   "lastUpdated": "2026-11-20"

@@ -191,6 +191,25 @@ class WeeklyCheckTests(unittest.TestCase):
                 self.assertEqual(result['processFilesChanged'], [name])
                 self.assertEqual(result['reasons'], ['generation_process_changed'])
 
+    def test_resources_dependencies_each_trigger_refresh_but_unrelated_commit_skips(self):
+        for name in ('automation/refresh_resources.py', 'automation/tests/test_refresh_resources.py', 'tests/resources-policy.test.mjs'):
+            with self.subTest(path=name):
+                root, module, manifest = self.fixture()
+                (root / 'unrelated.txt').write_text('Synthetic unrelated commit\n')
+                self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'unrelated')
+                self.assertEqual(module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)['action'], 'skip')
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('Synthetic Resources generation dependency\n')
+                self.git(root, 'add', name); self.git(root, 'commit', '-m', 'Resources dependency changed')
+                before = (root / 'content/docs/coming-soon.json').read_bytes()
+                result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+                self.assertEqual(result['action'], 'refresh_needed')
+                self.assertEqual(result['reasons'], ['generation_process_changed'])
+                self.assertEqual(result['processFilesChanged'], [name])
+                self.assertEqual((root / 'content/docs/coming-soon.json').read_bytes(), before)
+                self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
 
 if __name__ == '__main__':
     unittest.main()

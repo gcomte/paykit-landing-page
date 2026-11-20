@@ -56,13 +56,13 @@ async function docsTrees(load, documents) {
     }
   }
   rows.push({ version: 'coming-soon', route: '/docs', tree: layout({ children: await load('app/docs/page.tsx').default() }) });
-  assert.equal(rows.length, 15);
+  assert.equal(rows.length, 17);
   return rows;
 }
 
 const humanDates = { released: 'Nov 18, 2026', 'coming-soon': 'Nov 19, 2026' };
 
-test('all fifteen docs footers use their actual snapshot tag and persisted UTC generation date', async () => {
+test('all seventeen docs footers use their actual snapshot tag and persisted UTC generation date', async () => {
   const { load, documents } = fixtureLoader();
   for (const row of await docsTrees(load, documents)) {
     const html = renderToStaticMarkup(row.tree);
@@ -76,7 +76,7 @@ test('all fifteen docs footers use their actual snapshot tag and persisted UTC g
   }
 });
 
-test('all fifteen Markdown endpoints preserve footer metadata and complete HTML observations', async () => {
+test('all seventeen Markdown endpoints preserve footer metadata and complete HTML observations', async () => {
   const { load, documents } = fixtureLoader();
   for (const row of await docsTrees(load, documents)) {
     const response = row.route === '/docs'

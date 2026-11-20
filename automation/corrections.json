@@ -34,16 +34,32 @@
   },
   "requirements": [
     {
+      "id": "generated-version-aware-resources",
+      "requirement": "Generate a concise Resources reference page in each retained documentation version from approved public sources. Categorize useful references by reader task, with short source-supported descriptions, entry-level exact evidence and verified immutable pubky/paykit-rs links at that version's documented commit. Link the official upstream developer skill, never copy or maintain it. Include Resources in Reference navigation, HTML, Markdown, llms and actual version/generation-date footer. Preserve the seven existing pages when adding Resources and maintain all eight selected-source pages on future weekly refreshes; retain the older version's Resources unchanged during normal selected-release updates. Require a fresh public author and different independent factual reviewer, plus code review and actual software/deployment checks. Correct generation inputs and regenerate; never manually maintain generated prose, source metadata or dates. Do not imply inspected sources, reachable links or fixture repacking establish SDK execution. Keep Sunday 05:00 UTC and all private/public, authorization and no-change boundaries unchanged.",
+      "enforcedBy": [
+        "automation/refresh_resources.py",
+        "components/docs/content.ts",
+        "automation/WEEKLY.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "automation/tests/test_refresh_resources.py",
+        "tests/docs-resources.test.mjs",
+        "tests/resources-policy.test.mjs",
+        "tests/browser/docs-resources.spec.ts"
+      ],
+      "enforcementScope": "Approved Resources increment and future eight-page maintenance; an instruction record is not generated-content approval, deployment or a completed scheduled run."
+    },
+    {
       "id": "newest-published-release-selection",
       "requirement": "Each documentation run discovers the newest published GitHub release on pubky/paykit-rs/releases and uses that release's literal tag instead of statically pinning v0.1.1-rc9. Include published prereleases, exclude drafts/unpublished records, and order by publication time rather than semantic version, commit creation time or GitHub's stable-only latest alias. Freeze the selected release/tag/object/peeled commit once per run and pass it to preparation/generation/review; do not switch sources midway if another release appears. Never fall back to a default branch, stale tag or unassociated tag. The dynamic policy belongs in docs-generation.json; actual generated documents retain the concrete covered tag/commit. A changed selected tag triggers refresh even at the same commit. Preserve the separately retained stable snapshot and existing Sunday 05:00 UTC cadence, public evidence/review/QA/publication boundaries and skip-without-date-bump behavior.",
-      "implementationStatus": "implemented-pending-generated-content-and-review",
+      "implementationStatus": "shipped-live-verified",
       "supersedes": "Earlier static RC9 or literal-only selected-source instructions; exact ref preservation still applies AFTER release discovery.",
       "enforcedBy": ["docs-generation.json", "automation/release_source.py", "automation/check_source.py", "automation/weekly_check.py", "automation/prepare_development.py", "automation/refresh_development.py", "automation/WEEKLY.md"]
     },
     {
       "id": "generated-version-aware-glossary",
-      "requirement": "Implement the proposed automatically generated glossary in each retained documentation snapshot: useful alphabetically ordered terms, clear definitions grounded in that version's exact public source, term-level evidence mappings and links to matching-version guides. Publish it in the existing docs navigation as a reference page with matching Markdown, llms coverage and actual version/generation-date footer. Fresh public authoring and different-agent factual review apply; never manually maintain generated definitions or mix source versions. Preserve the six core pages and update the complete seven-page selected-source set on future release refreshes. Resources remains the next separate backlog item, not part of this implementation.",
-      "implementationStatus": "implemented-pending-generated-content-and-review",
+      "requirement": "Implement the proposed automatically generated glossary in each retained documentation snapshot: useful alphabetically ordered terms, clear definitions grounded in that version's exact public source, term-level evidence mappings and links to matching-version guides. Publish it in the existing docs navigation as a reference page with matching Markdown, llms coverage and actual version/generation-date footer. Fresh public authoring and different-agent factual review apply; never manually maintain generated definitions or mix source versions. Preserve the six core pages and maintain the complete selected-source page set on future release refreshes, now eight pages after the separately approved Resources increment.",
+      "implementationStatus": "shipped-live-verified",
       "enforcedBy": ["components/docs/content.ts", "components/docs/DocsPage.tsx", "automation/refresh_glossary.py", "automation/blueprints/released.json", "automation/blueprints/coming-soon.json", "automation/WEEKLY.md"]
     },
     {

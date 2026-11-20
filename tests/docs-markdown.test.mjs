@@ -69,7 +69,7 @@ export function observations(html) {
   return JSON.parse(p.stdout);
 }
 
-test('all fourteen published articles preserve observed prose, ordered links, code, headings, images, IDs and list ownership', async () => {
+test('all sixteen published articles preserve observed prose, ordered links, code, headings, images, IDs and list ownership', async () => {
   const load = sourceLoader();
   const view = load('components/docs/markdown.ts').documentationMarkdown;
   const rows = [];
@@ -84,7 +84,7 @@ test('all fourteen published articles preserve observed prose, ordered links, co
     }
   }
   if (process.env.PAYKIT_MARKDOWN_EVIDENCE) writeFileSync(process.env.PAYKIT_MARKDOWN_EVIDENCE, JSON.stringify(rows, null, 2) + '\n');
-  assert.equal(rows.length, 14);
+  assert.equal(rows.length, 16);
   for (const row of rows) assert.deepEqual(row.actual, row.expected, row.route);
 });
 

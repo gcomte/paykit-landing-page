@@ -13,12 +13,12 @@
     }
   },
   "contentHashes": {
-    "released": "3c1d5e69061c48b2b41aa0668c432a4fb2338e3da643875f24eb311399737310",
-    "coming-soon": "22a1f031d841fd6c533db62e992a47c887cf57fc58d039601cb7d0774224d83b"
+    "released": "eb7aab9b19da74b9d93364f50dbe2de4ec5eb5b8962574c6941cd3b29496e837",
+    "coming-soon": "7ad8537f31f7f5b84c8c05476c55859c346e80b7a1dd74012c491dcb524ca893"
   },
   "pageRefresh": {
     "version": "coming-soon",
-    "page": "glossary",
+    "page": "resources",
     "sourceCommit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be"
   },
   "versionRefresh": {
@@ -31,7 +31,8 @@
       "boundaries",
       "wallets",
       "point-of-sale",
-      "glossary"
+      "glossary",
+      "resources"
     ]
   }
 }

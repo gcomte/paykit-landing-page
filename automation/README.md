@@ -53,7 +53,18 @@ For initial addition or an explicitly selected glossary-only update, a fresh pub
     python -B automation/refresh_glossary.py --version released --sources /task-owned/released-sources
     python -B automation/refresh_glossary.py --version coming-soon --sources /task-owned/selected-sources
 
-This narrow renderer preserves the six core pages, source/version/readiness and other snapshot, merges validated glossary evidence and stamps the UTC generation day. Obtain independent factual review and normal QA/publication checks. On future latest-release updates the full selected-source renderer maintains all seven pages together. Never hand-maintain glossary prose or mix meanings from different versions.
+This narrow renderer preserves the six core pages, source/version/readiness and other snapshot, merges validated glossary evidence and stamps the UTC generation day. Obtain independent factual review and normal QA/publication checks. On future latest-release updates the full selected-source renderer maintains all eight pages together, including Resources. Never hand-maintain glossary prose or mix meanings from different versions.
+
+## Generated Resources
+
+Both retained versions have a generated `resources` page under Reference, with matching Markdown, llms inclusion and the actual covered version/generation-date footer. Keep it small and useful: task-categorized public references, short source-supported descriptions, entry-level exact evidence and immutable pubky/paykit-rs file links at the documented commit. Independently verify linked files and description relevance; HTTP 200 alone is not content support. Link the official upstream skill rather than copying or maintaining it.
+
+For the explicitly approved initial addition or a selected Resources-only update, generate the blueprint and mappings from frozen public sources, then run:
+
+    python -B automation/refresh_resources.py --version released --sources /task-owned/released-sources
+    python -B automation/refresh_resources.py --version coming-soon --sources /task-owned/selected-sources
+
+This narrow renderer preserves the seven existing pages, the other version, source/readiness metadata and downloadable fixtures, merges validated evidence and stamps only the generated version's UTC day. A different agent reviews the rendered claims and links before publication. Normal weekly selected-release refreshes maintain all eight pages in one complete blueprint/render/review flow; preserve the older retained version's glossary and Resources. Never hand-maintain generated content or treat this reference page as SDK execution evidence.
 
 ## Earlier full-pipeline reference (not the current delivery checklist)
 

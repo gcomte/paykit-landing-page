@@ -9,7 +9,7 @@ type Documentation = {
 
 // Run against the parent's fresh build AFTER both real generators have run.
 // Missing persisted dates are a failure, not synthetic browser-fixture success.
-test("all fifteen docs footers retain generated version/date metadata; landing has none", async ({ page, request }) => {
+test("all seventeen docs footers retain generated version/date metadata; landing has none", async ({ page, request }) => {
   const rows: { route: string; documentation: Documentation }[] = [];
   for (const version of ["released", "coming-soon"]) {
     const documentation: Documentation = JSON.parse(await readFile(`content/docs/${version}.json`, "utf8"));
@@ -17,7 +17,7 @@ test("all fifteen docs footers retain generated version/date metadata; landing h
     for (const entry of documentation.pages) rows.push({ route: `/docs/${version}/${entry.slug}`, documentation });
     if (version === "coming-soon") rows.push({ route: "/docs", documentation });
   }
-  expect(rows).toHaveLength(15);
+  expect(rows).toHaveLength(17);
   for (const { route, documentation } of rows) {
     const covered = documentation.version.tag ?? documentation.version.ref ?? documentation.version.label;
     const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })

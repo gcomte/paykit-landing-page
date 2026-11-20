@@ -75,3 +75,20 @@ test('browser checks cannot silently reuse a stale local production server', () 
   assert.ok(reuse, 'the runner must state its server ownership policy');
   assert.equal(reuse[1].trim(), 'false', 'always start the tested build or fail on an occupied port');
 });
+
+test('all sixteen static docs routes plus the entry retain the Resources version pair', async () => {
+  const selector = JSON.parse(readFileSync('docs-generation.json', 'utf8'));
+  const actual = await loadTs('components/docs/content.ts', {
+    'server-only': {}, '../../docs-generation.json': selector,
+  });
+  const entry = await loadTs('app/docs/[version]/[slug]/page.tsx', {
+    'next/navigation': { notFound() { throw new Error('404'); } },
+    '@/components/docs/content': actual,
+    '@/components/docs/metadata': {}, '@/components/docs/DocsPage': () => null,
+  });
+  const routes = entry.generateStaticParams().map(({ version, slug }) => `/docs/${version}/${slug}`);
+  assert.equal(entry.dynamicParams, false);
+  assert.equal(routes.length, 16);
+  assert.equal(new Set(['/docs', ...routes]).size, 17);
+  for (const version of ['released', 'coming-soon']) assert.ok(routes.includes(`/docs/${version}/resources`));
+});

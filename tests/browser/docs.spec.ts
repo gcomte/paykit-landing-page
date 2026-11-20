@@ -25,7 +25,7 @@ type Documentation = {
   pages: PageData[];
 };
 const versions: Version[] = ["released", "coming-soon"];
-const slugs = ["overview", "components", "flows", "boundaries", "wallets", "point-of-sale", "glossary"];
+const slugs = ["overview", "components", "flows", "boundaries", "wallets", "point-of-sale", "glossary", "resources"];
 const warning = "Selected source snapshot—check its ref and commit before integrating.";
 const documentPath = (version: Version, slug: string) => `/docs/${version}/${slug}`;
 const readDocumentation = async (version: Version): Promise<Documentation> =>

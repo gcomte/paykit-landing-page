@@ -21,7 +21,7 @@ if (generationConfig.schemaVersion !== 1 || source.repository !== "pubky/paykit-
 }
 export const defaultDocumentationVersion: DocumentationVersion = generationConfig.defaultVersion;
 export const documentationSlugs = [
-  "overview", "components", "flows", "boundaries", "wallets", "point-of-sale", "glossary",
+  "overview", "components", "flows", "boundaries", "wallets", "point-of-sale", "glossary", "resources",
 ] as const;
 export type DocumentationSlug = (typeof documentationSlugs)[number];
 export type DocumentationLink = { label: string; href: string };

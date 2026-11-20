@@ -136,7 +136,7 @@ def prepare_development(root, output, commit, selection=None):
                 raise ValueError('Registry returned a different or malformed package')
             version['packages'][package].update(yanked=registry['yanked'], checksum=registry['checksum'],
                 referenceUrl=f'https://docs.rs/{package}/{info["version"]}/{package.replace("-", "_")}/')
-    index = {**source, 'commit': commit, 'previousCommit': previous, 'files': files, 'version': version,
+    index = {**source, 'publicOnly': True, 'commit': commit, 'previousCommit': previous, 'files': files, 'version': version,
              'previousLibraryManifest': {'commit': previous, 'path': old_path, 'url': old_url,
                                          'sha256': hashlib.sha256(old_data).hexdigest()}}
     if 'selection' in policy:

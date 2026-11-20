@@ -472,6 +472,32 @@ class PrepareDevelopmentTests(unittest.TestCase):
         self.assertEqual(self.calls, [])
         self.assertFalse(output.exists())
 
+    def test_anonymous_prepared_index_satisfies_resources_public_source_contract(self):
+        from refresh_glossary import _validate_resources
+        root, output, module, selection, frozen = self.policy_fixture()
+        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+            module.prepare_development(root, output, NEW, selection=selection)
+        index = json.loads((output / 'index.json').read_bytes())
+        rows = {row['path']: row for row in index['files']}
+        self.assertEqual(len(rows), len(index['files']))
+        for path, data in self.files.items():
+            self.assertEqual((output / path).read_bytes(), data)
+            self.assertEqual(rows[path], {'path': path, 'url': f'{RAW}/{NEW}/{path}',
+                'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+        self.assertEqual(index['commit'], NEW)
+        self.assertEqual(index['ref'], frozen['sourceSelection']['ref'])
+        self.assertTrue(self.calls)
+        self.assertTrue(all(url.startswith((API + '/', RAW + '/', 'https://crates.io/api/v1/crates/'))
+                            for url in self.calls))
+        self.assertNotIn(API + '/releases?per_page=100&page=1', self.calls)
+        page = {'title': 'Resources', 'group': 'Reference', 'kind': 'reference', 'sections': [
+            {'id': 'get-started', 'title': 'Get started', 'paragraphs': ['Synthetic README reference.'],
+             'evidence': ['synthetic-readme'], 'links': [{'label': 'README',
+                'href': f'https://github.com/pubky/paykit-rs/blob/{NEW}/README.md'}]}]}
+        document = {'version': {'commit': NEW}, 'pages': []}
+        _validate_resources(page, document, 'coming-soon', output, index, [{'path': 'README.md'}])
+        self.assertIs(index.get('publicOnly'), True)
+
 
 if __name__ == '__main__':
     unittest.main()

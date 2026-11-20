@@ -39,7 +39,7 @@ test('glossary is a versioned documentation slug with ordinary HTML and Markdown
   const load = sourceLoader();
   const content = load('components/docs/content.ts');
   assert.equal(content.isDocumentationSlug('glossary'), true);
-  assert.deepEqual(content.documentationSlugs, ['overview', 'components', 'flows', 'boundaries', 'wallets', 'point-of-sale', 'glossary']);
+  assert.deepEqual(content.documentationSlugs, ['overview', 'components', 'flows', 'boundaries', 'wallets', 'point-of-sale', 'glossary', 'resources']);
   assert.deepEqual(load('app/docs/[version]/[slug]/page.tsx').generateStaticParams()
     .filter(({ slug }) => slug === 'glossary'), [
     { version: 'released', slug: 'glossary' }, { version: 'coming-soon', slug: 'glossary' },
@@ -53,8 +53,8 @@ function glossaryFixture() {
     const commit = (index ? 'b' : 'a').repeat(40);
     const core = content.documentationSlugs.filter((slug) => slug !== 'glossary').map((slug) => ({
       slug, title: `Synthetic ${slug}`, description: 'Synthetic fixture only.',
-      group: ['wallets', 'point-of-sale'].includes(slug) ? 'Integrate Paykit' : 'Understand Paykit',
-      kind: ['wallets', 'point-of-sale'].includes(slug) ? 'tutorial' : 'explanation',
+      group: slug === 'resources' ? 'Reference' : ['wallets', 'point-of-sale'].includes(slug) ? 'Integrate Paykit' : 'Understand Paykit',
+      kind: slug === 'resources' ? 'reference' : ['wallets', 'point-of-sale'].includes(slug) ? 'tutorial' : 'explanation',
       sections: [{ id: 'fixture', title: 'Synthetic fixture', paragraphs: ['Unchanged core fixture.'], evidence: [] }], sourceLinks: [],
     }));
     const glossary = { slug: 'glossary', title: 'Synthetic glossary', description: 'Synthetic terms, not product claims.',
@@ -168,7 +168,7 @@ test('both generated corpora ship alphabetical source-mapped glossary terms with
     const document = JSON.parse(readFileSync(`content/docs/${version}.json`, 'utf8'));
     const rows = JSON.parse(readFileSync(`automation/evidence/${version}.json`, 'utf8'));
     const evidence = new Map(rows.map((row) => [row.id, row]));
-    assert.deepEqual(document.pages.map((page) => page.slug), [...coreSlugs, 'glossary']);
+    assert.deepEqual(document.pages.map((page) => page.slug), [...coreSlugs, 'glossary', 'resources']);
     const page = document.pages.find((page) => page.slug === 'glossary');
     assert.equal(page.group, 'Reference');
     assert.equal(page.kind, 'reference');
