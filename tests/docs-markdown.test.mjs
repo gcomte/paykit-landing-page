@@ -137,7 +137,20 @@ test('llms.txt GET lists only existing Markdown views with exact published title
     }
   }
   assert.deepEqual(index.links.filter(([href]) => href.endsWith('/markdown')).map(([href]) => href), targets);
-  assert.ok(!text.includes('v0.1.1-rc9'), 'the configured future selector is not the published body identity');
+  // Keep the original future-selector regression independent of the live corpus:
+  // the selected RC9 snapshot may now legitimately be the published body.
+  const contentPath = path.resolve('components/docs/content.ts');
+  const content = load(contentPath);
+  const publishedFixture = structuredClone(await content.getDocumentation('coming-soon'));
+  publishedFixture.version = { ...publishedFixture.version,
+    label: 'Previously published fixture', commit: 'a'.repeat(40),
+    sourceUrl: `https://github.com/pubky/paykit-rs/tree/${'a'.repeat(40)}` };
+  const previousLoad = sourceLoader({ [contentPath]: { ...content,
+    getDocumentation: async (version) => version === 'coming-soon' ? publishedFixture : content.getDocumentation(version) } });
+  const previousText = await (await previousLoad(route).GET()).text();
+  assert.ok(previousText.includes(publishedFixture.version.commit));
+  assert.ok(previousText.includes(publishedFixture.version.label));
+  assert.ok(!previousText.includes('v0.1.1-rc9'), 'the configured future selector is not the published body identity');
 });
 
 test('route and layout injected qualifications are included, not only article children', async () => {

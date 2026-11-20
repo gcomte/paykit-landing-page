@@ -6,17 +6,31 @@
       "tag": "v0.1.0"
     },
     "coming-soon": {
-      "commit": "ddd699676ac18ad8c53d8bf8bac4266951b79c30",
-      "tag": null
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "tag": "v0.1.1-rc9",
+      "ref": "v0.1.1-rc9",
+      "kind": "tag"
     }
   },
   "contentHashes": {
     "released": "0b319b741f2941939ced2bbaea207fa125bb9c1354dae93c9f1d322518fb07cd",
-    "coming-soon": "d1671afad23e4b8173ffbe827dc0072ba54b778851130ece487a19888bec4f73"
+    "coming-soon": "0bc938454dd2f9962488c7444dad74e699c704e50d65105a0ea08d320b20a40d"
   },
   "pageRefresh": {
     "version": "released",
     "page": "overview",
     "sourceCommit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df"
+  },
+  "versionRefresh": {
+    "version": "coming-soon",
+    "sourceCommit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "pages": [
+      "overview",
+      "components",
+      "flows",
+      "boundaries",
+      "wallets",
+      "point-of-sale"
+    ]
   }
 }
