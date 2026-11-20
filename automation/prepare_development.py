@@ -10,6 +10,7 @@ import tomllib
 import urllib.error
 import urllib.parse
 import urllib.request
+from release_source import select_source, validate_frozen, release_identity
 
 API = 'https://api.github.com/repos/pubky/paykit-rs'
 RAW = 'https://raw.githubusercontent.com/pubky/paykit-rs'
@@ -28,18 +29,22 @@ def empty_output(output):
         raise ValueError('Output must be an empty task-owned absolute directory without symlinks')
 
 
-def prepare_development(root, output, commit):
+def prepare_development(root, output, commit, selection=None):
     root, output = Path(root), Path(output)
     empty_output(output)
     read = lambda path: json.loads((root / path).read_bytes())
-    source = read('docs-generation.json')['source']
+    policy = read('docs-generation.json')['source']
     previous = read('content/docs/coming-soon.json')['version']['commit']
     blueprint = read('automation/blueprints/coming-soon.json')
+    if any(not isinstance(sha, str) or not re.fullmatch('[0-9a-f]{40}', sha) for sha in (commit, previous)):
+        raise ValueError('Invalid commit: expected literal 40 lowercase hexadecimal characters')
+    frozen = (json.loads(Path(selection).read_bytes()) if selection is not None
+              else select_source(policy, lambda *args: commit))
+    source = frozen['sourceSelection']
+    validate_frozen(policy, frozen, commit)
     kind, ref = source['kind'], source['ref']
     if source['repository'] != 'pubky/paykit-rs' or kind not in ('tag', 'branch'):
         raise ValueError('Unsupported public source repository or ref kind')
-    if any(not isinstance(sha, str) or not re.fullmatch('[0-9a-f]{40}', sha) for sha in (commit, previous)):
-        raise ValueError('Invalid commit: expected literal 40 lowercase hexadecimal characters')
     qualified = 'refs/' + ('tags/' if kind == 'tag' else 'heads/') + ref
     if subprocess.run(['git', 'check-ref-format', qualified], capture_output=True).returncode:
         raise ValueError('Invalid source ref')
@@ -64,6 +69,11 @@ def prepare_development(root, output, commit):
         return status, data
     def record(url, name):
         return json.loads(fetch(url, name)[1])
+    if frozen is not None and 'selection' in policy:
+        release = frozen['release']
+        receipt = record(API + '/releases/' + str(release['id']), 'release.json')
+        if receipt['draft'] is not False or release_identity(receipt) != release:
+            raise ValueError('Public release no longer matches the frozen selection')
     selected = record(API + '/git/ref/' + urllib.parse.quote(qualified[5:], safe='/'), 'ref.json')
     target = selected['object']
     object_sha = target['sha']
@@ -105,6 +115,8 @@ def prepare_development(root, output, commit):
     version = {'label': ref, 'ref': ref, kind: ref, 'kind': kind, 'qualifiedRef': qualified,
                'object': object_sha, 'commit': commit,
                'sourceUrl': f'https://github.com/pubky/paykit-rs/tree/{commit}', 'packages': {}}
+    if frozen is not None and 'selection' in policy:
+        version['release'] = frozen['release']
     observations = []
     for package in PACKAGES:
         manifest = tomllib.loads(artifacts[package + '/Cargo.toml'].decode())
@@ -127,6 +139,8 @@ def prepare_development(root, output, commit):
     index = {**source, 'commit': commit, 'previousCommit': previous, 'files': files, 'version': version,
              'previousLibraryManifest': {'commit': previous, 'path': old_path, 'url': old_url,
                                          'sha256': hashlib.sha256(old_data).hexdigest()}}
+    if 'selection' in policy:
+        index['sourcePolicy'] = policy
     artifacts['index.json'] = (json.dumps(index, indent=2) + '\n').encode()
     artifacts['registry-observations.json'] = (json.dumps(observations, indent=2) + '\n').encode()
     empty_output(output)
@@ -143,9 +157,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='Empty task-owned absolute source directory')
     parser.add_argument('--commit', required=True, help='Expected exact 40-character commit from the weekly check')
+    parser.add_argument('--selection', type=Path, help='Weekly gate JSON: reuse its frozen release, never rediscover newest')
     args = parser.parse_args()
     try:
-        result = prepare_development(Path(__file__).resolve().parents[1], args.output, args.commit)
+        result = prepare_development(Path(__file__).resolve().parents[1], args.output, args.commit, args.selection)
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print(json.dumps({'action': 'error', 'reason': 'source_preparation_failed', 'detail': str(error)}))
         raise SystemExit(1)

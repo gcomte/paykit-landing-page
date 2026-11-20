@@ -2,8 +2,7 @@
   "schemaVersion": 1,
   "source": {
     "repository": "pubky/paykit-rs",
-    "ref": "v0.1.1-rc9",
-    "kind": "tag"
+    "selection": "newest-release"
   },
   "defaultVersion": "coming-soon"
 }

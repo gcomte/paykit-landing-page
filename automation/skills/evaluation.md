@@ -1,5 +1,7 @@
 # Independent evaluation — v2
 
+Current operative flow is ../WEEKLY.md: weekly Sunday 05:00 UTC, newest published release selection, generated glossary, independent factual/code review and proportionate software/browser QA. Historical full-pipeline CLI/lease/four-walkthrough examples below are reference only; SDK execution/playground setup remains deferred, and the coordinating agent still uses a model on no-change.
+
 Mode: `instruction-based-public-evidence-v1`. Acceptance rules are fixed during a generation run. Explicit process changes require regression tests and regeneration; repairs cannot weaken content checks, broaden credentials or alter permissions to force a pass. Share the prospective new-run 21600-second deadline, two-worker maximum and two repair rounds. New contexts/policy do not reset old runs or exhausted historical attempts. Preserve last good publication on failure.
 
 ## Public factual reviewer: a different agent
@@ -16,7 +18,7 @@ The reviewer may say “public evidence supports checked claims”. It can never
 
 ## Selected source and deterministic metadata
 
-Read root docs-generation.json and frozen selected literal ref/kind/object/commit. Verify default /docs and homepage metadata/cards follow selected source, separately from the genuine published stable view; an RC is not stable. Review deterministic metadata and renderer-injected warnings, version labels, source links and readiness assertions on every page, not only authored blueprint claims. A README heading does not support a readiness judgment. Preserve explicit upstream wording at its exact snapshot/component scope; absence is not proof of readiness. Operator caution must be identified as documentation policy, not fabricated upstream evidence. Provenance questions alone do not authorize warning removal. Process-only/forced runs receive complete fresh author/reviewer work even with zero source deltas. Keep all existing gates and new-run 21600-second/two-worker/two-repair limits.
+Read root docs-generation.json, verify its newest-published-release policy (including prereleases, excluding drafts) and the once-per-run frozen concrete release/tag/kind/object/commit. A stable-only latest alias or highest-semver choice is not this policy. Independently enumerate and check every glossary definition, classification and related-guide link against that exact version’s public sources, including alphabetic order, unique term anchors, navigation, Markdown/llms inclusion and actual covered-version/date metadata. Verify default /docs and homepage metadata/cards follow selected source, separately from the genuine published stable view; an RC is not stable. Review deterministic metadata and renderer-injected warnings, version labels, source links and readiness assertions on every page, not only authored blueprint claims. A README heading does not support a readiness judgment. Preserve explicit upstream wording at its exact snapshot/component scope; absence is not proof of readiness. Operator caution must be identified as documentation policy, not fabricated upstream evidence. Provenance questions alone do not authorize warning removal. Process-only/forced runs receive complete fresh author/reviewer work even with zero source deltas. Keep all existing gates and new-run 21600-second/two-worker/two-repair limits.
 
 ## Active instruction-mode report format
 

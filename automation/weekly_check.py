@@ -10,6 +10,7 @@ import time
 import math
 from pathlib import Path
 from check_source import resolve_source
+from release_source import select_source, source_matches
 
 
 SITE_URLS = ['https://paykit-landing-page-lake.vercel.app',
@@ -20,6 +21,7 @@ PROCESS_INPUTS = [
     'automation/README.md', 'automation/corrections.json', 'automation/SOURCE-BOUNDARY.md',
     'automation/refresh_page.py', 'automation/refresh_development.py', 'automation/check_source.py',
     'automation/weekly_check.py', 'automation/prepare_development.py', 'automation/recipes',
+    'automation/release_source.py', 'automation/refresh_glossary.py',
     'automation/blueprints/coming-soon.json', 'automation/skills',
     'components/docs', 'app/docs', 'app/layout.tsx', 'app/globals.css', 'app/llms.txt', 'package.json', 'package-lock.json',
     'tsconfig.json', 'next.config.ts', 'postcss.config.mjs', 'playwright.config.ts',
@@ -28,6 +30,7 @@ PROCESS_INPUTS = [
     'automation/tests/test_check_source.py', 'automation/tests/test_refresh_page.py',
     'automation/tests/test_refresh_development.py', 'automation/tests/test_footer_generation_date.py',
     'automation/tests/test_weekly_check.py', 'automation/tests/test_prepare_development.py',
+    'automation/tests/test_release_source.py', 'automation/tests/test_refresh_glossary.py',
 ]
 
 
@@ -56,9 +59,9 @@ def check_weekly(root, deployed_manifest, resolver=resolve_source, force=False, 
     if not revision:
         raise ValueError('Missing documentation generation history')
     changed = sorted(git(root, 'diff', '--name-only', revision, 'HEAD', '--', *PROCESS_INPUTS).splitlines())
-    selection = config['source']
-    commit = resolver(selection['repository'], selection['kind'], selection['ref'])
-    reasons = ['source_changed'] if commit != document['version']['commit'] else []
+    frozen = select_source(config['source'], resolver)
+    selection, commit = frozen['sourceSelection'], frozen['sourceCommit']
+    reasons = [] if source_matches(document['version'], frozen) else ['source_changed']
     if changed:
         reasons.append('generation_process_changed')
     if force:
@@ -67,7 +70,7 @@ def check_weekly(root, deployed_manifest, resolver=resolve_source, force=False, 
             'processFilesChanged': changed, 'documentationRevision': revision, 'head': git(root, 'rev-parse', 'HEAD'),
             'startedEpoch': started, 'deadlineEpoch': deadline, 'budgetSeconds': 21600,
             'sourceCommit': commit, 'documentationCommit': document['version']['commit'],
-            'refKind': selection['kind'], 'ref': selection['ref']}
+            'refKind': selection['kind'], 'ref': selection['ref'], **frozen}
 
 
 def main(argv=None):

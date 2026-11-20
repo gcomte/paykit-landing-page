@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import sys
+
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
 SCRIPT = Path(__file__).parents[1] / 'check_source.py'
 OLD = 'a' * 40
@@ -101,6 +104,29 @@ class CheckSourceTests(unittest.TestCase):
                 module.main()
         self.assertEqual(stopped.exception.code, 1)
         self.assertEqual(json.loads(output.getvalue())['action'], 'error')
+
+    def test_development_policy_discovers_a_concrete_tag_and_returns_frozen_selection(self):
+        from unittest.mock import patch
+        from test_release_source import POLICY, release
+        import release_source
+        root, module = self.fixture()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY}))
+        before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+        calls = []
+        def resolve(*args):
+            calls.append(args)
+            return NEW
+        with patch.object(release_source, 'fetch_release_page', return_value=([release()], '')):
+            try:
+                result = module.check_source(root, 'coming-soon', 'overview', resolver=resolve)
+            except KeyError as error:
+                self.fail('Development checks must understand the newest-release policy: ' + str(error))
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['sourceSelection'], {'repository': 'pubky/paykit-rs', 'kind': 'tag', 'ref': release()['tag_name']})
+        self.assertEqual(result['sourcePolicy'], POLICY)
+        self.assertEqual(result['release']['id'], release()['id'])
+        self.assertEqual(calls, [('pubky/paykit-rs', 'tag', release()['tag_name'])])
+        self.assertEqual(before, {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()})
 
 if __name__ == '__main__':
     unittest.main()

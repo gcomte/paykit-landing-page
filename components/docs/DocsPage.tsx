@@ -29,7 +29,7 @@ function PageNavigation({
 }: { pages: DocumentationPage[]; version: DocumentationVersion; current: string }) {
   return (
     <nav aria-label="Documentation pages" className={styles.pageNavigation}>
-      {(["Understand Paykit", "Integrate Paykit"] as const).map((group) => (
+      {(["Understand Paykit", "Integrate Paykit", "Reference"] as const).filter((group) => pages.some((page) => page.group === group)).map((group) => (
         <div key={group} className={styles.navigationGroup}>
           <h2>{group}</h2>
           <ul>
@@ -142,7 +142,7 @@ export default function DocsPage({
               <p className={styles.eyebrow}>{page.group}</p>
               <h1 id="docs-title">{page.title}</h1>
               <p className={styles.description} data-testid="docs-description"><InlineCode text={page.description} /></p>
-              <p className={styles.kind} data-testid="docs-page-kind">{page.kind === "tutorial" ? "Integration tutorial" : "Explanation"}</p>
+              <p className={styles.kind} data-testid="docs-page-kind">{page.kind === "tutorial" ? "Integration tutorial" : page.kind === "reference" ? "Reference" : "Explanation"}</p>
               <a href={markdownHref ?? `${documentationPath(version, page.slug)}/markdown`} className={styles.markdownAction}>View as Markdown</a>
             </div>
             <aside className={styles.provenance} aria-label="Documentation source" data-testid="docs-version-marker">

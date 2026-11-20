@@ -27,7 +27,7 @@ export function sourceLoader(overrides = {}) {
       if (name === 'next/navigation') return { notFound() { throw new Error('NEXT_HTTP_ERROR_FALLBACK;404'); } };
       if (name.startsWith('.') || name.startsWith('@/')) {
         const p = name.startsWith('@/') ? path.resolve(root, name.slice(2)) : path.resolve(path.dirname(file), name);
-        if (p.endsWith('.json')) return JSON.parse(readFileSync(p, 'utf8'));
+        if (p.endsWith('.json')) return Object.hasOwn(overrides, p) ? overrides[p] : JSON.parse(readFileSync(p, 'utf8'));
         const resolved = [p, `${p}.ts`, `${p}.tsx`].find((p) => existsSync(p));
         assert.ok(resolved, `Missing source dependency: ${p}`);
         return load(resolved);
@@ -69,7 +69,7 @@ export function observations(html) {
   return JSON.parse(p.stdout);
 }
 
-test('all twelve published articles preserve observed prose, ordered links, code, headings, images, IDs and list ownership', async () => {
+test('all fourteen published articles preserve observed prose, ordered links, code, headings, images, IDs and list ownership', async () => {
   const load = sourceLoader();
   const view = load('components/docs/markdown.ts').documentationMarkdown;
   const rows = [];
@@ -84,7 +84,7 @@ test('all twelve published articles preserve observed prose, ordered links, code
     }
   }
   if (process.env.PAYKIT_MARKDOWN_EVIDENCE) writeFileSync(process.env.PAYKIT_MARKDOWN_EVIDENCE, JSON.stringify(rows, null, 2) + '\n');
-  assert.equal(rows.length, 12);
+  assert.equal(rows.length, 14);
   for (const row of rows) assert.deepEqual(row.actual, row.expected, row.route);
 });
 
@@ -140,10 +140,12 @@ test('llms.txt GET lists only existing Markdown views with exact published title
   // Keep the original future-selector regression independent of the live corpus:
   // the selected RC9 snapshot may now legitimately be the published body.
   const contentPath = path.resolve('components/docs/content.ts');
-  const content = load(contentPath);
+  const futureSelector = { schemaVersion: 1, source: { repository: 'pubky/paykit-rs', kind: 'tag', ref: 'v0.1.1-rc9' }, defaultVersion: 'coming-soon' };
+  const content = sourceLoader({ [path.resolve('docs-generation.json')]: futureSelector })(contentPath);
   const publishedFixture = structuredClone(await content.getDocumentation('coming-soon'));
   publishedFixture.version = { ...publishedFixture.version,
-    label: 'Previously published fixture', commit: 'a'.repeat(40),
+    label: 'Previously published fixture', tag: 'synthetic-previous', ref: 'synthetic-previous', kind: 'tag',
+    qualifiedRef: 'refs/tags/synthetic-previous', commit: 'a'.repeat(40),
     sourceUrl: `https://github.com/pubky/paykit-rs/tree/${'a'.repeat(40)}` };
   const previousLoad = sourceLoader({ [contentPath]: { ...content,
     getDocumentation: async (version) => version === 'coming-soon' ? publishedFixture : content.getDocumentation(version) } });
@@ -198,7 +200,7 @@ test('exact existing code boundary retains blank lines, CRLF, tabs, spaces, fenc
 test('unexamined element types refuse instead of silently dropping content; invalid routes keep not-found behavior', async () => {
   const load = sourceLoader();
   assert.throws(() => load('components/docs/markdown.ts').documentationMarkdown(React.createElement('table', null, 'new content')), /Unsupported published documentation element/);
-  for (const [version, slug] of [['unknown', 'overview'], ['released', '../wallets'], ['coming-soon', 'glossary']]) {
+  for (const [version, slug] of [['unknown', 'overview'], ['released', '../wallets'], ['coming-soon', 'not-a-page']]) {
     await assert.rejects(load('app/docs/[version]/[slug]/markdown/route.ts').GET(new Request('https://example.invalid'), { params: Promise.resolve({ version, slug }) }), /404/);
   }
 });

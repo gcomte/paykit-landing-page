@@ -13,13 +13,13 @@
     }
   },
   "contentHashes": {
-    "released": "e5415bc7bb8aed967836a2663301efe30a5a17b682069464610da83abd6ca6ba",
-    "coming-soon": "57a7b7b0899c9f5959b09d78b54e208ff63da6e63814658a379c5cae4f9d0ea0"
+    "released": "3c1d5e69061c48b2b41aa0668c432a4fb2338e3da643875f24eb311399737310",
+    "coming-soon": "22a1f031d841fd6c533db62e992a47c887cf57fc58d039601cb7d0774224d83b"
   },
   "pageRefresh": {
-    "version": "released",
-    "page": "overview",
-    "sourceCommit": "dd8e75e5588cf7a0b3b45cacbab9125576ee90df"
+    "version": "coming-soon",
+    "page": "glossary",
+    "sourceCommit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be"
   },
   "versionRefresh": {
     "version": "coming-soon",
@@ -30,7 +30,8 @@
       "flows",
       "boundaries",
       "wallets",
-      "point-of-sale"
+      "point-of-sale",
+      "glossary"
     ]
   }
 }

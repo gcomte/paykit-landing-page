@@ -6,18 +6,22 @@ import generationConfig from "../../docs-generation.json";
 
 export const documentationVersions = ["released", "coming-soon"] as const;
 export type DocumentationVersion = (typeof documentationVersions)[number];
+// Policy chooses future generation inputs, never the displayed document identity.
+const source: { repository: string; selection?: string; kind?: string; ref?: string } = generationConfig.source;
+const newestRelease = source.selection === "newest-release" && Object.keys(source).length === 2;
+const fixedRef = source.selection === undefined && typeof source.ref === "string" &&
+  ["branch", "tag"].includes(source.kind ?? "") &&
+  /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(source.ref) &&
+  !source.ref.startsWith("refs/") && !source.ref.includes("..") &&
+  !source.ref.endsWith(".") && !source.ref.split("/").some((part) => !part || part.startsWith(".") || part.endsWith(".lock"));
 // Never silently substitute older docs for an invalid source selector.
-if (generationConfig.schemaVersion !== 1 || generationConfig.source.repository !== "pubky/paykit-rs" ||
-    !["branch", "tag"].includes(generationConfig.source.kind) ||
-    !/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(generationConfig.source.ref) ||
-    generationConfig.source.ref.startsWith("refs/") || generationConfig.source.ref.includes("..") ||
-    generationConfig.source.ref.endsWith(".") || generationConfig.source.ref.split("/").some((part) => !part || part.startsWith(".") || part.endsWith(".lock")) ||
-    generationConfig.defaultVersion !== "coming-soon") {
+if (generationConfig.schemaVersion !== 1 || source.repository !== "pubky/paykit-rs" ||
+    !(newestRelease || fixedRef) || generationConfig.defaultVersion !== "coming-soon") {
   throw new Error("Invalid docs-generation source selector.");
 }
 export const defaultDocumentationVersion: DocumentationVersion = generationConfig.defaultVersion;
 export const documentationSlugs = [
-  "overview", "components", "flows", "boundaries", "wallets", "point-of-sale",
+  "overview", "components", "flows", "boundaries", "wallets", "point-of-sale", "glossary",
 ] as const;
 export type DocumentationSlug = (typeof documentationSlugs)[number];
 export type DocumentationLink = { label: string; href: string };
@@ -35,8 +39,8 @@ export type DocumentationPage = {
   slug: DocumentationSlug;
   title: string;
   description: string;
-  group: "Understand Paykit" | "Integrate Paykit";
-  kind: "explanation" | "tutorial";
+  group: "Understand Paykit" | "Integrate Paykit" | "Reference";
+  kind: "explanation" | "tutorial" | "reference";
   sections: DocumentationSection[];
   sourceLinks: DocumentationLink[];
 };

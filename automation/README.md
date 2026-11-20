@@ -8,7 +8,7 @@ Before authoring, run the read-only source check from the last deployed checkout
 
     python automation/check_source.py --version released --page overview
 
-`skip` means the upstream commit matches the documented source: do not start authoring, regeneration or a commit. `refresh_needed` identifies a changed source. Released checks its recorded release tag; coming-soon checks the exact branch/tag in `docs-generation.json`. Lookup failures return `error` with exit code 1, never a false skip. Add `--force` for an explicit refresh or after changing generation instructions. This first check does not automatically fingerprint process changes, write checkpoints, regenerate content or enable scheduling. A changed source is a signal, not permission to reuse an old blueprint under a new version label; source-version updating remains a separate step.
+`skip` means the upstream commit matches the documented source: do not start authoring, regeneration or a commit. `refresh_needed` identifies a changed source. Released checks its recorded release tag; coming-soon discovers the newest published GitHub release under the `docs-generation.json` policy, including prereleases, then checks that release’s exact tag/commit. A changed selected tag also needs refresh even when its commit is unchanged. Lookup failures return `error` with exit code 1, never a false skip. Add `--force` for an explicit refresh or after changing generation instructions. This first check does not automatically fingerprint process changes, write checkpoints, regenerate content or enable scheduling. A changed source is a signal, not permission to reuse an old blueprint under a new version label; source-version updating remains a separate step.
 
 The existing manual refresh command supports one overview page:
 
@@ -36,13 +36,24 @@ The user approved Sunday 05:00 UTC (`0 5 * * 0`, timezone UTC), not daily. `WEEK
 
     python -B automation/weekly_check.py --started-at ORIGINAL_START_EPOCH
 
-This read-only command requires a clean checkout and matching live development manifest/content hash. It resolves only the configured literal upstream source and compares active generation inputs to the latest committed development-document revision. New source or process bytes require fresh complete authoring/review; unrelated commits skip. It writes no processed-state/date/output. Failures remain failures and cannot checkpoint attempts. Same-day byte-identical process-only generation can conservatively be retried; do not fabricate a content edit to clear it. The original six-hour start/deadline accompanies the result and must not reset on retries.
+This read-only command requires a clean checkout and matching live development manifest/content hash. It discovers the newest published release once (not the stable-only latest alias), freezes its exact tag/commit and release metadata and compares active generation inputs to the latest committed development-document revision. New source or process bytes require fresh complete authoring/review; unrelated commits skip. It writes no processed-state/date/output. Failures remain failures and cannot checkpoint attempts. Same-day byte-identical process-only generation can conservatively be retried; do not fabricate a content edit to clear it. The original six-hour start/deadline accompanies the result and must not reset on retries.
 
 When refresh is needed, prepare the public inputs before fresh authorship:
 
-    python -B automation/prepare_development.py --output /task-owned/sources --commit EXACT_GATE_COMMIT
+    python -B automation/prepare_development.py --output /task-owned/sources --commit EXACT_GATE_COMMIT --selection /task-owned/gate.json
 
-The helper freezes the selected ref/object/commit, exact public source files/hashes, previous library manifest and fresh registry observations for `refresh_development.py`. It does not author/review docs or execute SDK code. The coordinator runs the existing public author -> renderer -> independent reviewer -> tests/build/browser -> allowed fork push -> exact-SHA Vercel/live-readback sequence, with no successful attempted-input checkpoint. Unchanged runs skip those workers/generation/date bumps/commits, not the agent coordinator itself. Every outcome reports actual scope and time. Pinned tags remain pinned until configuration is explicitly changed.
+The helper freezes the selected ref/object/commit, exact public source files/hashes, previous library manifest and fresh registry observations for `refresh_development.py`. It does not author/review docs or execute SDK code. The coordinator runs the existing public author -> renderer -> independent reviewer -> tests/build/browser -> allowed fork push -> exact-SHA Vercel/live-readback sequence, with no successful attempted-input checkpoint. Unchanged runs skip those workers/generation/date bumps/commits, not the agent coordinator itself. Every outcome reports actual scope and time. The discovery policy remains dynamic; capture the actual gate JSON and pass its frozen selection to preparation so a later release cannot change the source midway through a run. No release/source lookup is performed by page rendering or a site build; visible metadata always describes the generated document.
+
+## Generated glossary
+
+Both documentation snapshots have a generated `glossary` reference page, available as HTML and matching Markdown and included in docs navigation and llms.txt. Entries are alphabetically ordered definitions grounded in that version’s exact public source and linked to its relevant guides. The shared docs footer shows the actual covered release and persisted generation date.
+
+For initial addition or an explicitly selected glossary-only update, a fresh public author adds/updates the glossary blueprint and exact evidence, then run:
+
+    python -B automation/refresh_glossary.py --version released --sources /task-owned/released-sources
+    python -B automation/refresh_glossary.py --version coming-soon --sources /task-owned/selected-sources
+
+This narrow renderer preserves the six core pages, source/version/readiness and other snapshot, merges validated glossary evidence and stamps the UTC generation day. Obtain independent factual review and normal QA/publication checks. On future latest-release updates the full selected-source renderer maintains all seven pages together. Never hand-maintain glossary prose or mix meanings from different versions.
 
 ## Earlier full-pipeline reference (not the current delivery checklist)
 

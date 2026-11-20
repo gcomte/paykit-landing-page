@@ -62,8 +62,10 @@ test('server selector rejects unsafe literals rather than normalizing or falling
   const dependencies = { 'server-only': {}, react: { cache: (fn) => fn }, '../../docs-generation.json': selector };
   const valid = await loadTs('components/docs/content.ts', dependencies);
   assert.equal(valid.defaultDocumentationVersion, 'coming-soon');
+  const literalSelector = { ...selector, source: { repository: 'pubky/paykit-rs', kind: 'tag', ref: 'v0.1.1-rc9' } };
+  assert.equal((await loadTs('components/docs/content.ts', { ...dependencies, '../../docs-generation.json': literalSelector })).defaultDocumentationVersion, 'coming-soon');
   for (const ref of ['bad..ref', 'a.lock', 'path/.hidden', 'refs/tags/v0.1.1-rc9', 'v0.1.1-rc9\n', 'a//b']) {
-    await assert.rejects(loadTs('components/docs/content.ts', { ...dependencies, '../../docs-generation.json': { ...selector, source: { ...selector.source, ref } } }), /Invalid docs-generation/);
+    await assert.rejects(loadTs('components/docs/content.ts', { ...dependencies, '../../docs-generation.json': { ...literalSelector, source: { ...literalSelector.source, ref } } }), /Invalid docs-generation/);
   }
 });
 

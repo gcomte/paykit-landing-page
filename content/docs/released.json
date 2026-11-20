@@ -1146,6 +1146,429 @@
           "href": "https://github.com/pubky/paykit-rs/tree/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/skills/paykit"
         }
       ]
+    },
+    {
+      "slug": "glossary",
+      "title": "Glossary",
+      "description": "Key terms for reading this version's wallet, point-of-sale and payment-coordination guides.",
+      "group": "Reference",
+      "kind": "reference",
+      "sections": [
+        {
+          "id": "accepted",
+          "title": "Accepted",
+          "paragraphs": [
+            "The SDK request state indicating that an acceptance is recorded in local history. It can appear while the acceptance message is still queued; it does not establish peer delivery or that a payment happened."
+          ],
+          "evidence": [
+            "released-glossary-request-states",
+            "released-glossary-acceptance-reducer",
+            "released-glossary-acceptance-pending-test",
+            "released-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Understand local request states",
+              "href": "/docs/released/flows#statuses"
+            }
+          ]
+        },
+        {
+          "id": "app-id",
+          "title": "App ID",
+          "paragraphs": [
+            "An identifier for an application within a Paykit identity, used to attribute public endpoints and private messages. It does not create a separate identity, Encrypted Link or private trust boundary."
+          ],
+          "evidence": [
+            "released-glossary-app-id",
+            "released-glossary-shared-identity"
+          ],
+          "links": [
+            {
+              "label": "Understand app ownership and shared identity",
+              "href": "/docs/released/components#public-private"
+            }
+          ]
+        },
+        {
+          "id": "encrypted-link",
+          "title": "Encrypted Link",
+          "paragraphs": [
+            "The private connection used to exchange Paykit application messages with a counterparty through pubky-noise. SDK links rely on identity-signed Noise key authorization, retained peer pins and authenticated static-key checks, not unsigned key fields in the public App Registry."
+          ],
+          "evidence": [
+            "released-glossary-link-transport",
+            "released-glossary-link-authorization",
+            "released-noise-publish",
+            "released-noise-pin",
+            "released-noise-validate"
+          ],
+          "links": [
+            {
+              "label": "Review private-link trust",
+              "href": "/docs/released/boundaries#trust"
+            }
+          ]
+        },
+        {
+          "id": "endpoint-payload",
+          "title": "Endpoint payload",
+          "paragraphs": [
+            "The UTF-8 receiving-detail text carried by a payment endpoint, such as an address, invoice or JSON descriptor. The payload wrapper stores text; it does not establish that the details are payable, so the application or payment adapter must interpret and validate them."
+          ],
+          "evidence": [
+            "released-glossary-endpoint-payload",
+            "released-glossary-endpoint-pair",
+            "released-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Discover receiving details without executing payment",
+              "href": "/docs/released/flows#public"
+            }
+          ]
+        },
+        {
+          "id": "event-id",
+          "title": "Event ID",
+          "paragraphs": [
+            "A UUID-v4 identifier for one Event Message. A request proposal carries both an Event ID for that message and a Payment Request ID for the request."
+          ],
+          "evidence": [
+            "released-glossary-event-id",
+            "released-glossary-request-shape"
+          ],
+          "links": [
+            {
+              "label": "See the request and event identifiers in the local fixture",
+              "href": "/docs/released/point-of-sale#code"
+            }
+          ]
+        },
+        {
+          "id": "idempotent-proposal",
+          "title": "Idempotent proposal",
+          "paragraphs": [
+            "Queuing a request with propose_payment_request_with_id lets a matching retry return the original proposal without queuing a second one. Persist the ID, counterparty and exact terms first, and retry as the same creating app and identity with retained Event Message history; deleting state or restoring a backup from before creation loses this protection. Every call still requires current session, app-capability and link checks; success describes the local queue, not payment authorization or confirmed delivery."
+          ],
+          "evidence": [
+            "released-glossary-idempotent-proposal",
+            "released-glossary-proposal-dedup-code"
+          ],
+          "links": [
+            {
+              "label": "Plan durable request creation and retries",
+              "href": "/docs/released/point-of-sale#integrate"
+            }
+          ]
+        },
+        {
+          "id": "payment-adapter",
+          "title": "Payment adapter",
+          "paragraphs": [
+            "The application-supplied SDK boundary for method-specific receiving details, endpoint selection and payment-target construction. Financial execution, proof validation and settlement checks remain application or adapter responsibilities rather than SDK outcomes."
+          ],
+          "evidence": [
+            "released-glossary-payment-adapter",
+            "released-glossary-receiving-details",
+            "released-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Choose the application adapter boundaries",
+              "href": "/docs/released/components#adapters"
+            }
+          ]
+        },
+        {
+          "id": "payment-amount",
+          "title": "Payment amount",
+          "paragraphs": [
+            "A decimal value expressed as text together with an asset name. Paykit checks their syntax but defines no asset registry or precision policy; applications still own method-specific financial interpretation."
+          ],
+          "evidence": [
+            "released-glossary-payment-amount",
+            "released-glossary-financial-boundary",
+            "released-amount-construction",
+            "released-amount-test"
+          ],
+          "links": [
+            {
+              "label": "Read the fixture amount and its limits",
+              "href": "/docs/released/point-of-sale#code"
+            }
+          ]
+        },
+        {
+          "id": "payment-endpoint",
+          "title": "Payment endpoint",
+          "paragraphs": [
+            "A payment endpoint pairs a machine-readable endpoint-type identifier with its receiving-detail payload. Public endpoints belong to an App ID; publishing or reading those details is discovery, not payment execution."
+          ],
+          "evidence": [
+            "released-glossary-endpoint-pair",
+            "released-glossary-endpoint-publication",
+            "released-glossary-payment-list-read",
+            "released-glossary-financial-boundary",
+            "released-public-path"
+          ],
+          "links": [
+            {
+              "label": "Follow public endpoint discovery",
+              "href": "/docs/released/flows#public"
+            }
+          ]
+        },
+        {
+          "id": "payment-endpoint-identifier",
+          "title": "Payment endpoint identifier",
+          "paragraphs": [
+            "The machine-readable name of an endpoint type, such as btc-lightning-bolt11. Its constructor checks structural path safety; the application still needs to support the selected payment method."
+          ],
+          "evidence": [
+            "released-glossary-endpoint-type",
+            "released-glossary-payment-adapter",
+            "released-endpoint-id"
+          ],
+          "links": [
+            {
+              "label": "See supported and unsupported endpoint types",
+              "href": "/docs/released/wallets#code"
+            }
+          ]
+        },
+        {
+          "id": "payment-list",
+          "title": "Payment list",
+          "paragraphs": [
+            "A collection of endpoint identifiers and their payloads, represented by the library as a map. Public discovery reads the list for a particular payee and App ID; selecting an entry does not execute a payment."
+          ],
+          "evidence": [
+            "released-glossary-payment-list",
+            "released-glossary-payment-list-read",
+            "released-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Read the local PaymentList fixture",
+              "href": "/docs/released/wallets#code"
+            }
+          ]
+        },
+        {
+          "id": "payment-proof",
+          "title": "Payment proof",
+          "paragraphs": [
+            "A request-correlated message carrying a payment reference, the app and endpoint type used, and a method-specific proof object. The application or payment adapter must validate the evidence and rail outcome; receiving this message alone does not establish settlement."
+          ],
+          "evidence": [
+            "released-glossary-proof-fields",
+            "released-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Separate proof history from settlement",
+              "href": "/docs/released/flows#statuses"
+            }
+          ]
+        },
+        {
+          "id": "payment-reference",
+          "title": "Payment reference",
+          "paragraphs": [
+            "A payee-visible text value used to correlate a payment with Paykit artifacts. Request terms supply it and Payment Proof messages copy it; construction rejects empty, overlong or control-character-containing references."
+          ],
+          "evidence": [
+            "released-glossary-payment-reference",
+            "released-glossary-reference-in-terms",
+            "released-glossary-proof-fields"
+          ],
+          "links": [
+            {
+              "label": "See the order reference in request terms",
+              "href": "/docs/released/point-of-sale#code"
+            }
+          ]
+        },
+        {
+          "id": "payment-request",
+          "title": "Payment request",
+          "paragraphs": [
+            "A payee-initiated private proposal asking a payer to pay according to supplied terms. It combines request and event identifiers with those terms and is sent over an Encrypted Link; low-level callers must enforce sender roles. It coordinates the request, not the financial execution."
+          ],
+          "evidence": [
+            "released-glossary-request-roles",
+            "released-glossary-request-shape",
+            "released-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Follow private request coordination",
+              "href": "/docs/released/flows#private"
+            }
+          ]
+        },
+        {
+          "id": "payment-request-id",
+          "title": "Payment Request ID",
+          "paragraphs": [
+            "The UUID-v4 identifier for one request, distinct from each lifecycle message's Event ID. Keep it with the counterparty and exact terms when using the SDK's idempotent proposal API; the ID alone does not preserve deduplication after the supporting history is lost."
+          ],
+          "evidence": [
+            "released-glossary-request-id",
+            "released-glossary-request-shape",
+            "released-glossary-idempotent-proposal",
+            "released-glossary-proposal-dedup-code"
+          ],
+          "links": [
+            {
+              "label": "Persist request identity before proposing",
+              "href": "/docs/released/point-of-sale#integrate"
+            }
+          ]
+        },
+        {
+          "id": "payment-request-terms",
+          "title": "Payment request terms",
+          "paragraphs": [
+            "The payee's requested amount, payment reference and accepted endpoint types, with optional constraints such as recurrence or an endpoint binding. Complete terms must pass builder validation; bound endpoints require a payee App ID and forbid fallback outside the supplied endpoint map."
+          ],
+          "evidence": [
+            "released-glossary-request-terms",
+            "released-glossary-terms-validation",
+            "released-glossary-bound-endpoints"
+          ],
+          "links": [
+            {
+              "label": "Build and validate request terms",
+              "href": "/docs/released/point-of-sale#code"
+            }
+          ]
+        },
+        {
+          "id": "private-application-message",
+          "title": "Private application message",
+          "paragraphs": [
+            "A message received over an Encrypted Link, exposed to low-level callers as plaintext with optional version, kind and app-attribution fields. Its Debug formatter redacts the raw body, but the application still holds sensitive plaintext and must keep it out of logs."
+          ],
+          "evidence": [
+            "released-glossary-private-plaintext",
+            "released-glossary-plaintext-handling"
+          ],
+          "links": [
+            {
+              "label": "Protect private messages in application memory and logs",
+              "href": "/docs/released/boundaries#trust"
+            }
+          ]
+        },
+        {
+          "id": "private-payment-list",
+          "title": "Private payment list",
+          "paragraphs": [
+            "An app-attributed, versioned message carrying the complete desired endpoint map to a counterparty over an established Encrypted Link, not a patch. SDK private resolution uses private lists and private adapter callbacks only; a missing or stale list does not trigger public fallback."
+          ],
+          "evidence": [
+            "released-glossary-private-list",
+            "released-glossary-private-list-send",
+            "released-glossary-private-resolution"
+          ],
+          "links": [
+            {
+              "label": "Keep private resolution and public discovery separate",
+              "href": "/docs/released/flows#fallback"
+            }
+          ]
+        },
+        {
+          "id": "proof-submitted",
+          "title": "ProofSubmitted",
+          "paragraphs": [
+            "The SDK request state indicating that a one-time Payment Proof is present in local history. It can be derived while that proof is still queued, so it establishes neither peer receipt nor verified settlement."
+          ],
+          "evidence": [
+            "released-glossary-request-states",
+            "released-glossary-proof-reducer",
+            "released-glossary-proof-pending-test",
+            "released-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Interpret local proof state correctly",
+              "href": "/docs/released/flows#statuses"
+            }
+          ]
+        },
+        {
+          "id": "pubky-session-provider",
+          "title": "Pubky session provider",
+          "paragraphs": [
+            "The application or binding boundary that supplies current live Pubky access to the SDK. Session creation, persistence, capability renewal and identity-wide key distribution remain caller responsibilities; a provider returning no live access does not itself sign the SDK out."
+          ],
+          "evidence": [
+            "released-glossary-session-provider",
+            "released-glossary-session-ownership"
+          ],
+          "links": [
+            {
+              "label": "Supply live access without confusing it with sign-in",
+              "href": "/docs/released/components#adapters"
+            }
+          ]
+        },
+        {
+          "id": "shared-state",
+          "title": "Shared state",
+          "paragraphs": [
+            "The one logical SDK state backing that apps sharing a Pubky identity must use for their private coordination. PubkySharedStateStorage encrypts this state, but requires independently verified Homeserver 0.16.2 or newer with GCS storage and correctly locked writers. Encryption does not hide resource existence, size or update timing, or prevent homeserver replay."
+          ],
+          "evidence": [
+            "released-glossary-shared-identity",
+            "released-glossary-storage-adapter",
+            "released-glossary-shared-state-storage"
+          ],
+          "links": [
+            {
+              "label": "Check the shared-state deployment contract",
+              "href": "/docs/released/boundaries#deployment"
+            }
+          ]
+        },
+        {
+          "id": "storage-adapter",
+          "title": "Storage adapter",
+          "paragraphs": [
+            "The SDK's application-supplied boundary for its authoritative logical state. It must provide atomic transactions and stable outbound/private-stream ordering, with the same logical backing for apps on one identity. Each transaction is atomic, but a later error does not undo earlier commits; a storage operation must not call SDK methods or wait for tasks using that same storage."
+          ],
+          "evidence": [
+            "released-glossary-storage-adapter"
+          ],
+          "links": [
+            {
+              "label": "Understand transaction and operation boundaries",
+              "href": "/docs/released/components#adapters"
+            }
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "Endpoint values and public discovery",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/payment_endpoint.rs"
+        },
+        {
+          "label": "Request, terms and proof types",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-lib/src/payment_request/types.rs"
+        },
+        {
+          "label": "Application and payment adapter responsibilities",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/src/domain/adapters/mod.rs"
+        },
+        {
+          "label": "Shared identity and private-link trust",
+          "href": "https://github.com/pubky/paykit-rs/blob/dd8e75e5588cf7a0b3b45cacbab9125576ee90df/paykit-sdk/README.md"
+        }
+      ]
     }
   ],
   "lastUpdated": "2026-11-20"

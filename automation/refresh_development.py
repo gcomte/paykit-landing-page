@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 import tarfile
 import tomllib
+from release_source import POLICY, validate_frozen
 
 
 def encode(value):
@@ -24,8 +25,12 @@ def refresh_development(root, sources):
     blueprint = read(root / 'automation/blueprints/coming-soon.json')
     previous = read(root / 'content/docs/coming-soon.json')
     config = read(root / 'docs-generation.json')
-    if (not all(index.get(k) == v for k, v in config['source'].items())
-            or blueprint['sourceCommit'] != index['commit'] or metadata['commit'] != index['commit']
+    source = config['source']
+    policy_bound = source == POLICY
+    validate_frozen(source, {'sourceSelection': {k: index[k] for k in ('repository', 'kind', 'ref')},
+        'sourcePolicy': index.get('sourcePolicy'), 'sourceCommit': index['commit'],
+        'release': metadata.get('release')}, index['commit'])
+    if (blueprint['sourceCommit'] != index['commit'] or metadata['commit'] != index['commit']
             or metadata['kind'] != index['kind'] or metadata['ref'] != index['ref']):
         raise ValueError('Development inputs do not match the selected source')
     source_field = 'tag' if index['kind'] == 'tag' else 'branch'
@@ -111,7 +116,9 @@ def refresh_development(root, sources):
     lock = read(root / 'automation/sources.lock.json')
     lock['coming-soon'] = {k: v for k, v in metadata.items() if k != 'readiness'}
     lock['repository'], lock['defaultVersion'] = index['repository'], config['defaultVersion']
-    lock['selectedSource'] = {**config['source'], **{k: metadata[k] for k in ('commit', 'object', 'qualifiedRef')}}
+    lock['selectedSource'] = {'repository': index['repository'], **{k: metadata[k] for k in ('kind', 'ref', 'commit', 'object', 'qualifiedRef')}}
+    if policy_bound:
+        lock['selectedSource']['sourcePolicy'] = source
     outputs['automation/sources.lock.json'] = encode(lock)
     manifest = read(root / 'public/docs-manifest.json')
     manifest['sources']['coming-soon'] = {k: metadata[k] for k in ('commit', source_field, 'ref', 'kind')}

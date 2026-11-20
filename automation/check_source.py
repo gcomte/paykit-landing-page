@@ -7,6 +7,7 @@ import re
 import subprocess
 import urllib.parse
 import urllib.request
+from release_source import select_source, source_matches
 
 
 def resolve_source(repository, kind, ref):
@@ -37,15 +38,17 @@ def check_source(root, version, page, force=False, resolver=resolve_source):
     if not any(item['slug'] == page for item in document['pages']):
         raise ValueError('The requested page does not exist')
     if version == 'released':
-        kind, ref = 'tag', document['version']['tag']
+        source = {'repository': config['source']['repository'], 'kind': 'tag', 'ref': document['version']['tag']}
     else:
-        kind, ref = config['source']['kind'], config['source']['ref']
-    commit = resolver(config['source']['repository'], kind, ref)
-    unchanged = commit == document['version']['commit']
+        source = config['source']
+    frozen = select_source(source, resolver)
+    selection = frozen['sourceSelection']
+    kind, ref, commit = selection['kind'], selection['ref'], frozen['sourceCommit']
+    unchanged = source_matches(document['version'], frozen)
     return {'action': 'skip' if unchanged and not force else 'refresh_needed',
             'reason': 'forced' if force else ('source_unchanged' if unchanged else 'source_changed'),
             'version': version, 'page': page, 'refKind': kind, 'ref': ref,
-            'documentationCommit': document['version']['commit'], 'sourceCommit': commit}
+            'documentationCommit': document['version']['commit'], **frozen}
 
 
 def main():

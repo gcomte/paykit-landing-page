@@ -13,6 +13,8 @@ import urllib.error
 import urllib.response
 from email.message import Message
 
+sys.path.insert(0, str(Path(__file__).parents[1]))
+
 SCRIPT = Path(__file__).parents[1] / 'prepare_development.py'
 OLD, NEW, OBJECT = 'a' * 40, 'b' * 40, 'c' * 40
 API = 'https://api.github.com/repos/pubky/paykit-rs'
@@ -22,6 +24,7 @@ PACKAGES = ('paykit-lib', 'paykit-sdk', 'paykit-ffi')
 
 class Response(io.BytesIO):
     status = 200
+    headers = {}
 
 
 class PrepareDevelopmentTests(unittest.TestCase):
@@ -382,6 +385,92 @@ class PrepareDevelopmentTests(unittest.TestCase):
         version = json.loads((output / 'index.json').read_bytes())['version']
         self.assertEqual((version['object'], version['commit']), (OBJECT, NEW))
         self.assertEqual((output / f'tag-{inner}.json').read_bytes(), self.replies[API + '/git/tags/' + inner])
+
+    def policy_fixture(self):
+        from test_release_source import POLICY, release
+        root, output, module = self.fixture()
+        source = {'repository': 'pubky/paykit-rs', 'kind': 'tag', 'ref': 'synthetic/v-next'}
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY}))
+        selected = release(tag=source['ref'])
+        frozen = {'action': 'refresh_needed', 'sourcePolicy': POLICY, 'sourceSelection': source,
+                  'sourceCommit': NEW, 'release': {k: selected[k] for k in ('id', 'tag_name', 'published_at', 'prerelease', 'html_url')}}
+        selection = output.parent / 'gate.json'
+        selection.write_text(json.dumps(frozen))
+        self.replies[API + '/releases/' + str(selected['id'])] = json.dumps(selected).encode()
+        return root, output, module, selection, frozen
+
+    def test_frozen_gate_selection_prevents_midrun_retarget_to_a_new_release(self):
+        from test_release_source import POLICY, release
+        root, output, module, selection, frozen = self.policy_fixture()
+        source, selected = frozen['sourceSelection'], frozen['release']
+        # A newer release has appeared since the gate; preparation must never list it.
+        self.replies[API + '/releases?per_page=100&page=1'] = json.dumps([release(99, 'newer-tag')]).encode()
+        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+            try:
+                module.prepare_development(root, output, NEW, selection=selection)
+            except TypeError as error:
+                self.fail('Preparation must consume the gate frozen selection: ' + str(error))
+        index = json.loads((output / 'index.json').read_bytes())
+        self.assertEqual({k: index[k] for k in source}, source)
+        self.assertEqual(index['sourcePolicy'], POLICY)
+        self.assertEqual(index['version']['release'], frozen['release'])
+        self.assertEqual(index['version']['tag'], source['ref'])
+        self.assertEqual(index['commit'], NEW)
+        self.assertEqual(self.calls[0], API + '/releases/' + str(selected['id']))
+        self.assertNotIn(API + '/releases?per_page=100&page=1', self.calls)
+        self.assertEqual((output / 'release.json').read_bytes(), self.replies[self.calls[0]])
+
+    def test_cli_accepts_frozen_gate_json_without_rediscovery(self):
+        root, output, module, selection, frozen = self.policy_fixture()
+        stdout = io.StringIO()
+        with patch.object(module, '__file__', str(root / 'automation/prepare_development.py')), \
+                patch.object(sys, 'argv', ['prepare_development.py', '--output', str(output), '--commit', NEW,
+                                          '--selection', str(selection)]), \
+                patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http), \
+                contextlib.redirect_stdout(stdout):
+            try:
+                module.main()
+            except SystemExit as error:
+                self.fail('Preparation CLI must accept --selection: ' + str(error))
+        self.assertEqual(json.loads(stdout.getvalue())['action'], 'prepared')
+        index = json.loads((output / 'index.json').read_bytes())
+        self.assertEqual(index['ref'], frozen['sourceSelection']['ref'])
+
+    def test_standalone_preparation_discovers_newest_once_then_checks_expected_commit(self):
+        from test_release_source import release
+        root, output, module, _, frozen = self.policy_fixture()
+        self.replies[API + '/releases?per_page=100&page=1'] = json.dumps([
+            release(1, 'old', '2030-01-01T00:00:00Z', prerelease=False),
+            release(tag=frozen['sourceSelection']['ref'])]).encode()
+        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+            try:
+                module.prepare_development(root, output, NEW)
+            except (KeyError, AttributeError) as error:
+                self.fail('Standalone preparation must resolve the release policy: ' + str(error))
+        index = json.loads((output / 'index.json').read_bytes())
+        self.assertEqual(index['version']['release'], frozen['release'])
+        self.assertEqual(self.calls.count(API + '/releases?per_page=100&page=1'), 1)
+        self.assertEqual(index['commit'], NEW)
+
+    def test_frozen_selection_is_validated_against_policy_before_http(self):
+        root, output, module, selection, frozen = self.policy_fixture()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': {
+            **frozen['sourcePolicy'], 'kind': 'tag', 'ref': frozen['sourceSelection']['ref']}}))
+        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+            with self.assertRaisesRegex(ValueError, 'selection|policy'):
+                module.prepare_development(root, output, NEW, selection=selection)
+        self.assertEqual(self.calls, [])
+        self.assertFalse(output.exists())
+
+    def test_explicit_config_cannot_be_overridden_by_a_frozen_gate(self):
+        root, output, module, selection, frozen = self.policy_fixture()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': {
+            'repository': 'pubky/paykit-rs', 'kind': 'tag', 'ref': 'different-explicit-tag'}}))
+        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+            with self.assertRaisesRegex(ValueError, 'selection|source'):
+                module.prepare_development(root, output, NEW, selection=selection)
+        self.assertEqual(self.calls, [])
+        self.assertFalse(output.exists())
 
 
 if __name__ == '__main__':

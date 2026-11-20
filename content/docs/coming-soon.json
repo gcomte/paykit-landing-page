@@ -1,8 +1,8 @@
 {
   "version": {
     "label": "v0.1.1-rc9",
-    "tag": "v0.1.1-rc9",
     "ref": "v0.1.1-rc9",
+    "tag": "v0.1.1-rc9",
     "kind": "tag",
     "qualifiedRef": "refs/tags/v0.1.1-rc9",
     "object": "9b4a4c05b03b924dd592963da64c55b3b118c0d3",
@@ -207,6 +207,13 @@
         },
         "published": false
       }
+    },
+    "release": {
+      "id": 447979812,
+      "tag_name": "v0.1.1-rc9",
+      "published_at": "2026-11-17T02:20:50Z",
+      "prerelease": true,
+      "html_url": "https://github.com/pubky/paykit-rs/releases/tag/v0.1.1-rc9"
     },
     "readiness": {
       "status": "unassessed",
@@ -1237,6 +1244,471 @@
         {
           "label": "Official integration skill — v0.1.1-rc9 source-tagged prerelease",
           "href": "https://github.com/pubky/paykit-rs/tree/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/skills/paykit"
+        }
+      ]
+    },
+    {
+      "slug": "glossary",
+      "title": "Glossary",
+      "description": "Key terms for reading this version's wallet, point-of-sale and payment-coordination guides.",
+      "group": "Reference",
+      "kind": "reference",
+      "sections": [
+        {
+          "id": "accepted",
+          "title": "Accepted",
+          "paragraphs": [
+            "The SDK request state indicating that an acceptance is recorded in local history. It can appear while the acceptance message is still queued; it does not establish peer delivery or that a payment happened."
+          ],
+          "evidence": [
+            "coming-soon-glossary-request-states",
+            "coming-soon-glossary-acceptance-reducer",
+            "coming-soon-glossary-acceptance-pending-test",
+            "coming-soon-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Understand local request states",
+              "href": "/docs/coming-soon/flows#statuses"
+            }
+          ]
+        },
+        {
+          "id": "app-id",
+          "title": "App ID",
+          "paragraphs": [
+            "An identifier for an application within a Paykit identity, used to attribute public endpoints and private messages. It does not create a separate identity, Encrypted Link or private trust boundary."
+          ],
+          "evidence": [
+            "coming-soon-glossary-app-id",
+            "coming-soon-glossary-shared-identity"
+          ],
+          "links": [
+            {
+              "label": "Understand app ownership and shared identity",
+              "href": "/docs/coming-soon/components#public-private"
+            }
+          ]
+        },
+        {
+          "id": "encrypted-link",
+          "title": "Encrypted Link",
+          "paragraphs": [
+            "The private connection used to exchange Paykit application messages with a counterparty through pubky-noise. SDK links rely on identity-signed Noise key authorization, retained peer pins and authenticated static-key checks, not unsigned key fields in the public App Registry."
+          ],
+          "evidence": [
+            "coming-soon-glossary-link-transport",
+            "coming-soon-glossary-link-authorization",
+            "coming-soon-noise-publish",
+            "coming-soon-noise-pin",
+            "coming-soon-noise-validate"
+          ],
+          "links": [
+            {
+              "label": "Review private-link trust",
+              "href": "/docs/coming-soon/boundaries#trust"
+            }
+          ]
+        },
+        {
+          "id": "endpoint-payload",
+          "title": "Endpoint payload",
+          "paragraphs": [
+            "The UTF-8 receiving-detail text carried by a payment endpoint, such as an address, invoice or JSON descriptor. The payload wrapper stores text; it does not establish that the details are payable, so the application or payment adapter must interpret and validate them."
+          ],
+          "evidence": [
+            "coming-soon-glossary-endpoint-payload",
+            "coming-soon-glossary-endpoint-pair",
+            "coming-soon-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Discover receiving details without executing payment",
+              "href": "/docs/coming-soon/flows#public"
+            }
+          ]
+        },
+        {
+          "id": "event-id",
+          "title": "Event ID",
+          "paragraphs": [
+            "A UUID-v4 identifier for one Event Message. A request proposal carries both an Event ID for that message and a Payment Request ID for the request."
+          ],
+          "evidence": [
+            "coming-soon-glossary-event-id",
+            "coming-soon-glossary-request-shape"
+          ],
+          "links": [
+            {
+              "label": "See the request and event identifiers in the local fixture",
+              "href": "/docs/coming-soon/point-of-sale#code"
+            }
+          ]
+        },
+        {
+          "id": "idempotent-proposal",
+          "title": "Idempotent proposal",
+          "paragraphs": [
+            "Queuing a request with propose_payment_request_with_id lets a matching retry return the original proposal without queuing a second one. Persist the ID, counterparty and exact terms first, and retry as the same creating app and identity with retained Event Message history; deleting state or restoring a backup from before creation loses this protection. Every call still requires current session, app-capability and link checks; success describes the local queue, not payment authorization or confirmed delivery."
+          ],
+          "evidence": [
+            "coming-soon-glossary-idempotent-proposal",
+            "coming-soon-glossary-proposal-dedup-code"
+          ],
+          "links": [
+            {
+              "label": "Plan durable request creation and retries",
+              "href": "/docs/coming-soon/point-of-sale#integrate"
+            }
+          ]
+        },
+        {
+          "id": "issued-receipt",
+          "title": "Issued receipt",
+          "paragraphs": [
+            "A receipt prepared by the local identity that the SDK can decrypt from its issuance state, including metadata, even before Receipt Access delivery. Another app sharing the identity can read it; blocked counterparties and missing records are rejected. This local read proves neither peer receipt nor settlement."
+          ],
+          "evidence": [
+            "coming-soon-glossary-issued-receipt",
+            "coming-soon-glossary-issued-receipt-test",
+            "coming-soon-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Read the snapshot-specific receipt behavior",
+              "href": "/docs/coming-soon/components#implemented-development"
+            }
+          ]
+        },
+        {
+          "id": "payment-adapter",
+          "title": "Payment adapter",
+          "paragraphs": [
+            "The application-supplied SDK boundary for method-specific receiving details, endpoint selection and payment-target construction. Financial execution, proof validation and settlement checks remain application or adapter responsibilities rather than SDK outcomes. Public receiving details are the complete desired set: an empty or partial result removes omitted SDK-managed endpoints, so return an error if a receiving backend is unavailable."
+          ],
+          "evidence": [
+            "coming-soon-glossary-payment-adapter",
+            "coming-soon-glossary-receiving-details",
+            "coming-soon-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Choose the application adapter boundaries",
+              "href": "/docs/coming-soon/components#adapters"
+            }
+          ]
+        },
+        {
+          "id": "payment-amount",
+          "title": "Payment amount",
+          "paragraphs": [
+            "A decimal value expressed as text together with an asset name. Paykit checks their syntax but defines no asset registry or precision policy; applications still own method-specific financial interpretation."
+          ],
+          "evidence": [
+            "coming-soon-glossary-payment-amount",
+            "coming-soon-glossary-financial-boundary",
+            "coming-soon-amount-construction",
+            "coming-soon-amount-test"
+          ],
+          "links": [
+            {
+              "label": "Read the fixture amount and its limits",
+              "href": "/docs/coming-soon/point-of-sale#code"
+            }
+          ]
+        },
+        {
+          "id": "payment-endpoint",
+          "title": "Payment endpoint",
+          "paragraphs": [
+            "A payment endpoint pairs a machine-readable endpoint-type identifier with its receiving-detail payload. Public endpoints belong to an App ID; publishing or reading those details is discovery, not payment execution."
+          ],
+          "evidence": [
+            "coming-soon-glossary-endpoint-pair",
+            "coming-soon-glossary-endpoint-publication",
+            "coming-soon-glossary-payment-list-read",
+            "coming-soon-glossary-financial-boundary",
+            "coming-soon-public-path"
+          ],
+          "links": [
+            {
+              "label": "Follow public endpoint discovery",
+              "href": "/docs/coming-soon/flows#public"
+            }
+          ]
+        },
+        {
+          "id": "payment-endpoint-identifier",
+          "title": "Payment endpoint identifier",
+          "paragraphs": [
+            "The machine-readable name of an endpoint type, such as btc-lightning-bolt11. Its constructor checks structural path safety; the application still needs to support the selected payment method."
+          ],
+          "evidence": [
+            "coming-soon-glossary-endpoint-type",
+            "coming-soon-glossary-payment-adapter",
+            "coming-soon-endpoint-id"
+          ],
+          "links": [
+            {
+              "label": "See supported and unsupported endpoint types",
+              "href": "/docs/coming-soon/wallets#code"
+            }
+          ]
+        },
+        {
+          "id": "payment-list",
+          "title": "Payment list",
+          "paragraphs": [
+            "A collection of endpoint identifiers and their payloads, represented by the library as a map. Public discovery reads the list for a particular payee and App ID; selecting an entry does not execute a payment."
+          ],
+          "evidence": [
+            "coming-soon-glossary-payment-list",
+            "coming-soon-glossary-payment-list-read",
+            "coming-soon-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Read the local PaymentList fixture",
+              "href": "/docs/coming-soon/wallets#code"
+            }
+          ]
+        },
+        {
+          "id": "payment-proof",
+          "title": "Payment proof",
+          "paragraphs": [
+            "A request-correlated message carrying a payment reference, the app and endpoint type used, and a method-specific proof object. The application or payment adapter must validate the evidence and rail outcome; receiving this message alone does not establish settlement."
+          ],
+          "evidence": [
+            "coming-soon-glossary-proof-fields",
+            "coming-soon-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Separate proof history from settlement",
+              "href": "/docs/coming-soon/flows#statuses"
+            }
+          ]
+        },
+        {
+          "id": "payment-reference",
+          "title": "Payment reference",
+          "paragraphs": [
+            "A payee-visible text value used to correlate a payment with Paykit artifacts. Request terms supply it and Payment Proof messages copy it; construction rejects empty, overlong or control-character-containing references."
+          ],
+          "evidence": [
+            "coming-soon-glossary-payment-reference",
+            "coming-soon-glossary-reference-in-terms",
+            "coming-soon-glossary-proof-fields"
+          ],
+          "links": [
+            {
+              "label": "See the order reference in request terms",
+              "href": "/docs/coming-soon/point-of-sale#code"
+            }
+          ]
+        },
+        {
+          "id": "payment-request",
+          "title": "Payment request",
+          "paragraphs": [
+            "A payee-initiated private proposal asking a payer to pay according to supplied terms. It combines request and event identifiers with those terms and is sent over an Encrypted Link; low-level callers must enforce sender roles. It coordinates the request, not the financial execution."
+          ],
+          "evidence": [
+            "coming-soon-glossary-request-roles",
+            "coming-soon-glossary-request-shape",
+            "coming-soon-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Follow private request coordination",
+              "href": "/docs/coming-soon/flows#private"
+            }
+          ]
+        },
+        {
+          "id": "payment-request-id",
+          "title": "Payment Request ID",
+          "paragraphs": [
+            "The UUID-v4 identifier for one request, distinct from each lifecycle message's Event ID. Keep it with the counterparty and exact terms when using the SDK's idempotent proposal API; the ID alone does not preserve deduplication after the supporting history is lost."
+          ],
+          "evidence": [
+            "coming-soon-glossary-request-id",
+            "coming-soon-glossary-request-shape",
+            "coming-soon-glossary-idempotent-proposal",
+            "coming-soon-glossary-proposal-dedup-code"
+          ],
+          "links": [
+            {
+              "label": "Persist request identity before proposing",
+              "href": "/docs/coming-soon/point-of-sale#integrate"
+            }
+          ]
+        },
+        {
+          "id": "payment-request-terms",
+          "title": "Payment request terms",
+          "paragraphs": [
+            "The payee's requested amount, payment reference and accepted endpoint types, with optional constraints such as recurrence or an endpoint binding. Complete terms must pass builder validation; bound endpoints require a payee App ID and forbid fallback outside the supplied endpoint map."
+          ],
+          "evidence": [
+            "coming-soon-glossary-request-terms",
+            "coming-soon-glossary-terms-validation",
+            "coming-soon-glossary-bound-endpoints"
+          ],
+          "links": [
+            {
+              "label": "Build and validate request terms",
+              "href": "/docs/coming-soon/point-of-sale#code"
+            }
+          ]
+        },
+        {
+          "id": "private-application-message",
+          "title": "Private application message",
+          "paragraphs": [
+            "A message received over an Encrypted Link, exposed to low-level callers as plaintext with optional version, kind and app-attribution fields. Its Debug formatter redacts the raw body, but the application still holds sensitive plaintext and must keep it out of logs."
+          ],
+          "evidence": [
+            "coming-soon-glossary-private-plaintext",
+            "coming-soon-glossary-plaintext-handling"
+          ],
+          "links": [
+            {
+              "label": "Protect private messages in application memory and logs",
+              "href": "/docs/coming-soon/boundaries#trust"
+            }
+          ]
+        },
+        {
+          "id": "private-payment-list",
+          "title": "Private payment list",
+          "paragraphs": [
+            "An app-attributed, versioned message carrying the complete desired endpoint map to a counterparty over an established Encrypted Link, not a patch. SDK private resolution uses private lists and private adapter callbacks only; a missing or stale list does not trigger public fallback."
+          ],
+          "evidence": [
+            "coming-soon-glossary-private-list",
+            "coming-soon-glossary-private-list-send",
+            "coming-soon-glossary-private-resolution"
+          ],
+          "links": [
+            {
+              "label": "Keep private resolution and public discovery separate",
+              "href": "/docs/coming-soon/flows#fallback"
+            }
+          ]
+        },
+        {
+          "id": "proof-submitted",
+          "title": "ProofSubmitted",
+          "paragraphs": [
+            "The SDK request state indicating that a one-time Payment Proof is present in local history. It can be derived while that proof is still queued, so it establishes neither peer receipt nor verified settlement."
+          ],
+          "evidence": [
+            "coming-soon-glossary-request-states",
+            "coming-soon-glossary-proof-reducer",
+            "coming-soon-glossary-proof-pending-test",
+            "coming-soon-glossary-financial-boundary"
+          ],
+          "links": [
+            {
+              "label": "Interpret local proof state correctly",
+              "href": "/docs/coming-soon/flows#statuses"
+            }
+          ]
+        },
+        {
+          "id": "pubky-session-provider",
+          "title": "Pubky session provider",
+          "paragraphs": [
+            "The application or binding boundary that supplies current live Pubky access to the SDK. Session creation, persistence, capability renewal and identity-wide key distribution remain caller responsibilities; a provider returning no live access does not itself sign the SDK out."
+          ],
+          "evidence": [
+            "coming-soon-glossary-session-provider",
+            "coming-soon-glossary-session-ownership"
+          ],
+          "links": [
+            {
+              "label": "Supply live access without confusing it with sign-in",
+              "href": "/docs/coming-soon/components#adapters"
+            }
+          ]
+        },
+        {
+          "id": "receipt-delivery-status",
+          "title": "Receipt delivery status",
+          "paragraphs": [
+            "The SDK issuance view tracks delivery of Receipt Access, the message that lets a counterparty retrieve and decrypt an encrypted receipt: locally queued, published (AccessSent), or stopped without automatic retry (AccessFailed). Sent and failed statuses are derived from the matching outbound message while the durable issuance record remains AccessQueued; a retryable delivery error can leave the view queued with an error. Publication is not proof that the peer read the receipt or that payment settled."
+          ],
+          "evidence": [
+            "coming-soon-glossary-receipt-states",
+            "coming-soon-glossary-receipt-view",
+            "coming-soon-glossary-receipt-retry-test",
+            "coming-soon-glossary-financial-boundary",
+            "coming-soon-glossary-receipt-access-meaning"
+          ],
+          "links": [
+            {
+              "label": "Interpret receipt delivery separately from settlement",
+              "href": "/docs/coming-soon/flows#statuses"
+            }
+          ]
+        },
+        {
+          "id": "shared-state",
+          "title": "Shared state",
+          "paragraphs": [
+            "The one logical SDK state backing that apps sharing a Pubky identity must use for their private coordination. PubkySharedStateStorage encrypts this state, but requires independently verified Homeserver 0.16.2 or newer with GCS storage and correctly locked writers. Encryption does not hide resource existence, size or update timing, or prevent homeserver replay."
+          ],
+          "evidence": [
+            "coming-soon-glossary-shared-identity",
+            "coming-soon-glossary-storage-adapter",
+            "coming-soon-glossary-shared-state-storage"
+          ],
+          "links": [
+            {
+              "label": "Check the shared-state deployment contract",
+              "href": "/docs/coming-soon/boundaries#deployment"
+            }
+          ]
+        },
+        {
+          "id": "storage-adapter",
+          "title": "Storage adapter",
+          "paragraphs": [
+            "The SDK's application-supplied boundary for its authoritative logical state. It must provide atomic transactions and stable outbound/private-stream ordering, with the same logical backing for apps on one identity. Each transaction is atomic, but a later error does not undo earlier commits; a storage operation must not call SDK methods or wait for tasks using that same storage."
+          ],
+          "evidence": [
+            "coming-soon-glossary-storage-adapter"
+          ],
+          "links": [
+            {
+              "label": "Understand transaction and operation boundaries",
+              "href": "/docs/coming-soon/components#adapters"
+            }
+          ]
+        }
+      ],
+      "sourceLinks": [
+        {
+          "label": "Endpoint values and public discovery",
+          "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-lib/src/payment_endpoint.rs"
+        },
+        {
+          "label": "Request, terms and proof types",
+          "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-lib/src/payment_request/types.rs"
+        },
+        {
+          "label": "Application and payment adapter responsibilities",
+          "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-sdk/src/domain/adapters/mod.rs"
+        },
+        {
+          "label": "Shared identity and private-link trust",
+          "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-sdk/README.md"
+        },
+        {
+          "label": "Receipt issuance and derived delivery states",
+          "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-sdk/src/domain/receipts/records.rs"
         }
       ]
     }

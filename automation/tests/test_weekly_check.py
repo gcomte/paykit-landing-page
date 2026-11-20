@@ -157,6 +157,40 @@ class WeeklyCheckTests(unittest.TestCase):
                 with self.subTest(start=start), self.assertRaisesRegex(ValueError, 'start'):
                     module.check_weekly(root, manifest, resolver=lambda *args: COMMIT, started_at=start)
 
+    def test_weekly_policy_returns_one_frozen_concrete_selection(self):
+        from unittest.mock import patch
+        from test_release_source import POLICY, release
+        import release_source
+        root, module, manifest = self.fixture()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY, 'defaultVersion': 'coming-soon'}))
+        self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'select newest published release')
+        with patch.object(release_source, 'fetch_release_page', return_value=([release()], '')) as fetched:
+            try:
+                result = module.check_weekly(root, manifest, resolver=lambda *args: 'b' * 40)
+            except KeyError as error:
+                self.fail('Weekly gate must resolve policy to a concrete release: ' + str(error))
+        self.assertEqual(result['sourceSelection'], {'repository': 'pubky/paykit-rs', 'kind': 'tag', 'ref': release()['tag_name']})
+        self.assertEqual(result['sourcePolicy'], POLICY)
+        self.assertEqual(result['sourceCommit'], 'b' * 40)
+        self.assertEqual(result['release']['id'], release()['id'])
+        self.assertEqual(fetched.call_count, 1)
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_release_and_glossary_process_dependencies_each_trigger_refresh(self):
+        for name in ('automation/release_source.py', 'automation/refresh_glossary.py',
+                     'automation/tests/test_release_source.py', 'automation/tests/test_refresh_glossary.py'):
+            with self.subTest(path=name):
+                root, module, manifest = self.fixture()
+                self.assertEqual(module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)['action'], 'skip')
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('Synthetic generation dependency\n')
+                self.git(root, 'add', name); self.git(root, 'commit', '-m', 'new docs generation dependency')
+                result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+                self.assertEqual(result['action'], 'refresh_needed')
+                self.assertEqual(result['processFilesChanged'], [name])
+                self.assertEqual(result['reasons'], ['generation_process_changed'])
+
 
 if __name__ == '__main__':
     unittest.main()

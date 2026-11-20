@@ -9,7 +9,7 @@ type PageData = {
   title: string;
   description: string;
   group: string;
-  kind: "explanation" | "tutorial";
+  kind: "explanation" | "tutorial" | "reference";
   sections: {
     id: string;
     title: string;
@@ -25,7 +25,7 @@ type Documentation = {
   pages: PageData[];
 };
 const versions: Version[] = ["released", "coming-soon"];
-const slugs = ["overview", "components", "flows", "boundaries", "wallets", "point-of-sale"];
+const slugs = ["overview", "components", "flows", "boundaries", "wallets", "point-of-sale", "glossary"];
 const warning = "Selected source snapshot—check its ref and commit before integrating.";
 const documentPath = (version: Version, slug: string) => `/docs/${version}/${slug}`;
 const readDocumentation = async (version: Version): Promise<Documentation> =>
@@ -80,10 +80,10 @@ for (const version of versions) {
       await expect(page.getByRole("main")).toHaveAttribute("data-doc-version", version);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(entry.title);
       await expect(page.getByTestId("docs-description")).toHaveText(plainText(entry.description));
-      await expect(page.getByTestId("docs-page-kind")).toHaveText(entry.kind === "tutorial" ? "Integration tutorial" : "Explanation");
+      await expect(page.getByTestId("docs-page-kind")).toHaveText(entry.kind === "tutorial" ? "Integration tutorial" : entry.kind === "reference" ? "Reference" : "Explanation");
       if (["wallets", "point-of-sale"].includes(slug)) expect(entry.kind).toBe("tutorial");
       const navigation = page.getByRole("navigation", { name: "Documentation pages", exact: true });
-      for (const group of ["Understand Paykit", "Integrate Paykit"]) {
+      for (const group of ["Understand Paykit", "Integrate Paykit", "Reference"]) {
         await expect(navigation.getByRole("heading", { name: group, exact: true })).toBeVisible();
       }
       await expect(navigation.getByRole("link", { name: entry.title, exact: true })).toHaveAttribute("aria-current", "page");

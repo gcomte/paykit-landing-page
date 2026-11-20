@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import sys
+
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
 SCRIPT = Path(__file__).parents[1] / 'refresh_development.py'
 OLD, NEW = 'a' * 40, 'b' * 40
@@ -115,6 +118,46 @@ class DevelopmentRefreshTests(unittest.TestCase):
         path.write_text(json.dumps(index))
         with self.assertRaisesRegex(ValueError, 'source'):
             module.refresh_development(root, sources)
+
+    def policy_fixture(self):
+        from test_release_source import POLICY, release
+        root, sources, module = self.fixture()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY, 'defaultVersion': 'coming-soon'}))
+        path = sources / 'index.json'
+        index = json.loads(path.read_bytes())
+        selected = release(tag=index['ref'])
+        index['sourcePolicy'] = POLICY
+        index['version']['release'] = {k: selected[k] for k in ('id', 'tag_name', 'published_at', 'prerelease', 'html_url')}
+        path.write_text(json.dumps(index))
+        return root, sources, module, index
+
+    def test_policy_snapshot_renders_frozen_tag_without_live_release_discovery(self):
+        from test_release_source import POLICY
+        root, sources, module, index = self.policy_fixture()
+        try:
+            module.refresh_development(root, sources)
+        except ValueError as error:
+            self.fail('Renderer must accept the concrete policy-bound frozen tag: ' + str(error))
+        doc = json.loads((root / 'content/docs/coming-soon.json').read_bytes())
+        self.assertEqual(doc['version']['release'], index['version']['release'])
+        self.assertEqual(doc['version']['ref'], index['ref'])
+        lock = json.loads((root / 'automation/sources.lock.json').read_bytes())
+        self.assertEqual(lock['selectedSource'], {'repository': 'pubky/paykit-rs', 'kind': 'tag',
+            'ref': index['ref'], 'commit': NEW, 'object': index['version']['object'],
+            'qualifiedRef': 'refs/tags/' + index['ref'], 'sourcePolicy': POLICY})
+        self.assertEqual(module.refresh_development(root, sources)['changedFiles'], [])
+
+    def test_renderer_rejects_contradictory_frozen_release_identity_before_writes(self):
+        for field, value in (('tag_name', 'different-tag'),
+                             ('html_url', 'https://github.com/other/repo/releases/tag/v-test')):
+            with self.subTest(field=field):
+                root, sources, module, index = self.policy_fixture()
+                index['version']['release'][field] = value
+                (sources / 'index.json').write_text(json.dumps(index))
+                before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+                with self.assertRaisesRegex(ValueError, 'release|selection'):
+                    module.refresh_development(root, sources)
+                self.assertEqual(before, {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()})
 
 if __name__ == '__main__':
     unittest.main()
