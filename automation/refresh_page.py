@@ -2,6 +2,7 @@
 """Regenerate one overview page from a source-grounded author blueprint."""
 import argparse
 import copy
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -32,6 +33,7 @@ def refresh_page(root, version, slug):
         if key not in existing:
             evidence.append(row)
     document['pages'][index] = page
+    document['lastUpdated'] = datetime.now(timezone.utc).date().isoformat()
     encode = lambda value: (json.dumps(value, indent=2, ensure_ascii=False) + '\n').encode()
     document_bytes = encode(document)
     manifest = json.loads(manifest_path.read_text())

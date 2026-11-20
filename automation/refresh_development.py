@@ -2,6 +2,7 @@
 """Refresh the complete development snapshot from pinned public author inputs."""
 import argparse
 import copy
+from datetime import datetime, timezone
 import gzip
 import hashlib
 import io
@@ -97,7 +98,8 @@ def refresh_development(root, sources):
         metadata['readiness'].update(status='experimental', attribution='upstream',
             notice='Upstream README: ' + warning[1],
             sourceUrl=metadata['readiness']['sourceUrl'] + f'#L{warning[0]}')
-    document = {'version': metadata, 'pages': copy.deepcopy(blueprint['pages'])}
+    document = {'version': metadata, 'pages': copy.deepcopy(blueprint['pages']),
+                'lastUpdated': datetime.now(timezone.utc).date().isoformat()}
     for page in document['pages']:
         for section in page['sections']:
             for block in section.get('code', []):

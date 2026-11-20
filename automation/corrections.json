@@ -34,6 +34,20 @@
   },
   "requirements": [
     {
+      "id": "weekly-sunday-documentation-automation",
+      "requirement": "After implementing and live-verifying the docs version/date footer, continue the same source-check, public authoring, independent review, generation, tests and authorized publication workflow as a weekly automation on Sunday morning, not daily. Retain the existing 05:00 UTC time slot with an explicit UTC timezone. Register exactly one Paykit weekly job, leave unrelated jobs alone, and report changed, unchanged and failed outcomes. Preserve the configured source ref; no implicit switch to latest tags or another branch. An unchanged check does not run generation or bump the footer date.",
+      "implementationStatus": "approved-pending-footer-deployment",
+      "supersedes": "Older daily 05:00 UTC scheduling references; cadence is now weekly Sunday 05:00 UTC."
+    },
+    {
+      "id": "docs-version-update-footer",
+      "requirement": "Show the covered Paykit release/source version and documentation last-updated date in the footer of every documentation page, including the Docs entry, but not on the landing page. Use the version actually covered by that page, preserving the separate released/development snapshots. Automatically stamp and persist a UTC day-granularity date for that documented version on each actual docs generation run, including explicit/forced generation; do not use the site build/request time or merely the upstream release date. Unchanged-source checks that skip generation leave the date unchanged. Preserve this metadata through future generation and matching Markdown exports. Use pubky/pubky-knowledge-base-v2 as the public UX reference, while keeping both requested fields in the Paykit docs footer.",
+      "implementationStatus": "implemented-pending-review-and-deployment",
+      "reference": "https://github.com/pubky/pubky-knowledge-base-v2/",
+      "enforcedBy": ["components/docs/DocsPage.tsx", "automation/refresh_page.py", "automation/refresh_development.py", "automation/tests/test_footer_generation_date.py", "tests/docs-footer.test.mjs", "tests/browser/docs-footer.spec.ts"],
+      "enforcementScope": "Root lastUpdated records the UTC documentation generation day for that documented version. Both active generators stamp it; HTML and Markdown share the docs footer. Site builds and unchanged checks do not stamp it. Deployment still requires independent review and verification."
+    },
+    {
       "id": "small-development-source-refresh",
       "requirement": "When the agreed selected development source changes, generate all existing development pages and their evidence/version-bound derivatives from that pinned public snapshot rather than relabelling stale pages. Preserve the released snapshot. Keep generation simple; do not enable scheduling or claim SDK/example execution. Reuse an existing dependency lock graph only for a library manifest unchanged except package version; otherwise require a new dependency resolution.",
       "enforcedBy": ["automation/refresh_development.py", "automation/tests/test_refresh_development.py", "automation/README.md"]

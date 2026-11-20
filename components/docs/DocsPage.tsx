@@ -103,6 +103,10 @@ export default function DocsPage({
   const pageIndex = documentation.pages.findIndex((entry) => entry.slug === page.slug);
   const previous = documentation.pages[pageIndex - 1];
   const next = documentation.pages[pageIndex + 1];
+  const coveredVersion = documentation.version.tag ?? documentation.version.ref ?? documentation.version.label;
+  const updatedDate = documentation.lastUpdated && new Intl.DateTimeFormat("en-US", {
+    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+  }).format(new Date(`${documentation.lastUpdated}T00:00:00Z`));
   return (
     <div className={styles.shell}>
       <a href="#docs-content" className="skip-link">Skip to documentation</a>
@@ -170,6 +174,10 @@ export default function DocsPage({
             </div>
           </nav>
           <footer className={styles.sources}>
+            <p className={styles.footerMetadata} data-testid="docs-footer-metadata">
+              Covers Paykit {coveredVersion}
+              {updatedDate && <> · Last updated: <time dateTime={documentation.lastUpdated}>{updatedDate}</time></>}
+            </p>
             <nav aria-label="Page sources">
               <h2>Source references</h2>
               <p>The upstream material behind this page.</p>

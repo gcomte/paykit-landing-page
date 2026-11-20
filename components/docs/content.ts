@@ -41,6 +41,8 @@ export type DocumentationPage = {
   sourceLinks: DocumentationLink[];
 };
 export type Documentation = {
+  // UTC day stamped by an explicit documentation generation, never a site build.
+  lastUpdated?: string;
   version: {
     label: string;
     commit: string;

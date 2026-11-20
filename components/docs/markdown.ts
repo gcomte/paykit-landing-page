@@ -51,7 +51,7 @@ export function documentationMarkdown(node: ReactNode): string {
     const inner = view(p.children);
     if (tag === "a") return anchor + `[${inner}](${destination(String(p.href))})`;
     if (/^h[1-6]$/.test(tag)) return anchor + `\n\n${"#".repeat(Number(tag[1]))} ${inner}\n\n`;
-    if (tag === "span") return anchor + inner;
+    if (tag === "span" || tag === "time") return anchor + inner;
     if (tag === "strong") return anchor + `**${inner}**`;
     if (tag === "p" || containers.has(tag)) return anchor + `\n\n${inner}\n\n`;
     if (tag === "ul") return anchor + `\n\n<!-- list boundary -->\n\n${inner}\n\n<!-- list boundary -->\n\n`;

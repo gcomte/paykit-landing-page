@@ -18,6 +18,10 @@ Hermes first reads the pinned public sources and generates the selected page and
 
 Run the focused check with `python -m unittest discover -s automation/tests -p test_refresh_page.py`, then the relevant site tests and build. This increment does not run SDK examples, move source refs, enable scheduling or provide unattended authoring. Those remain separate backlog items.
 
+### Documentation footer metadata
+
+Every docs footer shows the covered tag/ref and that version's UTC documentation generation day. Both active generators stamp root `lastUpdated` automatically on each actual generation, including forced/process-only runs. Repeated same-day generation remains a no-op; a later-day generation refreshes the date. Site builds, requests and unchanged source checks do not stamp it. The landing page has no docs metadata footer. HTML and Markdown render the same persisted fields; do not hand-edit generated dates or derive them from a build clock.
+
 ### Complete development-source refresh
 
 For an agreed development-source update, regenerate all existing development pages together so old pages are not silently relabelled as a newer snapshot. After a public author updates the complete coming-soon blueprint/evidence against the frozen source, run:

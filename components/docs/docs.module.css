@@ -548,6 +548,11 @@
   font-size: 13px;
 }
 
+.footerMetadata {
+  margin: 0 0 20px;
+  overflow-wrap: anywhere;
+}
+
 .sources nav > p {
   margin: 6px 0 10px;
 }
