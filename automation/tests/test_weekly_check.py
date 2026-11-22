@@ -211,5 +211,51 @@ class WeeklyCheckTests(unittest.TestCase):
                 self.assertEqual(self.git(root, 'status', '--porcelain'), '')
 
 
+    def test_actual_homepage_export_producers_and_parity_checks_trigger_but_unrelated_does_not(self):
+        # Discover real local import edges from the export entry, not a guessed
+        # duplicate of PROCESS_INPUTS. External packages stay package-lock-bound.
+        import re
+        source_root = SCRIPT.parents[1]
+        pending = [source_root / "app/markdown/route.ts"]
+        self.assertTrue(pending[0].is_file(), "Approved homepage export entry is missing")
+        producers = set()
+        while pending:
+            file = pending.pop()
+            if file in producers:
+                continue
+            producers.add(file)
+            if file.suffix not in (".ts", ".tsx", ".mjs"):
+                continue
+            for name in re.findall(r"(?:from\s*|import\s*)[\"']([^\"']+)[\"']", file.read_text()):
+                if not (name.startswith(".") or name.startswith("@/")):
+                    continue
+                target = source_root / name[2:] if name.startswith("@/") else file.parent / name
+                candidates = [target, *[Path(str(target) + suffix) for suffix in (".ts", ".tsx", ".mjs")]]
+                resolved = next((candidate.resolve() for candidate in candidates if candidate.is_file()), None)
+                self.assertIsNotNone(resolved, name)
+                pending.append(resolved)
+        checks = [source_root / "tests/homepage-markdown.test.mjs", source_root / "tests/homepage-markdown-observe.py"]
+        for file in checks:
+            self.assertTrue(file.is_file(), str(file))
+        for file in sorted(producers | set(checks)):
+            name = str(file.relative_to(source_root))
+            with self.subTest(actual_producer=name):
+                root, module, manifest = self.fixture()
+                (root / "unrelated-homepage-note.txt").write_text("Synthetic unrelated control\n")
+                self.git(root, "add", "."); self.git(root, "commit", "-m", "unrelated control")
+                self.assertEqual(module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)["action"], "skip")
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text((target.read_text() if target.exists() else "") + "\n")
+                self.git(root, "add", name); self.git(root, "commit", "-m", "actual homepage producer changed")
+                before = (root / "content/docs/coming-soon.json").read_bytes()
+                result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+                self.assertEqual(result["action"], "refresh_needed", name)
+                self.assertEqual(result["reasons"], ["generation_process_changed"])
+                self.assertEqual(result["processFilesChanged"], [name])
+                self.assertEqual((root / "content/docs/coming-soon.json").read_bytes(), before)
+                self.assertEqual(self.git(root, "status", "--porcelain"), "")
+
+
 if __name__ == '__main__':
     unittest.main()

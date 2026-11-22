@@ -16,6 +16,7 @@ export async function GET() {
   }));
   return new Response(documentationMarkdown(h("main", null,
     h("h1", null, "Paykit Docs"),
+    h("a", { href: "/markdown" }, "Paykit"),
     h("a", { href: "/docs/markdown" }, "Docs"),
     ...versions,
   )), { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Content-Type-Options": "nosniff" } });

@@ -34,6 +34,28 @@
   },
   "requirements": [
     {
+      "id": "homepage-reviewed-markdown-export",
+      "requirement": "The approved small increment adds homepage GET /markdown and a visible accessible View as Markdown footer link, and indexes that export in llms.txt while preserving existing docs source identities and links. Derive it read-only from the actual homepage entry and root layout, shared visible content and generated selected-source DocsTeaser metadata, with no parallel frozen copy and no new Paykit facts. Preserve the same contact email and request-time conference predicate before and at its cutoff, all interactive payment steps and illustrative warning, feature qualifications, FAQ answers, form labels/choices/privacy note, meaningful image alternatives and block-card destinations. Omit only the explicitly tested decorative/control-only boundaries; never execute client hooks in the exporter. Future imports retain the export and run bounded HTML/shared-source versus consumed-Markdown parity and producer-watch regressions. Preserve generated docs, dates, source snapshots, manifests, assets and existing docs routes; no forced regeneration for this presentation increment. Keep Sunday 05:00 UTC, runtime/authentication/security and allowed fork unchanged; SDK/sandbox and broader redesign remain deferred. Independent review and coordinator-owned build/browser/publication/readback are still required; implementation tests are not deployment approval. Keep lexical word boundaries explicit in shared markup; whitespace-only repairs preserving visible wording and design are routine implementation decisions, not user approval gates. Check rendered captions and shared chrome as well as headings; avoid CSS-specific export exceptions.",
+      "implementationStatus": "implemented-pending-independent-review",
+      "enforcedBy": [
+        "app/markdown/route.ts",
+        "components/homepage/markdown.tsx",
+        "components/interactionContent.ts",
+        "components/Landing.tsx",
+        "app/llms.txt/route.ts",
+        "tests/homepage-markdown.test.mjs",
+        "tests/homepage-markdown-observe.py",
+        "tests/browser/docs-homepage-markdown.spec.ts",
+        "automation/weekly_check.py",
+        "automation/tests/test_weekly_check.py",
+        "automation/COORDINATOR.md",
+        "automation/WEEKLY.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md"
+      ],
+      "enforcementScope": "Bounded actual-homepage presentation and parity/process tests, not a universal Markdown codec, factual re-authoring, independent approval or deployment. Historical preview milestones remain historical."
+    },
+    {
       "id": "generated-version-aware-resources",
       "requirement": "Generate a concise Resources reference page in each retained documentation version from approved public sources. Categorize useful references by reader task, with short source-supported descriptions, entry-level exact evidence and verified immutable pubky/paykit-rs links at that version's documented commit. Link the official upstream developer skill, never copy or maintain it. Include Resources in Reference navigation, HTML, Markdown, llms and actual version/generation-date footer. Preserve the seven existing pages when adding Resources and maintain all eight selected-source pages on future weekly refreshes; retain the older version's Resources unchanged during normal selected-release updates. Require a fresh public author and different independent factual reviewer, plus code review and actual software/deployment checks. Correct generation inputs and regenerate; never manually maintain generated prose, source metadata or dates. Do not imply inspected sources, reachable links or fixture repacking establish SDK execution. Keep Sunday 05:00 UTC and all private/public, authorization and no-change boundaries unchanged.",
       "enforcedBy": [

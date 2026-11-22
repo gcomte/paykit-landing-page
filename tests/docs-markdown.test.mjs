@@ -11,7 +11,7 @@ import { marked } from 'marked';
 
 const require = createRequire(import.meta.url);
 const root = process.cwd();
-export function sourceLoader(overrides = {}) {
+export function sourceLoader(overrides = {}, transform = (_file, source) => source) {
   const modules = new Map();
   function load(file) {
     file = path.resolve(root, file);
@@ -19,10 +19,11 @@ export function sourceLoader(overrides = {}) {
     if (modules.has(file)) return modules.get(file).exports;
     const module = { exports: {} };
     modules.set(file, module);
-    const code = ts.transpileModule(readFileSync(file, 'utf8'), {
+    const code = ts.transpileModule(transform(file, readFileSync(file, 'utf8')), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
     }).outputText;
     new Function('require', 'module', 'exports', code)((name) => {
+      if (Object.hasOwn(overrides, name)) return overrides[name];
       if (name === 'server-only' || name.endsWith('.module.css')) return {};
       if (name === 'next/navigation') return { notFound() { throw new Error('NEXT_HTTP_ERROR_FALLBACK;404'); } };
       if (name.startsWith('.') || name.startsWith('@/')) {
@@ -125,7 +126,7 @@ test('llms.txt GET lists only existing Markdown views with exact published title
   assert.match(response.headers.get('content-type'), /^text\/plain; charset=utf-8$/);
   const text = await response.text();
   const [index] = observations([marked.parse(text)]);
-  const targets = ['/docs/markdown'];
+  const targets = ['/markdown', '/docs/markdown'];
   for (const version of ['released', 'coming-soon']) {
     const d = JSON.parse(readFileSync(`content/docs/${version}.json`, 'utf8'));
     assert.ok(text.includes(d.version.commit));

@@ -24,6 +24,12 @@ PROCESS_INPUTS = [
     'automation/release_source.py', 'automation/refresh_glossary.py', 'automation/refresh_resources.py',
     'automation/blueprints/coming-soon.json', 'automation/skills',
     'components/docs', 'app/docs', 'app/layout.tsx', 'app/globals.css', 'app/llms.txt', 'package.json', 'package-lock.json',
+    # Homepage exports consume the actual request entry and these shared producers.
+    'app/page.tsx', 'app/markdown', 'components/homepage', 'components/Landing.tsx',
+    'components/Features.tsx', 'components/Interactions.tsx', 'components/interactionContent.ts',
+    'components/PaymentIllustration.tsx', 'components/PaymentStoryController.tsx',
+    'components/PaymentStory.module.css', 'lib/conference.mjs',
+    'tests/homepage-markdown.test.mjs', 'tests/homepage-markdown-observe.py',
     'tsconfig.json', 'next.config.ts', 'postcss.config.mjs', 'playwright.config.ts',
     'tests/browser/landing-docs.spec.ts', 'public/docs-examples/coming-soon',
     'tests/docs-*.test.mjs', 'tests/browser/docs*.spec.ts', 'tests/resources-policy.test.mjs',

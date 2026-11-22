@@ -219,7 +219,7 @@ export default function Landing({
             className="brand-lockup"
             aria-label="Paykit — the open payment coordination protocol"
           >
-            <span className="wordmark">Paykit</span>
+            <span className="wordmark">Paykit</span>{" "}
             <span className="brand-tagline title-accent">
               the open payment coordination protocol
             </span>
@@ -283,7 +283,7 @@ export default function Landing({
               </span>
               <span className="poster-caption">
                 <span>
-                  <strong>Meet Paykit</strong>
+                  <strong>Meet Paykit</strong>{" "}
                   <span>Watch the introduction</span>
                 </span>
                 <Arrow diagonal />
@@ -301,7 +301,7 @@ export default function Landing({
             <div>
               <p className="eyebrow">ANIMATED ILLUSTRATION</p>
               <h2 id="how-title">
-                Pay a person.
+                Pay a person.{" "}
                 <span className="muted title-accent">
                   Let your wallet handle the payment logistics.
                 </span>
@@ -748,6 +748,7 @@ export default function Landing({
             <a href="https://pubky.app/" target="_blank" rel="noreferrer">
               Community <Arrow diagonal />
             </a>
+            <a href="/markdown">View as Markdown <Arrow /></a>
             <a href="/llms.txt">llms.txt <Arrow /></a>
             <a href="#contact">
               Get in touch <Arrow />
