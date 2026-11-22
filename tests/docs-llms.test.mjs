@@ -27,12 +27,13 @@ test('llms guide follows proposal v2 with compact generated technical value', as
   let previous = -1;
   for (const version of versions) {
     const doc = await content.getDocumentation(version);
-    for (const value of [doc.version.label, doc.version.commit, doc.version.readiness.notice]) {
+    for (const value of [doc.version.label, doc.version.commit, doc.lastUpdated]) {
       const [observed] = observations([guidance]);
       assert.ok(observed.text.includes(value), `interpretation guidance includes ${value}`);
     }
     assert.ok(guidance.includes(doc.version.sourceUrl));
-    assert.ok(guidance.includes(doc.version.readiness.sourceUrl));
+    assert.ok(!guidance.includes(doc.version.readiness.sourceUrl));
+    assert.ok(!index.text.includes(doc.version.readiness.notice));
     const section = index.headings.findIndex(([level, title]) => level === 2 && title.includes(doc.version.label));
     assert.ok(section > previous, 'default documented snapshot comes first');
     previous = section;
@@ -117,7 +118,10 @@ test('future generated catalogue metadata stays literal without a maintained par
     const doc = structuredClone(await content.getDocumentation(version));
     const literal = `${version}: [not](https://example.invalid/injected) *literal* ~~only~~ &copy; <tag> \\text`;
     doc.version.label = `Synthetic label ${literal}`;
-    doc.version.readiness.notice = `Synthetic readiness ${literal}`;
+    doc.version.readiness.notice = `Synthetic readiness ${literal}`; // Omitted metadata is a negative control.
+    doc.version.commit = (version === 'released' ? 'c' : 'd').repeat(40);
+    doc.version.sourceUrl = `https://example.invalid/${version}/${doc.version.commit}`;
+    doc.lastUpdated = version === 'released' ? '2026-01-02' : '2026-01-03';
     doc.pages[0].title = `Synthetic title ${literal}`;
     doc.pages[0].description = `Synthetic description ${literal}`;
     return [version, doc];
@@ -127,11 +131,35 @@ test('future generated catalogue metadata stays literal without a maintained par
   const [observed] = observations([marked.parse(body)]);
   for (const [version, doc] of Object.entries(fixtures)) {
     assert.ok(observed.text.includes(doc.version.label));
-    assert.ok(observed.text.includes(doc.version.readiness.notice));
+    assert.ok(!observed.text.includes(doc.version.readiness.notice));
+    assert.ok(observed.text.includes(doc.version.commit));
+    assert.ok(observed.text.includes(doc.lastUpdated));
+    assert.ok(observed.links.some(([href]) => href === doc.version.sourceUrl));
     assert.ok(observed.text.includes(doc.pages[0].description));
     assert.ok(observed.links.some(([href, title]) => href === `/docs/${version}/overview/index.md` && title === doc.pages[0].title));
   }
   assert.ok(!observed.links.some(([href]) => href === 'https://example.invalid/injected'));
   assert.doesNotMatch(marked.parse(body), /<del>|<tag>/);
+  assert.equal(await (await load('app/index.md/route.ts').GET()).text(), body);
+});
+
+
+test('compact guide omits global readiness boilerplate without losing snapshot provenance or catalogue', async () => {
+  const load = sourceLoader();
+  const body = await (await load('app/llms.txt/route.ts').GET()).text();
+  const [observed] = observations([marked.parse(body)]);
+  const content = load('components/docs/content.ts');
+  for (const version of content.documentationVersions) {
+    const doc = await content.getDocumentation(version);
+    assert.ok(!observed.text.includes(doc.version.readiness.notice), `${version}: internal readiness is not guide prose`);
+    assert.ok(!observed.links.some(([href]) => href === doc.version.readiness.sourceUrl), `${version}: no duplicated readiness attribution`);
+    for (const value of [doc.version.label, doc.version.commit, doc.lastUpdated]) assert.ok(observed.text.includes(value));
+    assert.ok(observed.links.some(([href]) => href === doc.version.sourceUrl));
+    for (const page of doc.pages) {
+      assert.ok(observed.links.some(([href, title]) => href === `/docs/${version}/${page.slug}/index.md` && title === page.title));
+      assert.ok(observed.text.includes(page.description));
+    }
+  }
+  assert.doesNotMatch(body, /production readiness|Readiness source|Documentation policy:/i);
   assert.equal(await (await load('app/index.md/route.ts').GET()).text(), body);
 });

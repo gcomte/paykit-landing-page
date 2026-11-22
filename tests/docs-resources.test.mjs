@@ -59,10 +59,12 @@ test('synthetic Resources uses real route navigation TOC versioned Markdown llms
     assert.match(html, /<h2>Reference<\/h2>[\s\S]*?aria-current="page">Resources<\/a>/);
     assert.match(html, /data-testid="docs-page-kind">Reference<\/p>/);
     assert.ok(html.includes(document.version.commit));
-    assert.ok(html.includes(document.version.readiness.notice));
+    assert.ok(!html.includes(document.version.readiness.notice));
+    assert.ok(html.includes(document.version.sourceUrl));
     assert.ok(html.includes(`Covers Paykit ${document.version.tag}`));
     assert.ok(html.includes(`dateTime="${document.lastUpdated}"`));
-    for (const other of versions) assert.ok(html.includes(`href="/docs/${other}/resources"`));
+    assert.ok(html.includes(`href="/docs/${version}/resources"`));
+    assert.ok(!html.includes('aria-label="Documentation version"'));
     const route = `/docs/${version}/resources`;
     assert.ok(html.includes(`href="${route}/markdown"`));
     assert.ok(index.links.some(([href, title]) => href === `${route}/index.md` && title === 'Resources'));

@@ -72,7 +72,10 @@ test('all seventeen docs footers use their actual snapshot tag and persisted UTC
     assert.ok(footer.includes(`Covers Paykit ${version.tag}`), `${row.route}: covered version belongs in footer`);
     assert.ok(footer.includes(`Last updated: <time dateTime="${lastUpdated}">${humanDates[row.version]}</time>`), `${row.route}: persisted human-readable date`);
     assert.ok(html.includes(version.commit), 'exact source identity remains');
-    assert.ok(html.includes(version.readiness.notice), 'readiness warning remains');
+    assert.ok(!html.includes(version.readiness.notice), 'internal readiness is not a global footer warning');
+    assert.ok(html.includes(version.sourceUrl), 'exact source link remains');
+    assert.ok(!html.includes('data-testid="readiness-notice"'));
+    assert.ok(!html.includes('aria-label="Documentation version"'));
   }
 });
 

@@ -37,9 +37,10 @@ test("llms guide has useful generated version-specific lists and the same root M
   for (const { version, documentation: doc } of snapshots) {
     expect(observed.guidance).toContain(doc.version.label);
     expect(observed.guidance).toContain(doc.version.commit);
-    expect(observed.guidance).toContain(doc.version.readiness.notice);
+    expect(observed.guidance).not.toContain(doc.version.readiness.notice);
+    expect(observed.guidance).toContain(doc.lastUpdated);
     expect(guidance).toContain(doc.version.sourceUrl);
-    expect(guidance).toContain(doc.version.readiness.sourceUrl);
+    expect(guidance).not.toContain(doc.version.readiness.sourceUrl);
     const position = observed.headings.findIndex((h) => h.includes(doc.version.label));
     expect(position).toBeGreaterThan(previous);
     previous = position;

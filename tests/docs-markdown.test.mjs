@@ -46,7 +46,7 @@ export async function renderedDocumentation(load, version = 'coming-soon', slug 
   return layout({ children: await entry.default({ params: Promise.resolve({ version, slug }) }) });
 }
 
-test('Markdown GET uses the actual documentation route and layout, including source and readiness context', async () => {
+test('Markdown GET uses the actual documentation route and layout, including source and internal readiness boundaries', async () => {
   const route = 'app/docs/[version]/[slug]/markdown/route.ts';
   assert.ok(existsSync(route), 'the existing article needs a working read-only Markdown route');
   const load = sourceLoader();
@@ -55,10 +55,10 @@ test('Markdown GET uses the actual documentation route and layout, including sou
   assert.match(response.headers.get('content-type'), /^text\/markdown; charset=utf-8$/);
   const markdown = await response.text();
   const document = JSON.parse(readFileSync('content/docs/coming-soon.json', 'utf8'));
-  assert.ok(markdown.includes(document.version.readiness.notice));
+  assert.ok(!markdown.includes(document.version.readiness.notice));
   assert.ok(markdown.includes(document.version.commit));
   assert.ok(markdown.includes(document.version.sourceUrl));
-  assert.ok(markdown.includes('Selected source snapshot—check its ref and commit before integrating.'));
+  assert.ok(!markdown.includes('Selected source snapshot—check its ref and commit before integrating.'));
   assert.ok(markdown.includes(`# ${document.pages[0].title}`));
   assert.ok(marked.parse(markdown).includes(`<h1>${document.pages[0].title}</h1>`));
   assert.ok(renderToStaticMarkup(await renderedDocumentation(load)).includes(document.version.commit));
@@ -205,4 +205,36 @@ test('unexamined element types refuse instead of silently dropping content; inva
   for (const [version, slug] of [['unknown', 'overview'], ['released', '../wallets'], ['coming-soon', 'not-a-page']]) {
     await assert.rejects(load('app/docs/[version]/[slug]/markdown/route.ts').GET(new Request('https://example.invalid'), { params: Promise.resolve({ version, slug }) }), /404/);
   }
+});
+
+
+test('docs routes omit global source/readiness boxes and switcher while retaining actual provenance', async () => {
+  const load = sourceLoader();
+  const content = load('components/docs/content.ts');
+  const layout = load('app/docs/layout.tsx').default;
+  for (const version of [content.defaultDocumentationVersion, ...content.documentationVersions.filter((v) => v !== content.defaultDocumentationVersion)]) {
+    const doc = await content.getDocumentation(version);
+    for (const page of doc.pages) {
+      const tree = await renderedDocumentation(load, version, page.slug);
+      const html = renderToStaticMarkup(tree);
+      const forbidden = [
+        ['selected-source box', 'aria-label="Selected source version"'],
+        ['readiness box', 'data-testid="readiness-notice"'],
+        ['version switcher', 'aria-label="Documentation version"'],
+      ].filter(([, marker]) => html.includes(marker)).map(([name]) => name);
+      assert.deepEqual(forbidden, [], `${version}/${page.slug}: retired global UI`);
+      const covered = doc.version.tag ?? doc.version.ref ?? doc.version.label;
+      const [observed] = observations([html]);
+      assert.ok(observed.text.includes(covered));
+      assert.ok(observed.text.includes(doc.version.commit));
+      assert.ok(observed.links.some(([href]) => href === doc.version.sourceUrl));
+      assert.ok(html.includes(`aria-current="page">${page.title}</a>`));
+      assert.doesNotMatch(html, /<strong>(?:Released|Selected source)<\/strong>/);
+      const markdown = load('components/docs/markdown.ts').documentationMarkdown(tree);
+      assert.ok(!markdown.includes(doc.version.readiness.notice));
+      assert.ok(!markdown.includes('Selected source snapshot—check its ref and commit before integrating.'));
+    }
+  }
+  const entry = renderToStaticMarkup(layout({ children: await load('app/docs/page.tsx').default() }));
+  assert.doesNotMatch(entry, /readiness-notice|aria-label="Selected source version"|aria-label="Documentation version"/);
 });

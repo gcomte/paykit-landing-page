@@ -82,11 +82,13 @@ test('generated glossary uses the Reference navigation and page kind through the
     const html = renderToStaticMarkup(tree);
     assert.match(html, /<h2>Reference<\/h2>[\s\S]*?aria-current="page">Synthetic glossary<\/a>/);
     assert.match(html, /data-testid="docs-page-kind">Reference<\/p>/);
-    for (const other of ['released', 'coming-soon']) assert.ok(html.includes(`href="/docs/${other}/glossary"`));
+    assert.ok(html.includes(`href="/docs/${version}/glossary"`));
+    assert.ok(!html.includes('aria-label="Documentation version"'));
     assert.ok(html.includes(documents[version].version.commit));
     assert.ok(html.includes(`Covers Paykit ${documents[version].version.tag}`));
     assert.ok(html.includes(`dateTime="${documents[version].lastUpdated}"`));
-    assert.ok(html.includes('Synthetic readiness qualification.'));
+    assert.ok(!html.includes('Synthetic readiness qualification.'));
+    assert.ok(html.includes(documents[version].version.sourceUrl));
     for (const term of ['alpha', 'beta']) {
       assert.ok(html.includes(`href="#${term}"`));
       assert.ok(html.includes(`<h2 id="${term}-title">`));

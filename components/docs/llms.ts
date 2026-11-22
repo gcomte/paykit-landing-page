@@ -22,16 +22,14 @@ export async function documentationGuide(): Promise<string> {
   const lines = [
     "# Paykit", "",
     "> Documentation catalogue: payment coordination, components, flows, responsibilities, wallet and point-of-sale guides, glossary and resources.", "",
-    `Default documented snapshot: ${text(snapshots[0].documentation.version.label)} (${defaultDocumentationVersion}). Choose the matching snapshot below; these are published documentation identities, not a claim about the newest upstream release or production readiness.`, "",
+    `Default documented snapshot: ${text(snapshots[0].documentation.version.label)} (${defaultDocumentationVersion}). Choose the matching documented snapshot below.`, "",
   ];
-  // Interpretation/version/readiness guidance precedes the H2 resource lists.
+  // Snapshot provenance precedes the H2 resource lists.
   for (const { version, documentation } of snapshots) {
     const source = documentation.version;
     lines.push(`${version}: ${text(source.label)}. Source commit: ${text(source.commit)}. ` +
       (documentation.lastUpdated ? `Generated: ${text(documentation.lastUpdated)}. ` : "") +
-      `[Exact source](<${source.sourceUrl}>). ` +
-      `${source.readiness.attribution === "documentation-policy" ? "Documentation policy" : "Readiness"}: ${text(source.readiness.notice)} ` +
-      `[Readiness source](<${source.readiness.sourceUrl}>).`, "");
+      `[Exact source](<${source.sourceUrl}>).`, "");
   }
   lines.push("## Documentation", "",
     `- [Docs entry](/docs/index.md): Overview for the default documented snapshot, ${text(snapshots[0].documentation.version.label)}.`, "");

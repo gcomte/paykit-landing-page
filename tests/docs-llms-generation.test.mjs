@@ -221,10 +221,12 @@ test('real refresh producer bytes automatically feed the same real reader, guide
       assert.deepEqual(entryMarkdown, entryView, `${stage}: default HTML/Markdown parity`);
       assert.deepEqual(articleMarkdown, articleView, `${stage}: versioned HTML/Markdown parity`);
       for (const snapshot of [document, retained]) {
-        for (const value of [snapshot.version.label, snapshot.version.commit, snapshot.version.readiness.notice, snapshot.lastUpdated]) {
+        for (const value of [snapshot.version.label, snapshot.version.commit, snapshot.lastUpdated]) {
           assert.ok(catalogue.text.includes(value), `${stage}: guide consumes persisted ${value}`);
         }
         assert.ok(catalogue.links.some(([href]) => href === snapshot.version.sourceUrl));
+        assert.ok(!catalogue.text.includes(snapshot.version.readiness.notice), 'readiness remains internal after real generation');
+        assert.ok(!catalogue.links.some(([href]) => href === snapshot.version.readiness.sourceUrl));
         for (const page of snapshot.pages) {
           assert.ok(catalogue.text.includes(page.description), `${stage}: description ${page.slug}`);
           assert.ok(catalogue.links.some(([href, label]) => href === `/docs/${snapshot === document ? 'coming-soon' : 'released'}/${page.slug}/index.md` && label === page.title));
@@ -236,10 +238,11 @@ test('real refresh producer bytes automatically feed the same real reader, guide
         .format(new Date(`${document.lastUpdated}T00:00:00Z`));
       for (const output of [entryView, articleView]) {
         for (const value of [overview.title, overview.description, overview.sections[0].title,
-          document.version.ref, document.version.commit, document.version.readiness.notice, humanDate]) {
+          document.version.ref, document.version.commit, humanDate]) {
           assert.ok(output.text.includes(value), `${stage}: technical view consumes ${value}`);
         }
         assert.ok(output.links.some(([href]) => href === document.version.sourceUrl));
+        assert.ok(!output.text.includes(document.version.readiness.notice));
       }
       // React SSR spells the HTML attribute dateTime; HTML names are case-insensitive.
       for (const output of [html, articleHtml]) {
@@ -250,7 +253,7 @@ test('real refresh producer bytes automatically feed the same real reader, guide
       assert.equal(metadata.description, overview.description);
       if (stage !== 'before') {
         for (const stale of [initial.version.label, initial.version.commit, initial.version.sourceUrl,
-          initial.version.readiness.notice, initial.lastUpdated, initial.pages[0].title, initial.pages[0].description]) {
+          initial.lastUpdated, initial.pages[0].title, initial.pages[0].description]) {
           assert.ok(!catalogue.text.includes(stale) && !bodies.llms.includes(stale), `${stage}: no stale default guide identity ${stale}`);
           assert.ok(!entryView.text.includes(stale), `${stage}: no stale technical view identity ${stale}`);
         }

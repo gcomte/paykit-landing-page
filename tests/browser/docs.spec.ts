@@ -21,7 +21,7 @@ type PageData = {
   sourceLinks: { label: string; href: string }[];
 };
 type Documentation = {
-  version: { label: string; commit: string; tag?: string; sourceUrl: string; readiness: { status: string; notice: string; sourceUrl: string } };
+  version: { label: string; commit: string; tag?: string; ref?: string; sourceUrl: string; readiness: { status: string; notice: string; sourceUrl: string } };
   pages: PageData[];
 };
 const versions: Version[] = ["released", "coming-soon"];
@@ -61,7 +61,7 @@ test("docs entry renders the selected-source overview rather than a version choo
   await page.goto("/docs");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(overview.title);
   await expect(page.getByTestId("docs-version-marker")).toContainText(documentation.version.commit);
-  await expect(page.getByText(warning, { exact: true })).toHaveCount(1);
+  await expect(page.getByText(warning, { exact: true })).toHaveCount(0);
 });
 
 for (const version of versions) {
@@ -88,7 +88,7 @@ for (const version of versions) {
       }
       await expect(navigation.getByRole("link", { name: entry.title, exact: true })).toHaveAttribute("aria-current", "page");
       const marker = page.getByTestId("docs-version-marker");
-      await expect(marker).toContainText(version === "released" ? "Released" : "Selected source");
+      await expect(marker.locator("strong")).toHaveText(documentation.version.tag ?? documentation.version.ref ?? documentation.version.label);
       expect(documentation.version.commit).toMatch(/^[a-f0-9]{40}$/);
       if (version === "released") expect(documentation.version.tag, "released docs identify the exact release tag").toBeTruthy();
       await expect(marker.locator("code")).toHaveText(documentation.version.commit);
@@ -96,15 +96,12 @@ for (const version of versions) {
       await expect(marker.getByRole("link", { name: "View exact source" })).toHaveAttribute("href", documentation.version.sourceUrl);
       expect(new URL(documentation.version.sourceUrl).protocol).toBe("https:");
       expect(documentation.version.sourceUrl).toContain(documentation.version.commit);
-      if (version === "coming-soon") {
-        await expect(page.getByRole("note", { name: "Selected source version" })).toHaveText(warning);
-      } else {
-        await expect(page.getByText(warning, { exact: true })).toHaveCount(0);
-      }
+      await expect(page.getByRole("note", { name: "Selected source version" })).toHaveCount(0);
+      await expect(page.getByText(warning, { exact: true })).toHaveCount(0);
       const readiness = documentation.version.readiness;
       const readinessNotice = page.getByTestId("readiness-notice");
-      await expect(readinessNotice).toContainText(readiness.notice);
-      await expect(readinessNotice.getByRole("link")).toHaveAttribute("href", readiness.sourceUrl);
+      await expect(readinessNotice).toHaveCount(0);
+      await expect(page.getByText(readiness.notice, { exact: true })).toHaveCount(0);
       expect(readiness.sourceUrl).toContain(documentation.version.commit);
       if (readiness.status === "experimental") expect(readiness.notice.toLowerCase()).toContain("not for production");
       else {
@@ -155,9 +152,7 @@ for (const version of versions) {
         for (const item of documentation.pages) {
           await expect(navigation.getByRole("link", { name: item.title, exact: true })).toBeVisible();
         }
-        const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
-        await expect(switcher.getByRole("link", { name: "Released", exact: true })).toBeVisible();
-        await expect(switcher.getByRole("link", { name: "Selected source", exact: true })).toBeVisible();
+        await expect(page.getByRole("navigation", { name: "Documentation version", exact: true })).toHaveCount(0);
         const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
         expect(accessibility.violations, `${route} at ${width}px: ${JSON.stringify(accessibility.violations)}`).toEqual([]);
       }
@@ -167,14 +162,22 @@ for (const version of versions) {
 }
 
 for (const slug of slugs) {
-  test(`version switch preserves ${slug} in both directions`, async ({ page }) => {
-    await page.goto(documentPath("released", slug));
-    for (const [version, label] of [["coming-soon", "Selected source"], ["released", "Released"]] as const) {
-      const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
-      await switcher.getByRole("link", { name: label, exact: true }).click();
+  test(`direct URLs preserve ${slug} in both retained versions without a switcher`, async ({ page }) => {
+    for (const version of ["coming-soon", "released"] as const) {
+      const documentation = await readDocumentation(version);
+      const entry = documentation.pages.find((item) => item.slug === slug)!;
+      expect((await page.goto(documentPath(version, slug)))?.status()).toBe(200);
       await expect(page).toHaveURL(new RegExp(`${documentPath(version, slug)}$`));
-      await expect(page.getByRole("navigation", { name: "Documentation version", exact: true })
-        .getByRole("link", { name: label, exact: true })).toHaveAttribute("aria-current", "page");
+      await expect(page.getByRole("main")).toHaveAttribute("data-doc-version", version);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(entry.title);
+      const marker = page.getByTestId("docs-version-marker");
+      await expect(marker.locator("strong")).toHaveText(documentation.version.tag ?? documentation.version.ref ?? documentation.version.label);
+      await expect(marker.locator("code")).toHaveText(documentation.version.commit);
+      await expect(marker.getByRole("link", { name: "View exact source" })).toHaveAttribute("href", documentation.version.sourceUrl);
+      const active = page.getByRole("navigation", { name: "Documentation pages", exact: true }).getByRole("link", { name: entry.title, exact: true });
+      await expect(active).toHaveAttribute("href", documentPath(version, slug));
+      await expect(active).toHaveAttribute("aria-current", "page");
+      await expect(page.getByRole("navigation", { name: "Documentation version", exact: true })).toHaveCount(0);
     }
   });
 }
@@ -225,7 +228,7 @@ test("landing navigation exposes Docs on desktop and phone", async ({ page }) =>
   await expect(page).toHaveURL(/\/docs$/);
 });
 
-test("docs skip link, page navigation, version switching and code scrolling work with a keyboard", async ({ page }) => {
+test("docs skip link, page navigation, next steps and code scrolling work with a keyboard", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/docs");
   await page.keyboard.press("Tab");
@@ -238,10 +241,10 @@ test("docs skip link, page navigation, version switching and code scrolling work
   await wallets.focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/docs\/coming-soon\/wallets$/);
-  const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
-  await switcher.getByRole("link", { name: "Released", exact: true }).focus();
+  const nextSteps = page.getByRole("navigation", { name: "Next steps", exact: true });
+  await nextSteps.locator('a[href="/docs/coming-soon/point-of-sale"]').focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/docs\/released\/wallets$/);
+  await expect(page).toHaveURL(/\/docs\/coming-soon\/point-of-sale$/);
   const code = page.locator("pre").first();
   await expect(code).toBeVisible();
   await code.focus();
@@ -251,7 +254,7 @@ test("docs skip link, page navigation, version switching and code scrolling work
     await page.keyboard.press("ArrowRight");
     await expect.poll(() => code.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
   }
-  const current = page.getByRole("navigation", { name: "Documentation version", exact: true }).getByRole("link", { name: "Released", exact: true });
+  const current = page.getByRole("link", { name: "View as Markdown", exact: true });
   await current.focus();
   expect(await current.evaluate((node) => getComputedStyle(node).outlineStyle)).not.toBe("none");
 });

@@ -63,9 +63,8 @@ for (const version of ["released", "coming-soon"] as const) {
     const index = await request.get("/llms.txt");
     expect(index.status()).toBe(200);
     expect(marked.parse(await index.text())).toContain(`<a href="${route}/index.md">${glossary!.title}</a>`);
-    const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
-    await expect(switcher.getByRole("link", { name: "Released", exact: true })).toHaveAttribute("href", "/docs/released/glossary");
-    await expect(switcher.getByRole("link", { name: "Selected source", exact: true })).toHaveAttribute("href", "/docs/coming-soon/glossary");
+    await expect(page.getByRole("navigation", { name: "Documentation version", exact: true })).toHaveCount(0);
+    await expect(navigation.locator(`a[href="${route}"]`)).toHaveAttribute("aria-current", "page");
     for (const width of [1440, 375]) {
       await page.setViewportSize({ width, height: 1000 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

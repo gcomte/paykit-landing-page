@@ -34,7 +34,29 @@
   },
   "requirements": [
     {
+      "id": "docs-global-presentation-cleanup",
+      "userText": "User authorizes removing all3 repeated global source/readiness boxes and Released/Selected source switcher.",
+      "instructionSource": "Explicit latest user presentation instruction and approved SCOPE.md, 2026-11-22.",
+      "requirement": "global presentation only. Remove the shared selected-source note, readiness aside and version row; no version switcher or substitute WIP banners/hidden duplicates. Use actual version labels (tag/ref/label), retaining both retained URL sets, the decided default, version/date footers and source references. Keep readiness metadata internal and source-validated; preserve article technical qualifications, limitations, code, diagrams and links without implying production readiness. The compact llms/index guide omits global readiness notices, duplicated attribution links and the generic production-readiness disclaimer, retaining current versions/commits/dates/sources and all generated descriptions/links. All representations derive from the same generated snapshot/build on actual regeneration; no manual generated edits or presentation-only corpus/date bumps. Preserve weekly newest published release discovery and the older snapshot. Imports must run `tests/docs-presentation-policy.test.mjs` plus route/guide, producer and weekly skip regressions; independent review and coordinator-owned build/browser/publication remain separate.",
+      "implementationStatus": "implemented-pending-independent-review",
+      "enforcedBy": [
+        "components/docs/DocsPage.tsx",
+        "components/docs/llms.ts",
+        "tests/docs-markdown.test.mjs",
+        "tests/docs-llms.test.mjs",
+        "tests/docs-presentation-policy.test.mjs",
+        "tests/browser/docs.spec.ts",
+        "automation/COORDINATOR.md",
+        "automation/WEEKLY.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md"
+      ],
+      "enforcementScope": "Shared presentation and bounded regressions only; no new Paykit facts, generated edits, source-selection change, independent approval, SDK execution or publication."
+    },
+    {
       "id": "llms-txt-valuable-guide-v2",
+      "supersededBy": "docs-global-presentation-cleanup",
+      "supersededPresentationScope": "Global presentation only: retired shared notice/switcher UI and compact-guide readiness boilerplate. Preserve all public-source/privacy/source-validation rules, internal readiness metadata, technical qualifications and unrelated requirements.",
       "proposal": {
         "url": "https://llmstxt.org/",
         "version": 2,
@@ -242,6 +264,8 @@
     },
     {
       "id": "truthful-readiness-metadata",
+      "supersededBy": "docs-global-presentation-cleanup",
+      "supersededPresentationScope": "Global presentation only: retired shared notice/switcher UI and compact-guide readiness boilerplate. Preserve all public-source/privacy/source-validation rules, internal readiness metadata, technical qualifications and unrelated requirements.",
       "requirement": "Do not infer global readiness from 0.x/stable/prerelease labels or absence of a warning. Preserve explicit upstream wording at its exact version/component scope and snapshot. Provenance questions alone do not approve warning removal. A README heading is not evidence for a renderer-injected readiness judgment: repair the producer/mapping, retain clearly attributed operator caution and omit fabricated upstream evidence. Independent review includes deterministic metadata, labels, warnings, source links and all rendered assertions, not only authored blueprints.",
       "enforcedBy": [
         "automation/pipeline.py",

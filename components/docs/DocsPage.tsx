@@ -98,8 +98,6 @@ function Section({ section, version }: { section: DocumentationSection; version:
 export default function DocsPage({
   documentation, page, version, markdownHref,
 }: { documentation: Documentation; page: DocumentationPage; version: DocumentationVersion; markdownHref?: string }) {
-  const comingSoon = version === "coming-soon";
-  const versionName = comingSoon ? "Selected source" : "Released";
   const pageIndex = documentation.pages.findIndex((entry) => entry.slug === page.slug);
   const previous = documentation.pages[pageIndex - 1];
   const next = documentation.pages[pageIndex + 1];
@@ -125,18 +123,6 @@ export default function DocsPage({
           </div>
         </aside>
         <main id="docs-content" tabIndex={-1} className={styles.main} data-doc-version={version}>
-          <div className={styles.versionRow}>
-            <span className={styles.versionLabel}>Documentation version</span>
-            <nav aria-label="Documentation version" className={styles.versionSwitcher}>
-              <a href={documentationPath("released", page.slug)} aria-current={!comingSoon ? "page" : undefined}>Released</a>
-              <a href={documentationPath("coming-soon", page.slug)} aria-current={comingSoon ? "page" : undefined}>Selected source</a>
-            </nav>
-          </div>
-          {comingSoon && <p role="note" aria-label="Selected source version" className={styles.warning}>Selected source snapshot—check its ref and commit before integrating.</p>}
-          <aside role="note" aria-label="Software readiness" className={styles.warning} data-testid="readiness-notice">
-            <p>{documentation.version.readiness.notice}</p>
-            <ExternalLink href={documentation.version.readiness.sourceUrl}>{documentation.version.readiness.attribution === "documentation-policy" ? "Read upstream README" : "Upstream readiness statement"}</ExternalLink>
-          </aside>
           <article aria-labelledby="docs-title">
             <div className={styles.articleHeader}>
               <p className={styles.eyebrow}>{page.group}</p>
@@ -147,8 +133,8 @@ export default function DocsPage({
             </div>
             <aside className={styles.provenance} aria-label="Documentation source" data-testid="docs-version-marker">
               <div className={styles.provenanceHeading}>
-                <strong>{versionName}</strong>
-                {documentation.version.label !== versionName && documentation.version.label !== documentation.version.tag && <span>{documentation.version.label}</span>}
+                <strong>{coveredVersion}</strong>
+                {documentation.version.label !== coveredVersion && <span>{documentation.version.label}</span>}
                 {documentation.version.ref
                   ? <span className={styles.tag}>{documentation.version.kind === "tag" ? "Tag" : "Branch"}: {documentation.version.ref}</span>
                   : documentation.version.tag && <span className={styles.tag}>Tag: {documentation.version.tag}</span>}
