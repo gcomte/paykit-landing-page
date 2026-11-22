@@ -34,8 +34,44 @@
   },
   "requirements": [
     {
+      "id": "llms-txt-valuable-guide-v2",
+      "proposal": {
+        "url": "https://llmstxt.org/",
+        "version": 2,
+        "modified": "2026-08-10",
+        "repository": "AnswerDotAI/llms-txt",
+        "commit": "3700a0a624a4a004c6a246789b37f389940b1b58",
+        "path": "nbs/index.qmd"
+      },
+      "requirement": "The superseding small increment makes llms.txt the LLM-facing entry, keeping exactly one existing visible accessible llms.txt homepage footer action and removing only the full-copy homepage View as Markdown action. The informal proposal v2 requires only H1; adopt its useful short blockquote summary, non-heading interpretation/version/readiness guidance before H2 resource lists and [name](url): concise descriptions. Generate only from actual published documentation metadata/getDocumentation: default documented snapshot first, exact labels/commits/source URLs/readiness notices and all matching-version technical page titles/descriptions; no future-selector leakage, newest-upstream/production-ready inference, copied maintained narrative or new Paykit facts. No new Paykit facts are permitted. Filter for LLM value: no full-homepage projection, navigation/social/marketing/forms/contact/calendar/teaser/copyright content and no llms-full.txt. /index.md is the identical compact guide with text/markdown; llms.txt is text/plain; both utf-8/nosniff. /docs/index.md and /docs/{version}/{slug}/index.md alias current docs /markdown bodies exactly, including version/date/source and invalid-route 404s. Preserve legacy homepage /markdown, all existing docs /markdown and human Docs per-page actions. Add relative same-origin describedby /llms.txt and alternate text/markdown HTTP Link discovery in existing Next headers with later specific rules; preserve all CSP/security values and metadataBase. Escape literal labels/text locally; the 8 KB bounded usefulness test is a project choice, not a proposal requirement. Keep generated docs/assets/examples/manifests/dates/packages byte-identical and do not force docs regeneration for this presentation slice. Preserve homepage wording/design and the three explicit lexical JSX spaces, Sunday 05:00 UTC, existing runtime/auth/security/fork and deferred SDK/sandbox scope. Imports run format/value/alias/discovery/source-identity regressions, including the explicit older-body fixture, legacy fidelity and actual-producer process-watch tests with unrelated skip controls; app/index.md is watched. Independent review and coordinator-owned build/browser/production HTTP/publication readback remain separate gates; local tests are not delivery approval. User requirement: “of course everything including the llms.txt must always be regenerated whenever the docs are regenerated”. Recompute all derived HTML/Markdown representations, including llms.txt, /index.md and per-page Markdown, from the same generated snapshot/build on every actual docs regeneration; no manual copy or independent updater. Propagate persisted version/source/date/title/description metadata through the real content reader, guide and routes. Normal no-change skips remain skips; identical regenerated inputs may yield identical bytes. Each snapshot’s stored generation dates remain truthful, never build/request freshness; retained older snapshots remain unchanged unless they are actually regenerated. Run tests/docs-llms-generation.test.mjs as a bounded real producer-to-reader regression before imports: actual producer bytes in disposable state through actual content.ts (including its cache wrapper), llms/index aliases and legacy technical Markdown/HTML. This conditional rule does not force generation for a presentation-only change. The synthetic fixture is not full public generation, independent approval, scheduled-run acceptance or SDK execution.",
+      "implementationStatus": "implemented-pending-independent-review",
+      "enforcedBy": [
+        "components/docs/llms.ts",
+        "app/llms.txt/route.ts",
+        "app/index.md/route.ts",
+        "app/docs/index.md/route.ts",
+        "app/docs/[version]/[slug]/index.md/route.ts",
+        "components/Landing.tsx",
+        "next.config.ts",
+        "tests/docs-llms.test.mjs",
+        "tests/docs-llms-generation.test.mjs",
+        "tests/docs-markdown.test.mjs",
+        "tests/homepage-markdown.test.mjs",
+        "tests/browser/docs-llms.spec.ts",
+        "tests/browser/docs-homepage-markdown.spec.ts",
+        "automation/weekly_check.py",
+        "automation/tests/test_weekly_check.py",
+        "automation/COORDINATOR.md",
+        "automation/WEEKLY.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md"
+      ],
+      "enforcementScope": "Supersedes earlier homepage-action/full-copy LLM-index and optional llms-full expectations only. Retain existing compatibility and historical records; this generated metadata guide is not a new export framework, docs regeneration, independent approval, deployment or SDK execution."
+    },
+    {
       "id": "homepage-reviewed-markdown-export",
-      "requirement": "The approved small increment adds homepage GET /markdown and a visible accessible View as Markdown footer link, and indexes that export in llms.txt while preserving existing docs source identities and links. Derive it read-only from the actual homepage entry and root layout, shared visible content and generated selected-source DocsTeaser metadata, with no parallel frozen copy and no new Paykit facts. Preserve the same contact email and request-time conference predicate before and at its cutoff, all interactive payment steps and illustrative warning, feature qualifications, FAQ answers, form labels/choices/privacy note, meaningful image alternatives and block-card destinations. Omit only the explicitly tested decorative/control-only boundaries; never execute client hooks in the exporter. Future imports retain the export and run bounded HTML/shared-source versus consumed-Markdown parity and producer-watch regressions. Preserve generated docs, dates, source snapshots, manifests, assets and existing docs routes; no forced regeneration for this presentation increment. Keep Sunday 05:00 UTC, runtime/authentication/security and allowed fork unchanged; SDK/sandbox and broader redesign remain deferred. Independent review and coordinator-owned build/browser/publication/readback are still required; implementation tests are not deployment approval. Keep lexical word boundaries explicit in shared markup; whitespace-only repairs preserving visible wording and design are routine implementation decisions, not user approval gates. Check rendered captions and shared chrome as well as headings; avoid CSS-specific export exceptions.",
+      "supersededBy": "llms-txt-valuable-guide-v2",
+      "requirement": "Historical homepage export increment, superseded for its visible action and llms coverage by llms-txt-valuable-guide-v2: retain GET /markdown as compatibility, but remove the homepage View as Markdown action and keep the single existing llms.txt action. Preserve existing docs source identities and links. Derive it read-only from the actual homepage entry and root layout, shared visible content and generated selected-source DocsTeaser metadata, with no parallel frozen copy and no new Paykit facts. Preserve the same contact email and request-time conference predicate before and at its cutoff, all interactive payment steps and illustrative warning, feature qualifications, FAQ answers, form labels/choices/privacy note, meaningful image alternatives and block-card destinations. Omit only the explicitly tested decorative/control-only boundaries; never execute client hooks in the exporter. Future imports retain the export and run bounded HTML/shared-source versus consumed-Markdown parity and producer-watch regressions. Preserve generated docs, dates, source snapshots, manifests, assets and existing docs routes; no forced regeneration for this presentation increment. Keep Sunday 05:00 UTC, runtime/authentication/security and allowed fork unchanged; SDK/sandbox and broader redesign remain deferred. Independent review and coordinator-owned build/browser/publication/readback are still required; implementation tests are not deployment approval. Keep lexical word boundaries explicit in shared markup; whitespace-only repairs preserving visible wording and design are routine implementation decisions, not user approval gates. Check rendered captions and shared chrome as well as headings; avoid CSS-specific export exceptions.",
       "implementationStatus": "implemented-pending-independent-review",
       "enforcedBy": [
         "app/markdown/route.ts",
@@ -142,6 +178,7 @@
     },
     {
       "id": "every-page-markdown-and-reviewed-llm-exports",
+      "supersededBy": "llms-txt-valuable-guide-v2",
       "requirement": "Every public content page, including the homepage, versioned docs, glossary and resources, has a corresponding Markdown version and visible View as Markdown action. API endpoints and internal error responses are not content pages. The global footer links to llms.txt. After the human-facing content passes required review, a deterministic packaging job derives Markdown and the llms.txt index from that same reviewed content without new model-authored facts or unreviewed summaries. Validate complete page/index coverage, version/source identity, links, code blocks, warnings and meaningful diagram alternatives; exports must not silently drop qualifications or code. llms-full.txt is recommended but optional until separately selected. Match the behavior of the public Pubky knowledge-base reference without requiring a framework rewrite. New artifacts, footer links and parity checks must actually exist before claiming delivery.",
       "enforcedBy": [
         "automation/COORDINATOR.md",

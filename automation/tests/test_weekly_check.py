@@ -257,5 +257,51 @@ class WeeklyCheckTests(unittest.TestCase):
                 self.assertEqual(self.git(root, "status", "--porcelain"), "")
 
 
+    def test_actual_llm_guide_and_alias_producers_trigger_but_unrelated_commit_skips(self):
+        # Discover the real module graph, independently of PROCESS_INPUTS.
+        import re
+        source_root = SCRIPT.parents[1]
+        pending = [source_root / name for name in (
+            'app/index.md/route.ts', 'app/llms.txt/route.ts', 'app/docs/index.md/route.ts',
+            'app/docs/[version]/[slug]/index.md/route.ts', 'next.config.ts')]
+        producers = set()
+        while pending:
+            file = pending.pop()
+            self.assertTrue(file.is_file(), str(file))
+            if file in producers:
+                continue
+            producers.add(file)
+            if file.suffix not in ('.ts', '.tsx', '.mjs'):
+                continue
+            for name in re.findall(r'(?:from\s*|import\s*)[\"\']([^\"\']+)[\"\']', file.read_text()):
+                if not (name.startswith('.') or name.startswith('@/')):
+                    continue
+                target = source_root / name[2:] if name.startswith('@/') else file.parent / name
+                candidates = [target, *[Path(str(target) + suffix) for suffix in ('.ts', '.tsx', '.mjs')]]
+                resolved = next((candidate.resolve() for candidate in candidates if candidate.is_file()), None)
+                self.assertIsNotNone(resolved, name)
+                pending.append(resolved)
+        producers.add(source_root / 'tests/docs-llms.test.mjs')
+        self.assertIn(source_root / 'components/docs/llms.ts', producers)
+        for file in sorted(producers):
+            name = str(file.relative_to(source_root))
+            with self.subTest(actual_producer=name):
+                root, module, manifest = self.fixture()
+                (root / 'unrelated-llm-note.txt').write_text('Synthetic unrelated control\n')
+                self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'unrelated control')
+                self.assertEqual(module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)['action'], 'skip')
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text((target.read_text() if target.exists() else '') + '\n')
+                self.git(root, 'add', name); self.git(root, 'commit', '-m', 'actual LLM producer changed')
+                before = (root / 'content/docs/coming-soon.json').read_bytes()
+                result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+                self.assertEqual(result['action'], 'refresh_needed', name)
+                self.assertEqual(result['reasons'], ['generation_process_changed'])
+                self.assertEqual(result['processFilesChanged'], [name])
+                self.assertEqual((root / 'content/docs/coming-soon.json').read_bytes(), before)
+                self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+
 if __name__ == '__main__':
     unittest.main()

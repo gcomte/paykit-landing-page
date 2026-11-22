@@ -114,24 +114,27 @@ test("complete homepage consumed Markdown matches actual HTML and shared interac
   assert.deepEqual(actual, expected);
 });
 
-test("actual homepage footer has a visible accessible Markdown link", async () => {
+test("actual homepage footer has exactly one visible accessible llms.txt action", async () => {
   const load = await homepageLoader();
   const html = renderToStaticMarkup(homepageTree(load));
   const footer = html.slice(html.indexOf("<footer"));
-  assert.match(footer, /<a href="\/markdown">View as Markdown(?:<| )/);
+  assert.equal((footer.match(/href="\/llms\.txt"/g) ?? []).length, 1);
+  assert.match(footer, /<a href="\/llms\.txt">llms\.txt(?:<| )/);
+  assert.doesNotMatch(footer, /href="\/markdown"|View as Markdown/);
   assert.ok(!footer.includes("docs-footer-metadata"));
 });
 
-test("llms indexes the working homepage export without changing docs source identities", async () => {
+test("llms indexes curated technical Markdown without changing docs source identities", async () => {
   const load = await homepageLoader();
   const body = await (await load("app/llms.txt/route.ts").GET()).text();
   const [index] = observe([marked.parse(body)]);
-  assert.ok(index.links.some(([href, label]) => href === "/markdown" && label === "Paykit"), "homepage export missing from llms");
+  assert.ok(!index.links.some(([href]) => href === "/markdown"), "legacy full-homepage export is not an LLM guide resource");
+  assert.ok(index.links.some(([href]) => href === "/docs/index.md"));
   for (const version of ["released", "coming-soon"]) {
     const doc = await load("components/docs/content.ts").getDocumentation(version);
     assert.ok(body.includes(doc.version.commit));
     assert.ok(index.links.some(([href]) => href === doc.version.sourceUrl));
-    for (const page of doc.pages) assert.ok(index.links.some(([href, label]) => href === `/docs/${version}/${page.slug}/markdown` && label === page.title));
+    for (const page of doc.pages) assert.ok(index.links.some(([href, label]) => href === `/docs/${version}/${page.slug}/index.md` && label === page.title));
   }
 });
 
@@ -217,22 +220,31 @@ test("the bounded homepage adapter refuses unexamined native grammar", async () 
   assert.throws(() => load("components/homepage/markdown.tsx").homepageMarkdown(React.createElement("table", null, "unsupported new body")), /Unsupported homepage element/);
 });
 
-test("approved homepage export is durable in current import and review instructions", () => {
+test("approved llms guide and legacy compatibility are durable in current import instructions", () => {
   const rules = JSON.parse(readFileSync("automation/corrections.json", "utf8"));
-  const rule = rules.requirements.find((rule) => rule.id === "homepage-reviewed-markdown-export");
-  assert.ok(rule, "record the approved small homepage increment in the correction register");
-  assert.match(rule.requirement, /\/markdown/);
-  assert.match(rule.requirement, /View as Markdown/);
-  assert.match(rule.requirement, /actual homepage entry.*layout/i);
-  assert.match(rule.requirement, /generated.*DocsTeaser/i);
+  const legacy = rules.requirements.find((rule) => rule.id === "homepage-reviewed-markdown-export");
+  assert.match(legacy.requirement, /\/markdown/);
+  assert.match(legacy.requirement, /actual homepage entry.*layout/i);
+  assert.match(legacy.requirement, /generated.*DocsTeaser/i);
+  const rule = rules.requirements.find((rule) => rule.id === "llms-txt-valuable-guide-v2");
+  assert.ok(rule, "record the superseding LLM-value correction");
+  assert.equal(legacy.supersededBy, rule.id);
+  assert.equal(rule.proposal.url, "https://llmstxt.org/");
+  assert.equal(rule.proposal.version, 2);
+  assert.match(rule.requirement, /generate.*metadata/i);
   assert.match(rule.requirement, /no new.*facts/i);
+  assert.match(rule.requirement, /\/index\.md/);
+  assert.match(rule.requirement, /describedby/);
   assert.match(rule.requirement, /Sunday.*05:00 UTC/);
   assert.match(rule.requirement, /independent review/i);
   for (const file of rule.enforcedBy) assert.ok(existsSync(file), file);
   for (const file of ["automation/COORDINATOR.md", "automation/WEEKLY.md", "automation/skills/writing.md", "automation/skills/evaluation.md"]) {
     const text = readFileSync(file, "utf8");
-    assert.match(text, /homepage.*\/markdown/i, file);
-    assert.match(text, /View as Markdown/, file);
+    assert.match(text, /llms\.txt/, file);
+    assert.match(text, /\/index\.md/, file);
+    assert.match(text, /generate.*metadata/i, file);
+    assert.match(text, /legacy.*\/markdown/i, file);
+    assert.match(text, /docs-llms\.test\.mjs/, file);
     assert.match(text, /homepage-markdown\.test\.mjs/, file);
   }
 });

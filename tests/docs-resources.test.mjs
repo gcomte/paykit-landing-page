@@ -65,7 +65,7 @@ test('synthetic Resources uses real route navigation TOC versioned Markdown llms
     for (const other of versions) assert.ok(html.includes(`href="/docs/${other}/resources"`));
     const route = `/docs/${version}/resources`;
     assert.ok(html.includes(`href="${route}/markdown"`));
-    assert.ok(index.links.some(([href, title]) => href === `${route}/markdown` && title === 'Resources'));
+    assert.ok(index.links.some(([href, title]) => href === `${route}/index.md` && title === 'Resources'));
     const response = await load('app/docs/[version]/[slug]/markdown/route.ts').GET(new Request(`https://example.invalid${route}/markdown`), {
       params: Promise.resolve({ version, slug: 'resources' }),
     });
@@ -148,7 +148,7 @@ test('both real generated Resources pages have commit-matched evidence and pinne
     assert.ok(html.includes(`dateTime="${document.lastUpdated}"`));
     assert.ok(html.includes(document.version.commit));
     assert.ok(html.includes(`href="/docs/${version}/resources/markdown"`));
-    assert.ok(llms.links.some(([href, title]) => href === `/docs/${version}/resources/markdown` && title === page.title));
+    assert.ok(llms.links.some(([href, title]) => href === `/docs/${version}/resources/index.md` && title === page.title));
     const response = await load('app/docs/[version]/[slug]/markdown/route.ts').GET(new Request('https://example.invalid'), {
       params: Promise.resolve({ version, slug: 'resources' }),
     });

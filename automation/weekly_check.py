@@ -23,7 +23,7 @@ PROCESS_INPUTS = [
     'automation/weekly_check.py', 'automation/prepare_development.py', 'automation/recipes',
     'automation/release_source.py', 'automation/refresh_glossary.py', 'automation/refresh_resources.py',
     'automation/blueprints/coming-soon.json', 'automation/skills',
-    'components/docs', 'app/docs', 'app/layout.tsx', 'app/globals.css', 'app/llms.txt', 'package.json', 'package-lock.json',
+    'components/docs', 'app/docs', 'app/index.md', 'app/layout.tsx', 'app/globals.css', 'app/llms.txt', 'package.json', 'package-lock.json',
     # Homepage exports consume the actual request entry and these shared producers.
     'app/page.tsx', 'app/markdown', 'components/homepage', 'components/Landing.tsx',
     'components/Features.tsx', 'components/Interactions.tsx', 'components/interactionContent.ts',

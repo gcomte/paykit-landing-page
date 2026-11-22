@@ -126,18 +126,19 @@ test('llms.txt GET lists only existing Markdown views with exact published title
   assert.match(response.headers.get('content-type'), /^text\/plain; charset=utf-8$/);
   const text = await response.text();
   const [index] = observations([marked.parse(text)]);
-  const targets = ['/markdown', '/docs/markdown'];
-  for (const version of ['released', 'coming-soon']) {
+  const targets = ['/docs/index.md'];
+  const catalogue = load('components/docs/content.ts');
+  for (const version of [catalogue.defaultDocumentationVersion, ...catalogue.documentationVersions.filter((v) => v !== catalogue.defaultDocumentationVersion)]) {
     const d = JSON.parse(readFileSync(`content/docs/${version}.json`, 'utf8'));
     assert.ok(text.includes(d.version.commit));
     for (const page of d.pages) {
-      const target = `/docs/${version}/${page.slug}/markdown`;
+      const target = `/docs/${version}/${page.slug}/index.md`;
       targets.push(target);
       assert.ok(index.links.some(([href, label]) => href === target && label === page.title));
-      assert.equal((await load('app/docs/[version]/[slug]/markdown/route.ts').GET(new Request('https://example.invalid' + target), { params: Promise.resolve({ version, slug: page.slug }) })).status, 200);
+      assert.equal((await load('app/docs/[version]/[slug]/index.md/route.ts').GET(new Request('https://example.invalid' + target), { params: Promise.resolve({ version, slug: page.slug }) })).status, 200);
     }
   }
-  assert.deepEqual(index.links.filter(([href]) => href.endsWith('/markdown')).map(([href]) => href), targets);
+  assert.deepEqual(index.links.filter(([href]) => href.endsWith('/index.md')).map(([href]) => href), targets);
   // Keep the original future-selector regression independent of the live corpus:
   // the selected RC9 snapshot may now legitimately be the published body.
   const contentPath = path.resolve('components/docs/content.ts');

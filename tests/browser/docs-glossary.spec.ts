@@ -62,7 +62,7 @@ for (const version of ["released", "coming-soon"] as const) {
     }
     const index = await request.get("/llms.txt");
     expect(index.status()).toBe(200);
-    expect(marked.parse(await index.text())).toContain(`<a href="${route}/markdown">${glossary!.title}</a>`);
+    expect(marked.parse(await index.text())).toContain(`<a href="${route}/index.md">${glossary!.title}</a>`);
     const switcher = page.getByRole("navigation", { name: "Documentation version", exact: true });
     await expect(switcher.getByRole("link", { name: "Released", exact: true })).toHaveAttribute("href", "/docs/released/glossary");
     await expect(switcher.getByRole("link", { name: "Selected source", exact: true })).toHaveAttribute("href", "/docs/coming-soon/glossary");

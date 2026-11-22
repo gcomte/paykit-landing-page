@@ -30,7 +30,21 @@ const config: NextConfig = {
             value: "camera=(), microphone=(), geolocation=()",
           },
           { key: "Content-Security-Policy", value: csp },
+          { key: "Link", value: '</llms.txt>; rel="describedby"' },
         ],
+      },
+      // Later same-name headers win; retain describedby with each alternate.
+      {
+        source: "/",
+        headers: [{ key: "Link", value: '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"' }],
+      },
+      {
+        source: "/docs",
+        headers: [{ key: "Link", value: '</docs/index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"' }],
+      },
+      {
+        source: "/docs/:version/:slug",
+        headers: [{ key: "Link", value: '</docs/:version/:slug/index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"' }],
       },
     ];
   },

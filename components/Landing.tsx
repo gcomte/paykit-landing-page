@@ -748,7 +748,6 @@ export default function Landing({
             <a href="https://pubky.app/" target="_blank" rel="noreferrer">
               Community <Arrow diagonal />
             </a>
-            <a href="/markdown">View as Markdown <Arrow /></a>
             <a href="/llms.txt">llms.txt <Arrow /></a>
             <a href="#contact">
               Get in touch <Arrow />

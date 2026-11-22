@@ -145,7 +145,7 @@ test('glossary llms entries expose the actual version-specific Markdown routes, 
   const text = await (await load('app/llms.txt/route.ts').GET()).text();
   for (const version of ['released', 'coming-soon']) {
     assert.ok(text.includes(documents[version].version.commit));
-    assert.ok(marked.parse(text).includes(`<a href="/docs/${version}/glossary/markdown">Synthetic glossary</a>`));
+    assert.ok(marked.parse(text).includes(`<a href="/docs/${version}/glossary/index.md">Synthetic glossary</a>`));
   }
 });
 
