@@ -149,7 +149,10 @@
             "coming-soon-storage-operation-contract",
             "coming-soon-receiving-details-contract",
             "coming-soon-session-key-ownership",
-            "coming-soon-publish-app"
+            "coming-soon-publish-app",
+            "coming-soon-identity-context",
+            "coming-soon-identity-session-keys",
+            "coming-soon-glossary-app-id"
           ],
           "list": [
             "StorageAdapter: commits SDK mutations atomically and preserves ordering. Apps sharing a Pubky identity must share the same logical durable state.",
@@ -157,9 +160,16 @@
             "PaymentAdapter: supplies receiving details, candidate selection and payment targets. It does not execute payments or validate settlement for you."
           ],
           "paragraphs": [
+            "For live private communication, supply live Pubky access and matching identity-wide Paykit key material. An app-owned App ID provides attribution within that identity, not a new identity.",
             "Atomicity applies to each storage transaction, not the whole multi-transaction operation: later failure does not roll back earlier commits. A storage operation must not call SDK methods or wait on spawned tasks that access the same storage. Session creation, persistence, capability renewal and identity-wide key distribution remain application responsibilities.",
             "Your public receiving-details callback returns the complete desired endpoint set. Empty results remove every SDK-managed endpoint; a subset removes omitted endpoints. If a receiving backend is not ready, return an error rather than an empty or partial set.",
             "App enrollment is explicit: publish_paykit_app adds or replaces the configured app in the identity-wide registry and requires an active Pubky session. In RC9, initial identity refresh and publication share one SDK storage operation; the per-transaction failure rules above still apply. Restore a backup before publishing, not afterwards."
+          ],
+          "links": [
+            {
+              "label": "Identity and App ID: the live private-communication prerequisite",
+              "href": "/docs/coming-soon/glossary#identity"
+            }
           ]
         },
         {
@@ -677,7 +687,8 @@
             "coming-soon-lib-package",
             "coming-soon-app-scope",
             "coming-soon-endpoint-id",
-            "coming-soon-payload-list"
+            "coming-soon-payload-list",
+            "coming-soon-skill-privacy"
           ],
           "list": [
             "tar reports a missing file: download this version's archive first, keep its filename unchanged and run extraction from the download directory.",
@@ -685,7 +696,14 @@
             "A compiler, linker or pkg-config error appears: install the missing build prerequisite. A dependency or toolchain download error needs working network access, not payment credentials.",
             "Cargo says the lock file needs updating: use a fresh extraction and cargo run --locked. Do not delete the lock, loosen the version or switch to a floating branch to make the fixture pass.",
             "No shared rail in your own data: compare the exact endpoint identifiers with your supported set. A wrapped payload is not proof that your backend can pay it.",
-            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local fixture."
+            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local fixture.",
+            "If a clean extraction repeats the problem, use the linked public upstream issue tracker to report a minimal reproduction. Identify this documentation page and its fixture archive URL/version, the exact error and expected result, Rust/Cargo versions, and operating system/architecture. Say whether you suspect an upstream library problem or a docs/fixture packaging problem; do not assume upstream owns this archive or guarantees support. Share only non-sensitive diagnostics: remove keys, session/auth material, backups, private messages, endpoint payloads and payment secrets."
+          ],
+          "links": [
+            {
+              "label": "Report a repeatable problem: upstream Paykit issue tracker",
+              "href": "https://github.com/pubky/paykit-rs/issues"
+            }
           ]
         },
         {
@@ -950,7 +968,8 @@
             "coming-soon-parsed-access",
             "coming-soon-private-message",
             "coming-soon-roundtrip-test",
-            "coming-soon-malformed-test"
+            "coming-soon-malformed-test",
+            "coming-soon-skill-privacy"
           ],
           "list": [
             "tar reports a missing file: download this version's archive first, keep its filename unchanged and run extraction from the download directory.",
@@ -958,7 +977,14 @@
             "A compiler, linker or pkg-config error appears: install the missing build prerequisite. A dependency or toolchain download error needs working network access, not payment credentials.",
             "Cargo says the lock file needs updating: use a fresh extraction and cargo run --locked. Do not delete the lock, loosen the version or switch to a floating branch to make the fixture pass.",
             "The request parser returns None: it is not a recognized request-event kind. A recognized result with is_valid false still needs rejection/error handling; dispatch alone does not validate its body.",
-            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local fixture."
+            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local fixture.",
+            "If a clean extraction repeats the problem, use the linked public upstream issue tracker to report a minimal reproduction. Identify this documentation page and its fixture archive URL/version, the exact error and expected result, Rust/Cargo versions, and operating system/architecture. Say whether you suspect an upstream library problem or a docs/fixture packaging problem; do not assume upstream owns this archive or guarantees support. Share only non-sensitive diagnostics: remove keys, session/auth material, backups, private messages, endpoint payloads and payment secrets."
+          ],
+          "links": [
+            {
+              "label": "Report a repeatable problem: upstream Paykit issue tracker",
+              "href": "https://github.com/pubky/paykit-rs/issues"
+            }
           ]
         },
         {
@@ -1064,6 +1090,10 @@
           ],
           "links": [
             {
+              "label": "Define identity before choosing an App ID",
+              "href": "/docs/coming-soon/glossary#identity"
+            },
+            {
               "label": "Understand app ownership and shared identity",
               "href": "/docs/coming-soon/components#public-private"
             }
@@ -1138,6 +1168,28 @@
             {
               "label": "Plan durable request creation and retries",
               "href": "/docs/coming-soon/point-of-sale#integrate"
+            }
+          ]
+        },
+        {
+          "id": "identity",
+          "title": "Identity",
+          "paragraphs": [
+            "Here, a Paykit identity is the shared Paykit context of a Pubky public-key identity: its apps share private links and SDK state. An App ID names an application within that context, not a new identity. Establishing or advancing Encrypted Links requires live authenticated Pubky access and matching identity-wide Paykit key material. The Paykit secret is derived from the Pubky secret and may be supplied separately to delegated apps; it is not the Pubky secret itself."
+          ],
+          "evidence": [
+            "coming-soon-identity-public-key",
+            "coming-soon-identity-context",
+            "coming-soon-identity-session-keys",
+            "coming-soon-identity-key-implementation",
+            "coming-soon-glossary-shared-identity",
+            "coming-soon-glossary-app-id",
+            "coming-soon-session-key-ownership"
+          ],
+          "links": [
+            {
+              "label": "Understand app ownership without private isolation",
+              "href": "/docs/coming-soon/components#public-private"
             }
           ]
         },
@@ -3414,6 +3466,54 @@
       "sourceHash": "d8849180b7642a8442c06fd9ef25082614df88203eb23e8dfe83508a6c36e09c",
       "kind": "implemented",
       "claim": "The pinned changelog begins its current change notes under an Unreleased heading; the entry is snapshot documentation, not independent proof of release or deployment."
+    },
+    {
+      "id": "coming-soon-identity-public-key",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "README.md",
+      "startLine": 8,
+      "endLine": 16,
+      "excerpt": "Paykit helps apps discover where someone can receive a payment through their\nPubky identity. As a meta payment protocol, it also provides a layer for\npayment-related metadata such as Payment Requests, Payment Proofs, receipts,\nReceipt Access, and Allowances.\n\nA payee can publish public payment details under their Pubky public key, or\nshare a Private Payment List with another person over an Encrypted Link. Paykit\nhandles the common Pubky storage layout, encrypted message formats, Payment\nRequest messages, receipts, and language bindings needed for that exchange.",
+      "sourceHash": "fcaa1f6f09e39726e04668922991d24fc36b303e09d49811ed83da7c14427d87",
+      "kind": "implemented",
+      "claim": "Paykit discovery uses a Pubky identity: payees publish public receiving details under their Pubky public key and exchange private lists over an Encrypted Link."
+    },
+    {
+      "id": "coming-soon-identity-context",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "specs/paykit-sdk.md",
+      "startLine": 16,
+      "endLine": 29,
+      "excerpt": "## Shared Identity Model\n\nPaykit private communication belongs to the Pubky identity, not to one app.\nApps sharing an identity use one logical set of Encrypted Links, private stream\ncheckpoints, outbound queues, Payment Requests, Receipts, recovery state, and\nbackup data. Each SDK handle is configured with a `PaykitAppId` so app-owned\npublic Payment Endpoints and private messages remain attributable to their\nsource. The App ID does not create a separate private channel.\n\nOne public Paykit App Registry lists the apps participating in the identity,\ntheir display names and capabilities, the identity-wide Noise public key, and\noptional default-app preferences. Public Payment Endpoints are stored per app.\nPrivate Payment Lists use Latest-State Message semantics per app and their\ncurrent views are aggregated for payment resolution.",
+      "sourceHash": "a8c5ad63d1a32b2ca9340ad642fe3bc82e7e04813285d36187cbcc3e465028ae",
+      "kind": "implemented",
+      "claim": "The shared identity model makes private links and SDK coordination identity-wide under the Pubky identity; App IDs attribute app-owned endpoints/messages rather than creating separate private channels."
+    },
+    {
+      "id": "coming-soon-identity-session-keys",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "specs/paykit-sdk.md",
+      "startLine": 453,
+      "endLine": 463,
+      "excerpt": "`PubkySessionAccess` provides the live authenticated `PubkySession`, Pubky\nclient for counterparty homeserver access, and an optional\n`PubkyLocalSecretKey` and `PaykitIdentitySecretKey`. When an explicit Paykit\nsecret is absent, the SDK derives generation 1 from the local Pubky secret. A\nholder of that Pubky secret can derive any later generation explicitly, while\ndelegated apps receive only the current generation-specific Paykit secret.\nIndependent Noise and shared-state keys are derived from the Paykit secret.\nThis lets delegated apps use private Paykit without receiving the Pubky root\nsecret. Public-only session access can use public workflows but cannot\nestablish or advance Encrypted Links. The SDK derives and persists public\n`IdentityState` from that access during initialization.",
+      "sourceHash": "a8c5ad63d1a32b2ca9340ad642fe3bc82e7e04813285d36187cbcc3e465028ae",
+      "kind": "implemented",
+      "claim": "Live private communication combines an authenticated Pubky session with matching Paykit key material; the Paykit secret is derived from the Pubky secret or supplied to delegated apps, and separate Noise/state keys are derived from it. The Pubky and Paykit secrets are not identical."
+    },
+    {
+      "id": "coming-soon-identity-key-implementation",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-sdk/src/runtime/noise_key_authorization.rs",
+      "startLine": 92,
+      "endLine": 105,
+      "excerpt": "pub(super) fn sign_authorization(\n    access: &PubkySessionAccess,\n    key: &crate::PaykitIdentitySecretKey,\n) -> Result<PaykitNoiseKeyAuthorization> {\n    access.validate_for_capabilities(crate::PAYKIT_AUTHORIZER_SESSION_CAPABILITIES)?;\n    let identity = access.local_secret_key.as_ref().ok_or_else(|| {\n        authorization_error(\"Noise key authorization requires the Pubky identity secret\")\n    })?;\n    key.validate_pubky_derivation(Some(identity))?;\n    Ok(PaykitNoiseKeyAuthorization::sign(\n        &identity.keypair(),\n        &key.noise_secret_key(),\n        key.key_generation(),\n    )?)",
+      "sourceHash": "a5ab5e725bff728602af8456d784df8c93a1a4470db6d7e14644f62e75e5dd9d",
+      "kind": "implemented",
+      "claim": "The implemented authorizer takes separate Pubky identity and Paykit key material, validates their derivation relation, and signs authorization using the Pubky identity keypair and derived Noise secret."
     }
   ],
   "diagrams": [

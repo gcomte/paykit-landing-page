@@ -20,7 +20,8 @@ PROCESS_INPUTS = [
     'docs-generation.json', 'automation/COORDINATOR.md', 'automation/WEEKLY.md',
     'automation/README.md', 'automation/corrections.json', 'automation/SOURCE-BOUNDARY.md',
     'automation/refresh_page.py', 'automation/refresh_development.py', 'automation/check_source.py',
-    'automation/weekly_check.py', 'automation/prepare_development.py', 'automation/recipes',
+    'automation/weekly_check.py', 'automation/newcomer_review.py',
+    'automation/prepare_development.py', 'automation/recipes',
     'automation/release_source.py', 'automation/refresh_glossary.py', 'automation/refresh_resources.py',
     'automation/blueprints/coming-soon.json', 'automation/skills',
     'components/docs', 'app/docs', 'app/index.md', 'app/layout.tsx', 'app/globals.css', 'app/llms.txt', 'package.json', 'package-lock.json',
@@ -37,7 +38,7 @@ PROCESS_INPUTS = [
     'automation/tests/test_refresh_development.py', 'automation/tests/test_footer_generation_date.py',
     'automation/tests/test_weekly_check.py', 'automation/tests/test_prepare_development.py',
     'automation/tests/test_release_source.py', 'automation/tests/test_refresh_glossary.py',
-    'automation/tests/test_refresh_resources.py',
+    'automation/tests/test_refresh_resources.py', 'automation/tests/test_newcomer_review.py',
 ]
 
 

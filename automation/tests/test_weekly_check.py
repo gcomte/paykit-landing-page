@@ -303,5 +303,59 @@ class WeeklyCheckTests(unittest.TestCase):
                 self.assertEqual(self.git(root, 'status', '--porcelain'), '')
 
 
+    def test_newcomer_helper_role_and_check_each_trigger_real_history_refresh(self):
+        # Synthetic committed histories drive the real cheap decision, not mocked fingerprints.
+        for name in ('automation/newcomer_review.py', 'automation/skills/newcomer-review.md',
+                     'automation/tests/test_newcomer_review.py'):
+            with self.subTest(path=name):
+                root, module, manifest = self.fixture()
+                before = (root / 'content/docs/coming-soon.json').read_bytes()
+                (root / 'synthetic-unrelated.txt').write_text('Synthetic unrelated control\n')
+                self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'unrelated control')
+                from unittest.mock import patch
+                with patch.object(module.subprocess, 'check_output', wraps=subprocess.check_output) as commands:
+                    skipped = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+                self.assertEqual(skipped['action'], 'skip')
+                self.assertEqual(skipped['processFilesChanged'], [])
+                self.assertTrue(commands.call_args_list)
+                # No normal-skip author, factual reviewer, newcomer or helper subprocess.
+                self.assertTrue(all(call.args[0][0] == 'git' for call in commands.call_args_list))
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('Synthetic newcomer process input\n')
+                self.git(root, 'add', name); self.git(root, 'commit', '-m', 'newcomer input changed')
+                result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+                self.assertEqual(result['action'], 'refresh_needed')
+                self.assertEqual(result['reasons'], ['generation_process_changed'])
+                self.assertEqual(result['processFilesChanged'], [name])
+                self.assertEqual((root / 'content/docs/coming-soon.json').read_bytes(), before)
+                self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_active_newcomer_workflow_names_real_gate_and_keeps_skip_publication_boundaries(self):
+        source_root = SCRIPT.parents[1]
+        for name in ('automation/COORDINATOR.md', 'automation/WEEKLY.md'):
+            body = (source_root / name).read_text()
+            self.assertIn('newcomer_review.py capture', body)
+            self.assertIn('newcomer_review.py validate', body)
+            self.assertIn('--author-task-id', body)
+            self.assertIn('--factual-reviewer-task-id', body)
+            self.assertIn('skills/newcomer-review.md', body)
+        weekly = (source_root / 'automation/WEEKLY.md').read_text()
+        self.assertIn('Public AUTHOR and factual REVIEWER get separate fresh contexts: only frozen', weekly)
+        self.assertIn('The distinct PUBLIC NEWCOMER receives only rendered public reader inputs', weekly)
+        self.assertIn('weekly_check, newcomer_review, prepare_development', weekly)
+        role = (source_root / 'automation/skills/newcomer-review.md').read_text()
+        for token in ('reading-only', 'reviewerTaskId', 'inputManifestSha256', 'checkedRoutes',
+                      'readerQuestion', 'blocking', 'observations', 'Talos'):
+            self.assertIn(token, role)
+        registry = json.loads((source_root / 'automation/corrections.json').read_bytes())
+        self.assertIn('docs-newcomer-reading-review', [row['id'] for row in registry['requirements']])
+        writing = (source_root / 'automation/skills/writing.md').read_text()
+        for token in ('identity versus App ID at first relevant use',
+                      'verified existing public escalation handoff', 'non-sensitive diagnostics',
+                      'No repeated warning/provenance box or new support service'):
+            self.assertIn(token, writing)
+
+
 if __name__ == '__main__':
     unittest.main()

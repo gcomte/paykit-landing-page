@@ -1766,5 +1766,53 @@
     "sourceHash": "d8849180b7642a8442c06fd9ef25082614df88203eb23e8dfe83508a6c36e09c",
     "kind": "implemented",
     "claim": "The pinned changelog begins its current change notes under an Unreleased heading; the entry is snapshot documentation, not independent proof of release or deployment."
+  },
+  {
+    "id": "coming-soon-identity-public-key",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "README.md",
+    "startLine": 8,
+    "endLine": 16,
+    "excerpt": "Paykit helps apps discover where someone can receive a payment through their\nPubky identity. As a meta payment protocol, it also provides a layer for\npayment-related metadata such as Payment Requests, Payment Proofs, receipts,\nReceipt Access, and Allowances.\n\nA payee can publish public payment details under their Pubky public key, or\nshare a Private Payment List with another person over an Encrypted Link. Paykit\nhandles the common Pubky storage layout, encrypted message formats, Payment\nRequest messages, receipts, and language bindings needed for that exchange.",
+    "sourceHash": "fcaa1f6f09e39726e04668922991d24fc36b303e09d49811ed83da7c14427d87",
+    "kind": "implemented",
+    "claim": "Paykit discovery uses a Pubky identity: payees publish public receiving details under their Pubky public key and exchange private lists over an Encrypted Link."
+  },
+  {
+    "id": "coming-soon-identity-context",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "specs/paykit-sdk.md",
+    "startLine": 16,
+    "endLine": 29,
+    "excerpt": "## Shared Identity Model\n\nPaykit private communication belongs to the Pubky identity, not to one app.\nApps sharing an identity use one logical set of Encrypted Links, private stream\ncheckpoints, outbound queues, Payment Requests, Receipts, recovery state, and\nbackup data. Each SDK handle is configured with a `PaykitAppId` so app-owned\npublic Payment Endpoints and private messages remain attributable to their\nsource. The App ID does not create a separate private channel.\n\nOne public Paykit App Registry lists the apps participating in the identity,\ntheir display names and capabilities, the identity-wide Noise public key, and\noptional default-app preferences. Public Payment Endpoints are stored per app.\nPrivate Payment Lists use Latest-State Message semantics per app and their\ncurrent views are aggregated for payment resolution.",
+    "sourceHash": "a8c5ad63d1a32b2ca9340ad642fe3bc82e7e04813285d36187cbcc3e465028ae",
+    "kind": "implemented",
+    "claim": "The shared identity model makes private links and SDK coordination identity-wide under the Pubky identity; App IDs attribute app-owned endpoints/messages rather than creating separate private channels."
+  },
+  {
+    "id": "coming-soon-identity-session-keys",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "specs/paykit-sdk.md",
+    "startLine": 453,
+    "endLine": 463,
+    "excerpt": "`PubkySessionAccess` provides the live authenticated `PubkySession`, Pubky\nclient for counterparty homeserver access, and an optional\n`PubkyLocalSecretKey` and `PaykitIdentitySecretKey`. When an explicit Paykit\nsecret is absent, the SDK derives generation 1 from the local Pubky secret. A\nholder of that Pubky secret can derive any later generation explicitly, while\ndelegated apps receive only the current generation-specific Paykit secret.\nIndependent Noise and shared-state keys are derived from the Paykit secret.\nThis lets delegated apps use private Paykit without receiving the Pubky root\nsecret. Public-only session access can use public workflows but cannot\nestablish or advance Encrypted Links. The SDK derives and persists public\n`IdentityState` from that access during initialization.",
+    "sourceHash": "a8c5ad63d1a32b2ca9340ad642fe3bc82e7e04813285d36187cbcc3e465028ae",
+    "kind": "implemented",
+    "claim": "Live private communication combines an authenticated Pubky session with matching Paykit key material; the Paykit secret is derived from the Pubky secret or supplied to delegated apps, and separate Noise/state keys are derived from it. The Pubky and Paykit secrets are not identical."
+  },
+  {
+    "id": "coming-soon-identity-key-implementation",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-sdk/src/runtime/noise_key_authorization.rs",
+    "startLine": 92,
+    "endLine": 105,
+    "excerpt": "pub(super) fn sign_authorization(\n    access: &PubkySessionAccess,\n    key: &crate::PaykitIdentitySecretKey,\n) -> Result<PaykitNoiseKeyAuthorization> {\n    access.validate_for_capabilities(crate::PAYKIT_AUTHORIZER_SESSION_CAPABILITIES)?;\n    let identity = access.local_secret_key.as_ref().ok_or_else(|| {\n        authorization_error(\"Noise key authorization requires the Pubky identity secret\")\n    })?;\n    key.validate_pubky_derivation(Some(identity))?;\n    Ok(PaykitNoiseKeyAuthorization::sign(\n        &identity.keypair(),\n        &key.noise_secret_key(),\n        key.key_generation(),\n    )?)",
+    "sourceHash": "a5ab5e725bff728602af8456d784df8c93a1a4470db6d7e14644f62e75e5dd9d",
+    "kind": "implemented",
+    "claim": "The implemented authorizer takes separate Pubky identity and Paykit key material, validates their derivation relation, and signs authorization using the Pubky identity keypair and derived Noise secret."
   }
 ]

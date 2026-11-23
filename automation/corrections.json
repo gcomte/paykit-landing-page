@@ -417,6 +417,22 @@
         "tests/docs-markdown.test.mjs"
       ],
       "enforcementScope": "Operator preference and focused read-only presentation tests for the separately labeled development preview only. No approval/generation/helper/policy mechanism is changed or certified."
+    },
+    {
+      "id": "docs-newcomer-reading-review",
+      "requirement": "Add a distinct fresh public-only newcomer reader after candidate generation and factual review and before publication. Start with actual rendered entry and record discovery journeys before full inventory, then read all selected pages/Markdown. Assess purpose, wallet versus POS choice, prerequisites, terminology, limits and next steps, without author hints, source-code context, private memory/Talos or SDK/guide-command execution. Bind an immutable actual independent report to current captured body bytes and raw index SHA, actual unique author/factual/newcomer dispatch IDs and exact entry/page scope. Missing, stale, incomplete, malformed, failed or blocking review refuses publication; blocker severity must block, while explained nonblocking preferences are logged. Feed actionable findings into source-grounded generation instructions/blueprint, regenerate and freshly re-review final views with factual and newcomer roles; never patch generated output or flip reports. Include the stage in future weekly refreshes; no-change skips every author/reviewer. Preserve all other source/privacy/publication gates, Sunday 05:00 UTC, two concurrent workers, two shared repairs and the original deadline.",
+      "enforcedBy": [
+        "automation/newcomer_review.py",
+        "automation/skills/newcomer-review.md",
+        "automation/COORDINATOR.md",
+        "automation/WEEKLY.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "automation/weekly_check.py",
+        "automation/tests/test_newcomer_review.py",
+        "automation/tests/test_weekly_check.py"
+      ],
+      "enforcementScope": "Real stdlib capture and read-only binding/report gate plus synthetic CLI/committed-history regressions; semantic approval requires the actual independent newcomer reading. No generated content change, human-study/SDK certification, deployment or native scheduler integration is claimed."
     }
   ]
 }
