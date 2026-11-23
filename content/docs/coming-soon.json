@@ -1252,10 +1252,12 @@
             "coming-soon-pos-bindings-link-setup-reference",
             "coming-soon-pos-handshake-report-state",
             "coming-soon-pos-handshake-report-fields",
-            "coming-soon-pos-handshake-completed-checkpoint"
+            "coming-soon-pos-handshake-completed-checkpoint",
+            "coming-soon-pos-initiator-identity-and-noise-key",
+            "coming-soon-app-scope"
           ],
           "list": [
-            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, start with initiate_link_with_peer. For that same peer, use advance_link_handshake to advance the Rust handshake. A successful report with state LinkedPeerState::Linked means the handshake is complete locally; Linking means it’s still in progress. Link completion does not mean a request was delivered.",
+            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, call initiate_link_with_peer with the counterparty’s Pubky public key (PubkyPublicKey), not an App ID or a Noise key. For that same peer, use advance_link_handshake to advance the Rust handshake. A successful report with state LinkedPeerState::Linked means the handshake is complete locally; Linking means it’s still in progress. Link completion does not mean a request was delivered.",
             "Persist the order reference, exact terms, counterparty and a newly generated request ID before proposing. Retry propose_payment_request_with_id only as the same creating App and identity with the same values and retained shared Event Message history. After state deletion or a pre-creation backup restore, reconcile order and execution records first; the saved ID alone does not prevent duplicates. Never reuse the demo's fixed ID across real orders.",
             "Define your own asset precision and conversion policy. The example usd amount and Lightning method do not establish conversion support or a payable destination.",
             "Track local queue and request state separately from delivery and payment state. The payer uses request-constrained resolution; acceptance or ProofSubmitted is not permission for the merchant to release goods.",
