@@ -96,7 +96,7 @@ test("all docs .md aliases preserve exact current bodies and invalid-route statu
       expect(alias.headers()["link"]).toBe(describedby);
       expect(await alias.body(), base).toEqual(await legacy.body());
       const body = await alias.text();
-      expect(body).toContain(`Covers Paykit ${doc.version.tag ?? doc.version.ref ?? doc.version.label}`);
+      expect(body).toContain(`Covers Paykit [${doc.version.tag ?? doc.version.ref ?? doc.version.label}](<https://github.com/pubky/paykit-rs/releases>)`);
       expect(body).not.toMatch(/Source commit|View exact source/);
       for (const source of page.sourceLinks) expect(marked.parse(body)).toContain(`href="${source.href}"`);
       const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })

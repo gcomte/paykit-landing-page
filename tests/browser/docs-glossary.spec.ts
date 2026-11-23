@@ -61,7 +61,7 @@ for (const version of ["released", "coming-soon"] as const) {
     const response = await request.get(`${route}/markdown`);
     expect(response.status()).toBe(200);
     const markdown = await response.text();
-    expect(markdown).toContain(metadata);
+    expect(markdown).toContain(`Covers Paykit [${covered}](<https://github.com/pubky/paykit-rs/releases>) · Last updated: ${date}`);
     expect(markdown).not.toMatch(/Source commit|View exact source/);
     for (const source of glossary!.sourceLinks) expect(marked.parse(markdown)).toContain(`href="${source.href}"`);
     for (const section of glossary!.sections) {

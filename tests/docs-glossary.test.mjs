@@ -85,7 +85,7 @@ test('generated glossary uses the Reference navigation and page kind through the
     assert.ok(html.includes(`href="/docs/${version}/glossary"`));
     assert.ok(!html.includes('aria-label="Documentation version"'));
     assert.ok(html.includes(documents[version].version.commit));
-    assert.ok(html.includes(`Covers Paykit ${documents[version].version.tag}`));
+    assert.ok(html.includes(`Covers Paykit <a href="https://github.com/pubky/paykit-rs/releases">${documents[version].version.tag}</a>`));
     assert.ok(html.includes(`dateTime="${documents[version].lastUpdated}"`));
     assert.ok(!html.includes('Synthetic readiness qualification.'));
     assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"|Source commit|View exact source/);
@@ -120,7 +120,7 @@ test('newest-release selector is accepted as policy without becoming a displayed
     params: Promise.resolve({ version: 'coming-soon', slug: 'overview' }),
   }));
   assert.ok(html.includes(document.version.commit));
-  assert.ok(html.includes(`Covers Paykit ${document.version.tag ?? document.version.ref ?? document.version.label}`));
+  assert.ok(html.includes(`Covers Paykit <a href="https://github.com/pubky/paykit-rs/releases">${document.version.tag ?? document.version.ref ?? document.version.label}</a>`));
   assert.ok(!html.includes('newest-release'));
   const index = await (await load('app/llms.txt/route.ts').GET()).text();
   assert.ok(index.includes(document.version.commit));

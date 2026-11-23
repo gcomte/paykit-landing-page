@@ -68,7 +68,7 @@ for (const version of ["released", "coming-soon"] as const) {
     const markdown = await response.text();
     expect(markdown).not.toMatch(/Source commit|View exact source/);
     for (const source of resources!.sourceLinks) expect(marked.parse(markdown)).toContain(`href="${source.href}"`);
-    expect(markdown).toContain(metadata);
+    expect(markdown).toContain(`Covers Paykit [${covered}](<https://github.com/pubky/paykit-rs/releases>) · Last updated: ${date}`);
     for (const section of resources!.sections) {
       expect(markdown).toContain(`<a id="${section.id}"></a>`);
       expect(markdown).toContain(`## ${section.title}`);

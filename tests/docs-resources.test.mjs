@@ -65,7 +65,7 @@ test('synthetic Resources uses real route navigation TOC versioned Markdown llms
     for (const link of document.pages.find(({ slug }) => slug === 'resources').sourceLinks) {
       assert.ok(sources.includes(`href="${link.href}"`));
     }
-    assert.ok(html.includes(`Covers Paykit ${document.version.tag}`));
+    assert.ok(html.includes(`Covers Paykit <a href="https://github.com/pubky/paykit-rs/releases">${document.version.tag}</a>`));
     assert.ok(html.includes(`dateTime="${document.lastUpdated}"`));
     assert.ok(html.includes(`href="/docs/${version}/resources"`));
     assert.ok(!html.includes('aria-label="Documentation version"'));
@@ -150,7 +150,7 @@ test('both real generated Resources pages have commit-matched evidence and pinne
       assert.ok(section.links?.map(checkLink).some(Boolean), `${version}/${section.id}: primary snapshot link required`);
     }
     const html = renderToStaticMarkup(await renderedDocumentation(load, version, 'resources'));
-    assert.ok(html.includes(`Covers Paykit ${document.version.tag ?? document.version.ref ?? document.version.label}`));
+    assert.ok(html.includes(`Covers Paykit <a href="https://github.com/pubky/paykit-rs/releases">${document.version.tag ?? document.version.ref ?? document.version.label}</a>`));
     assert.ok(html.includes(`dateTime="${document.lastUpdated}"`));
     assert.ok(html.includes(document.version.commit));
     assert.ok(html.includes(`href="/docs/${version}/resources/markdown"`));

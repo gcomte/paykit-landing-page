@@ -69,7 +69,7 @@ test('all seventeen docs footers use their actual snapshot tag and persisted UTC
     const footer = html.match(/<footer\b[^>]*>([\s\S]*?)<\/footer>/)?.[1];
     assert.ok(footer, row.route);
     const { version, lastUpdated } = documents[row.version];
-    assert.ok(footer.includes(`Covers Paykit ${version.tag}`), `${row.route}: covered version belongs in footer`);
+    assert.ok(footer.includes(`Covers Paykit <a href="https://github.com/pubky/paykit-rs/releases">${version.tag}</a>`), `${row.route}: covered version links to GitHub Releases in the footer`);
     assert.ok(footer.includes(`Last updated: <time dateTime="${lastUpdated}">${humanDates[row.version]}</time>`), `${row.route}: persisted human-readable date`);
     assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"|Source commit|View exact source/);
     assert.ok(!html.includes(version.readiness.notice), 'internal readiness is not a global footer warning');
@@ -93,7 +93,7 @@ test('all seventeen Markdown endpoints preserve footer metadata and complete HTM
     assert.equal(response.status, 200);
     const markdown = await response.text();
     const { version } = documents[row.version];
-    assert.ok(markdown.includes(`Covers Paykit ${version.tag} · Last updated: ${humanDates[row.version]}`), row.route);
+    assert.ok(markdown.includes(`Covers Paykit [${version.tag}](<https://github.com/pubky/paykit-rs/releases>) · Last updated: ${humanDates[row.version]}`), row.route);
     const observed = spawnSync('python', ['-B', 'tests/docs-markdown-observe.py'], {
       input: JSON.stringify([renderToStaticMarkup(row.tree), marked.parse(markdown)]), encoding: 'utf8',
     });
@@ -191,7 +191,7 @@ test('all seventeen actual docs routes keep version/date footers and Page source
     const date = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
       .format(new Date(`${document.lastUpdated}T00:00:00Z`));
     const footer = html.match(/<footer\b[^>]*>([\s\S]*?)<\/footer>/)?.[1];
-    assert.ok(footer?.includes(`Covers Paykit ${coveredVersion}`), row.route);
+    assert.ok(footer?.includes(`Covers Paykit <a href="https://github.com/pubky/paykit-rs/releases">${coveredVersion}</a>`), row.route);
     assert.ok(footer.includes(`Last updated: <time dateTime="${document.lastUpdated}">${date}</time>`), row.route);
     const sources = footer.match(/<nav aria-label="Page sources">([\s\S]*?)<\/nav>/)?.[1];
     assert.ok(sources?.includes('Source references'), row.route);

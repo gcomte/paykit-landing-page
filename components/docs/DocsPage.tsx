@@ -150,7 +150,7 @@ export default function DocsPage({
           </nav>
           <footer className={styles.sources}>
             <p className={styles.footerMetadata} data-testid="docs-footer-metadata">
-              Covers Paykit {coveredVersion}
+              Covers Paykit <a href="https://github.com/pubky/paykit-rs/releases">{coveredVersion}</a>
               {updatedDate && <> · Last updated: <time dateTime={documentation.lastUpdated}>{updatedDate}</time></>}
             </p>
             <nav aria-label="Page sources">

@@ -236,11 +236,13 @@ test('real refresh producer bytes automatically feed the same real reader, guide
       const overview = document.pages.find(({ slug }) => slug === 'overview');
       const humanDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
         .format(new Date(`${document.lastUpdated}T00:00:00Z`));
+      const covered = document.version.tag ?? document.version.ref ?? document.version.label;
       for (const output of [entryView, articleView]) {
         for (const value of [overview.title, overview.description, overview.sections[0].title,
-          `Covers Paykit ${document.version.tag ?? document.version.ref ?? document.version.label}`, humanDate]) {
+          `Covers Paykit ${covered}`, humanDate]) {
           assert.ok(output.text.includes(value), `${stage}: technical view consumes ${value}`);
         }
+        assert.ok(output.links.some(([href, label]) => href === 'https://github.com/pubky/paykit-rs/releases' && label === covered), `${stage}: technical view links its version to GitHub Releases`);
         for (const link of overview.sourceLinks) {
           assert.ok(output.links.some(([href]) => href === link.href), `${stage}: technical view consumes page source ${link.href}`);
         }

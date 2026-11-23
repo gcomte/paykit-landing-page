@@ -18,6 +18,7 @@ test("all seventeen docs footers retain generated version/date metadata; landing
     if (version === "coming-soon") rows.push({ route: "/docs", documentation });
   }
   expect(rows).toHaveLength(17);
+  const releases = "https://github.com/pubky/paykit-rs/releases";
   for (const { route, documentation } of rows) {
     const covered = documentation.version.tag ?? documentation.version.ref ?? documentation.version.label;
     const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
@@ -27,6 +28,9 @@ test("all seventeen docs footers retain generated version/date metadata; landing
     const footer = page.locator("footer");
     const metadata = footer.getByTestId("docs-footer-metadata");
     await expect(metadata).toHaveText(text);
+    const releaseLink = metadata.getByRole("link", { name: covered, exact: true });
+    await expect(releaseLink).toHaveAttribute("href", releases);
+    await expect(releaseLink).toHaveCSS("text-decoration-line", "underline");
     await expect(metadata.locator("time")).toHaveAttribute("datetime", documentation.lastUpdated!);
     for (const width of [1440, 375]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -39,7 +43,7 @@ test("all seventeen docs footers retain generated version/date metadata; landing
     }
     const response = await request.get(`${route}/markdown`);
     expect(response.status()).toBe(200);
-    expect(await response.text()).toContain(text);
+    expect(await response.text()).toContain(`Covers Paykit [${covered}](<${releases}>) · Last updated: ${date}`);
   }
   await page.goto("/");
   await expect(page.getByTestId("docs-footer-metadata")).toHaveCount(0);

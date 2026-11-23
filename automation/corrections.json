@@ -34,6 +34,19 @@
   },
   "requirements": [
     {
+      "id": "docs-footer-version-release-link",
+      "userText": "Covers Paykit v0.1.1-rc9  --> the version should always link to the github releases page",
+      "instructionSource": "Explicit user footer correction, 2026-11-23.",
+      "requirement": "Link the actual covered version label in every existing docs version/date footer to https://github.com/pubky/paykit-rs/releases, in HTML and matching Markdown. Link the version text only; preserve the stored date, version selection, article content and technical source links. Use the shared footer, not manually edited generated snapshots, and do not reintroduce the provenance panel or version switcher.",
+      "implementationStatus": "implemented",
+      "enforcedBy": [
+        "components/docs/DocsPage.tsx",
+        "tests/docs-footer.test.mjs",
+        "tests/docs-llms-generation.test.mjs",
+        "tests/browser/docs-footer.spec.ts"
+      ]
+    },
+    {
       "id": "docs-footer-only-version-presentation",
       "userText": "It's not helpful. The comment \"Covers Paykit v0.1.1-rc9\" in the footer is enough.",
       "instructionSource": "Explicit follow-up user presentation instruction, 2026-11-22.",

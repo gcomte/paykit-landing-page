@@ -51,7 +51,7 @@ test('version chrome identifies selected tag truthfully and retains the separate
   for (const [version, documentation] of [['coming-soon', selectedDoc], ['released', stableDoc]]) {
     const html = renderToStaticMarkup(React.createElement(page.default, { documentation, page: documentation.pages[0], version }));
     const footer = html.match(/<footer\b[^>]*>([\s\S]*?)<\/footer>/)?.[1];
-    assert.ok(footer.includes(`Covers Paykit ${documentation.version.ref}`));
+    assert.ok(footer.includes(`Covers Paykit <a href="https://github.com/pubky/paykit-rs/releases">${documentation.version.ref}</a>`));
     assert.ok(html.includes(`href="/docs/${version}/overview" aria-current="page"`));
     assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"|Source commit|View exact source/);
     assert.ok(!html.includes(documentation.version.sourceUrl), 'no relocated global tree link');

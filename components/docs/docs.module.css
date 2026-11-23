@@ -553,6 +553,10 @@
   overflow-wrap: anywhere;
 }
 
+.footerMetadata a {
+  text-decoration: underline;
+}
+
 .sources nav > p {
   margin: 6px 0 10px;
 }

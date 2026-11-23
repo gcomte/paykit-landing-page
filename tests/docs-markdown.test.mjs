@@ -56,7 +56,7 @@ test('Markdown GET uses the actual documentation route and layout, including sou
   const markdown = await response.text();
   const document = JSON.parse(readFileSync('content/docs/coming-soon.json', 'utf8'));
   assert.ok(!markdown.includes(document.version.readiness.notice));
-  assert.ok(markdown.includes(`Covers Paykit ${document.version.tag ?? document.version.ref ?? document.version.label}`));
+  assert.ok(markdown.includes(`Covers Paykit [${document.version.tag ?? document.version.ref ?? document.version.label}](<https://github.com/pubky/paykit-rs/releases>)`));
   for (const link of document.pages[0].sourceLinks) assert.ok(markdown.includes(link.href));
   assert.doesNotMatch(markdown, /Source commit|View exact source/);
   assert.ok(!markdown.includes('Selected source snapshot—check its ref and commit before integrating.'));
