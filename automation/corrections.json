@@ -34,6 +34,18 @@
   },
   "requirements": [
     {
+      "id": "docs-live-action-inputs-and-signals",
+      "userText": "that's good, let's go ahead with that.",
+      "instructionSource": "Explicit approval of the follow-up for the first live wallet lookup and POS link readiness, 2026-11-23.",
+      "requirement": "When the first action after a local demo tells a reader to call a live API, say what the app must supply and what those inputs refer to. When it tells the reader to wait, name the observable result or state that allows the reader to continue. If the detail cannot be stated accurately in a short sentence from the exact public source, point directly to the applicable version-matched input or readiness step. Do not invent application-specific choices, imply that starting or queueing is completion, or add a live walkthrough. Apply this in the existing writing and evaluation roles; regenerate rather than hand-editing output. Do not add a review stage or change scheduling or SDK execution scope.",
+      "implementationStatus": "implemented",
+      "enforcedBy": [
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "tests/docs-demo-language.test.mjs"
+      ]
+    },
+    {
       "id": "docs-plain-language-demos",
       "userText": "much better. And remember, we want to fix mainly the docs generation, not the docs itself, so that whenever we regenerate the docs, the results will be better",
       "instructionSource": "Explicit approval of demo terminology and generation-first correction, 2026-11-23.",

@@ -12,16 +12,18 @@ function assertDemoName(text, field) {
   assert.doesNotMatch(text, /\bfixtures?\b/i, `${field} calls the demo a fixture: ${text}`);
 }
 
-test('future imports retain the plain-language demo rule registration', () => {
-  const rule = json('automation/corrections.json').requirements.find((item) => item.id === id);
-  assert.ok(rule, `missing correction: ${id}`);
-  for (const path of [...roles, 'tests/docs-demo-language.test.mjs']) {
-    assert.ok(rule.enforcedBy?.includes(path), `${id} does not list ${path}`);
-  }
-  for (const path of roles) {
-    assert.ok(readFileSync(path, 'utf8').includes(id), `${path} does not reference ${id}`);
-  }
-});
+for (const correctionId of [id, 'docs-live-action-inputs-and-signals']) {
+  test(`future imports retain the ${correctionId} rule registration`, () => {
+    const rule = json('automation/corrections.json').requirements.find((item) => item.id === correctionId);
+    assert.ok(rule, `missing correction: ${correctionId}`);
+    for (const path of [...roles, 'tests/docs-demo-language.test.mjs']) {
+      assert.ok(rule.enforcedBy?.includes(path), `${correctionId} does not list ${path}`);
+    }
+    for (const path of roles) {
+      assert.ok(readFileSync(path, 'utf8').includes(correctionId), `${path} does not reference ${correctionId}`);
+    }
+  });
+}
 
 test('selected docs name the demo downloads and overview entry points', () => {
   const { pages } = json('content/docs/coming-soon.json');

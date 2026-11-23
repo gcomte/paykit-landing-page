@@ -953,15 +953,23 @@
             "coming-soon-sdk-sync",
             "coming-soon-storage-contract",
             "coming-soon-shared-state",
-            "coming-soon-adapter-boundary"
+            "coming-soon-adapter-boundary",
+            "coming-soon-resources-library-callers",
+            "coming-soon-public-path",
+            "coming-soon-wallet-public-storage-handle",
+            "coming-soon-wallet-public-list-routing"
           ],
           "list": [
-            "Direct read-only lookup with paykit-lib: obtain the payee identity and app ID through your product flow, then call get_payment_list with PublicStorage rather than populating the map by hand. Keep client timeouts and fetch budgets explicit.",
+            "Direct read-only lookup with paykit-lib: call get_payment_list with the PublicStorage handle from your Pubky client (public_storage()), the payee’s Pubky public key, and the App ID of the app that published the receiving details under that key. Keep client timeouts and fetch budgets explicit.",
             "Durable resolution with paykit-sdk: use resolve_public_contact_payment for the payee's public endpoints or resolve_private_contact_payment for private lists. Keep that choice explicit: private failure is not public fallback permission.",
             "Publish your own app and public endpoints: construct paykit-sdk with shared storage, a live-session provider and your payment adapter. Restore any backup before app publication. Enroll the app with publish_paykit_app; sync_public_endpoints publishes your adapter's receiving details.",
             "Replace the demo payload and lookup policy with rail-specific target validation, user authorization, durable execution intent and settlement checks. Verify shared-state deployment requirements before multi-app use."
           ],
           "links": [
+            {
+              "label": "Public payment lookup: get_payment_list example and inputs",
+              "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-lib/src/payment_endpoint.rs#L254-L298"
+            },
             {
               "label": "Choose the application adapters",
               "href": "/docs/coming-soon/components"
@@ -1241,10 +1249,13 @@
             "coming-soon-propose",
             "coming-soon-pos-start-encrypted-link",
             "coming-soon-pos-rust-link-setup-reference",
-            "coming-soon-pos-bindings-link-setup-reference"
+            "coming-soon-pos-bindings-link-setup-reference",
+            "coming-soon-pos-handshake-report-state",
+            "coming-soon-pos-handshake-report-fields",
+            "coming-soon-pos-handshake-completed-checkpoint"
           ],
           "list": [
-            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, start with initiate_link_with_peer. Wait until the handshake completes before trying to deliver requests.",
+            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, start with initiate_link_with_peer. For that same peer, use advance_link_handshake to advance the Rust handshake. A successful report with state LinkedPeerState::Linked means the handshake is complete locally; Linking means it’s still in progress. Link completion does not mean a request was delivered.",
             "Persist the order reference, exact terms, counterparty and a newly generated request ID before proposing. Retry propose_payment_request_with_id only as the same creating App and identity with the same values and retained shared Event Message history. After state deletion or a pre-creation backup restore, reconcile order and execution records first; the saved ID alone does not prevent duplicates. Never reuse the demo's fixed ID across real orders.",
             "Define your own asset precision and conversion policy. The example usd amount and Lightning method do not establish conversion support or a payable destination.",
             "Track local queue and request state separately from delivery and payment state. The payer uses request-constrained resolution; acceptance or ProofSubmitted is not permission for the merchant to release goods.",
@@ -1260,7 +1271,7 @@
               "href": "/docs/coming-soon/flows"
             },
             {
-              "label": "Rust SDK: establish an encrypted link",
+              "label": "Rust SDK: encrypted-link handshake and completion",
               "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/specs/paykit-sdk.md#establish-encrypted-link"
             },
             {

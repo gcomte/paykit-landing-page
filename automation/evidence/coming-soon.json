@@ -1862,5 +1862,65 @@
     "sourceHash": "a2f34040c2cc77f24b7762165a94281596ed06a4ba84362612b89cd9b9328e92",
     "kind": "application-responsibility",
     "claim": "Shared state requires Homeserver 0.16.2+ with GCS object storage on every serving instance; filesystem storage is not supported and the operator must verify the deployed version and storage backend."
+  },
+  {
+    "id": "coming-soon-wallet-public-storage-handle",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-ffi/src/session.rs",
+    "startLine": 631,
+    "endLine": 637,
+    "excerpt": "    async fn load_public_storage(&self) -> paykit_sdk::Result<Option<pubky::PublicStorage>> {\n        let available = self\n            .provider\n            .public_storage_available()\n            .map_err(|err| ffi_error_to_sdk(err, \"load public Pubky storage\"))?;\n        Ok(available.then(|| self.pubky.public_storage()))\n    }",
+    "sourceHash": "72478bcad656ee923a483c8f6820b593119b5c99611cb8b3a5684bcfc6d7bab6",
+    "kind": "implemented",
+    "claim": "The Paykit FFI adapter obtains a pubky::PublicStorage handle with public_storage() on its Pubky client. The concrete Pubky receiver is established by the same file at lines 365–369."
+  },
+  {
+    "id": "coming-soon-wallet-public-list-routing",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-lib/src/pubky_routing.rs",
+    "startLine": 260,
+    "endLine": 278,
+    "excerpt": "pub async fn fetch_payment_list_with_budget(\n    storage: &PublicStorage,\n    payee: &PublicKey,\n    app_id: &PaykitAppId,\n    remaining_endpoints: &mut usize,\n    remaining_requests: &mut usize,\n    remaining_payload_bytes: &mut usize,\n) -> Result<PaymentList> {\n    let max_endpoints = (*remaining_endpoints).min(PAYMENT_LIST_MAX_ENDPOINTS);\n    let addr = format!(\"{payee}{}\", payment_endpoint_path_prefix(app_id));\n    debug!(\"listing payment endpoints\");\n    let resources = list_resources(\n        storage,\n        addr,\n        \"list payment endpoints\",\n        remaining_requests,\n        PAYMENT_LIST_MAX_ENDPOINTS,\n    )\n    .await?;",
+    "sourceHash": "8966befec4c130752093fe4ae340605a6b100f3605225a6267d52973bb618668",
+    "kind": "implemented",
+    "claim": "The direct list lookup builds its public listing address from the supplied payee key and the supplied app ID; it does not choose or derive an app ID."
+  },
+  {
+    "id": "coming-soon-pos-handshake-report-state",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-sdk/src/domain/linked_peers/mod.rs",
+    "startLine": 26,
+    "endLine": 40,
+    "excerpt": "/// Local relationship state for a counterparty.\n#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]\n#[non_exhaustive]\npub enum LinkedPeerState {\n    /// The SDK tracks this counterparty, but no active Encrypted Link exists.\n    NotLinked,\n    /// An Encrypted Link Handshake is in progress.\n    Linking,\n    /// An Encrypted Link is established.\n    Linked,\n    /// Local state cannot safely continue without recovery.\n    RecoveryRequired,\n    /// Local policy blocks this peer.\n    Blocked,\n}",
+    "sourceHash": "0f4b5ef8fb42535fcfdec33b7146cc47beb9c7dc4c407fc6247f7088377e7913",
+    "kind": "implemented",
+    "claim": "The SDK LinkedPeerState is local to the counterparty: Linked means an established Encrypted Link, while Linking is an in-progress handshake; NotLinked, RecoveryRequired and Blocked are not completion."
+  },
+  {
+    "id": "coming-soon-pos-handshake-report-fields",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-sdk/src/domain/linked_peers/mod.rs",
+    "startLine": 93,
+    "endLine": 104,
+    "excerpt": "/// Result of starting or advancing an Encrypted Link Handshake.\n#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]\npub struct LinkedPeerHandshakeReport {\n    /// Counterparty public key.\n    pub counterparty: PubkyPublicKey,\n    /// Current Linked Peer state after the operation.\n    pub state: LinkedPeerState,\n    /// Current Encrypted Link state generation.\n    pub generation: u64,\n    /// In-progress handshake role, when a handshake remains pending.\n    pub handshake_role: Option<EncryptedLinkHandshakeRole>,\n}",
+    "sourceHash": "0f4b5ef8fb42535fcfdec33b7146cc47beb9c7dc4c407fc6247f7088377e7913",
+    "kind": "implemented",
+    "claim": "Starting or advancing a handshake returns a LinkedPeerHandshakeReport with the counterparty, state, link-state generation and optional pending role."
+  },
+  {
+    "id": "coming-soon-pos-handshake-completed-checkpoint",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-sdk/src/domain/linked_peers/mod.rs",
+    "startLine": 631,
+    "endLine": 659,
+    "excerpt": "    let mut peer = expected_peer.clone();\n    match update {\n        HandshakeCheckpointUpdate::Pending(snapshot) => {\n            state.handshake_snapshot = Some(snapshot.serialize())\n        }\n        HandshakeCheckpointUpdate::Complete(snapshot) => {\n            state.link_snapshot = Some(snapshot.serialize());\n            state.handshake_snapshot = None;\n            state.handshake_role = None;\n            peer.state = LinkedPeerState::Linked;\n            requeue_recovery_required_outbound_messages(tx, counterparty, now)?;\n        }\n    }\n    peer.failure_count = 0;\n    peer.last_sync_at = Some(now);\n    let report = LinkedPeerHandshakeReport {\n        counterparty: counterparty.clone(),\n        state: peer.state.clone(),\n        generation: state.generation,\n        handshake_role: state.handshake_role,\n    };\n    tx.rebase_buffered_private_intake_generation(\n        counterparty,\n        expected_state.generation,\n        state.generation,\n    )?;\n    tx.save_encrypted_link_state(state);\n    tx.save_linked_peer(peer);\n    Ok(HandshakeCheckpointSave::Applied(report))",
+    "sourceHash": "0f4b5ef8fb42535fcfdec33b7146cc47beb9c7dc4c407fc6247f7088377e7913",
+    "kind": "implemented",
+    "claim": "The Pending branch replaces the handshake snapshot and leaves the peer in the Linking state. Completing the handshake stores the link snapshot, clears the pending snapshot and role, persists Linked, and reports the matching counterparty and state."
   }
 ]
