@@ -957,10 +957,17 @@
             "coming-soon-resources-library-callers",
             "coming-soon-public-path",
             "coming-soon-wallet-public-storage-handle",
-            "coming-soon-wallet-public-list-routing"
+            "coming-soon-wallet-public-list-routing",
+            "coming-soon-wallet-registry-lookup",
+            "coming-soon-wallet-registry-app-ids",
+            "coming-soon-wallet-registry-first-public-read",
+            "coming-soon-wallet-registry-default-references",
+            "coming-soon-wallet-registry-default-membership",
+            "coming-soon-wallet-public-list-empty-or-invalid"
           ],
           "list": [
             "Direct read-only lookup with paykit-lib: call get_payment_list with the PublicStorage handle from your Pubky client (public_storage()), the payee’s Pubky public key, and the App ID of the app that published the receiving details under that key. Keep client timeouts and fetch budgets explicit.",
+            "If you only have the payee’s Pubky public key, call `get_paykit_app_registry` with `PublicStorage` and that key to see registered App IDs before your app chooses which App ID to pass to `get_payment_list`. The registry may be absent or list several apps; a registration or default doesn’t guarantee a usable endpoint.",
             "Durable resolution with paykit-sdk: use resolve_public_contact_payment for the payee's public endpoints or resolve_private_contact_payment for private lists. Keep that choice explicit: private failure is not public fallback permission.",
             "Publish your own app and public endpoints: construct paykit-sdk with shared storage, a live-session provider and your payment adapter. Restore any backup before app publication. Enroll the app with publish_paykit_app; sync_public_endpoints publishes your adapter's receiving details.",
             "Replace the demo payload and lookup policy with rail-specific target validation, user authorization, durable execution intent and settlement checks. Verify shared-state deployment requirements before multi-app use."
@@ -969,6 +976,10 @@
             {
               "label": "Public payment lookup: get_payment_list example and inputs",
               "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-lib/src/payment_endpoint.rs#L254-L298"
+            },
+            {
+              "label": "Public App Registry lookup: get_paykit_app_registry",
+              "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-lib/src/app_registry.rs#L485-L503"
             },
             {
               "label": "Choose the application adapters",
@@ -1254,10 +1265,14 @@
             "coming-soon-pos-handshake-report-fields",
             "coming-soon-pos-handshake-completed-checkpoint",
             "coming-soon-pos-initiator-identity-and-noise-key",
-            "coming-soon-app-scope"
+            "coming-soon-app-scope",
+            "coming-soon-pos-manual-handshake-poll-spec",
+            "coming-soon-pos-manual-handshake-advance-idle",
+            "coming-soon-pos-manual-handshake-idle-pending",
+            "coming-soon-pos-manual-handshake-pending-linking"
           ],
           "list": [
-            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, call initiate_link_with_peer with the counterparty’s Pubky public key (PubkyPublicKey), not an App ID or a Noise key. For that same peer, use advance_link_handshake to advance the Rust handshake. A successful report with state LinkedPeerState::Linked means the handshake is complete locally; Linking means it’s still in progress. Link completion does not mean a request was delivered.",
+            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, call initiate_link_with_peer with the counterparty’s Pubky public key (PubkyPublicKey), not an App ID or a Noise key. For that same peer, use advance_link_handshake to advance the Rust handshake. A successful report with state LinkedPeerState::Linked means the handshake is complete locally; Linking means it’s still in progress. If your app drives the handshake manually and a successful report still says `Linking`, call `advance_link_handshake` again for the same peer on your app’s next poll. Link completion does not mean a request was delivered.",
             "Persist the order reference, exact terms, counterparty and a newly generated request ID before proposing. Retry propose_payment_request_with_id only as the same creating App and identity with the same values and retained shared Event Message history. After state deletion or a pre-creation backup restore, reconcile order and execution records first; the saved ID alone does not prevent duplicates. Never reuse the demo's fixed ID across real orders.",
             "Define your own asset precision and conversion policy. The example usd amount and Lightning method do not establish conversion support or a payable destination.",
             "Track local queue and request state separately from delivery and payment state. The payer uses request-constrained resolution; acceptance or ProofSubmitted is not permission for the merchant to release goods.",
