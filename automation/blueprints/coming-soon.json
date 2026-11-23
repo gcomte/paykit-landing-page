@@ -43,12 +43,13 @@
             "coming-soon-sdk-lib",
             "coming-soon-ffi",
             "coming-soon-ffi-package",
-            "coming-soon-storage-contract"
+            "coming-soon-storage-contract",
+            "coming-soon-resources-ffi-surface"
           ],
           "list": [
             "paykit-lib: validated values, app-scoped public discovery and private protocol helpers. You manage sessions and durable state when using this layer directly.",
             "paykit-sdk: a stateful Rust runtime with storage, live-session and payment-adapter boundaries. Prefer this for a durable application rather than rebuilding request and link state.",
-            "paykit-ffi: the Swift/Kotlin-facing UniFFI layer in the source tree. Binding availability is separate from a Rust crate version; the Rust fixtures below do not exercise mobile bindings."
+            "paykit-ffi: Paykit uses UniFFI to generate bindings so Swift and Kotlin apps can call the Rust SDK. Binding availability is separate from a Rust crate version; the local Rust fixtures below do not exercise mobile bindings."
           ],
           "links": [
             {
@@ -209,7 +210,7 @@
           ],
           "paragraphs": [
             "The tutorials use paykit-lib to expose a small protocol outcome. A stateful Rust app can integrate paykit-sdk for durable coordination workflows. Swift/Kotlin integrations use the source-matched FFI surface; these pages do not claim a tested mobile build.",
-            "In RC9, FFI-created Pubky clients use HTTP PKARR relays for identity records instead of connecting directly to the DHT, including on local testnets. Publication still awaits the relay; this is not a fire-and-forget success guarantee."
+            "In RC9, Pubky clients created by the bindings send identity-record requests over HTTP to a PKARR relay, including on local testnets. The relay accesses the DHT, the network for those records, so the client does not connect to it directly. When publishing a record, the client still waits for the relay."
           ]
         },
         {
@@ -583,19 +584,25 @@
         },
         {
           "id": "prerequisites",
-          "title": "1. Prepare the build environment",
+          "title": "1. Prepare and download the fixture",
           "evidence": [
             "coming-soon-lib-package"
           ],
           "list": [
             "Install Rust through rustup so the included rust-toolchain.toml can select Rust 1.91.1. The shell commands below assume a terminal with tar.",
             "Have a C compiler/linker, pkg-config and internet access for toolchain/dependency downloads and the pinned Git source.",
-            "Start in an empty working directory. Download the archive linked in the next step into that directory; keep its filename unchanged."
+            "Start in an empty working directory. Use the link below to download the archive into that directory; keep its filename unchanged."
+          ],
+          "links": [
+            {
+              "label": "Download the wallet fixture for this version",
+              "href": "/docs-examples/coming-soon/paykit-wallet-coming-soon.tar.gz"
+            }
           ]
         },
         {
           "id": "run",
-          "title": "2. Download, extract and run",
+          "title": "2. Extract and run",
           "evidence": [
             "coming-soon-lib-package",
             "coming-soon-app-scope",
@@ -603,7 +610,7 @@
             "coming-soon-payload-list"
           ],
           "paragraphs": [
-            "Download the complete fixture using this page's archive link. It contains Cargo.toml, Cargo.lock, rust-toolchain.toml and src/main.rs; no separately copied code is needed.",
+            "The archive contains Cargo.toml, Cargo.lock, rust-toolchain.toml and src/main.rs; no separately copied code is needed.",
             "The manifest pins paykit-lib to Git revision 0b9c63d25dbd0cd5e7cf6ec577bc170732d350be, the source selected for v0.1.1-rc9. Keep this exact source pin rather than substituting a registry dependency or floating branch.",
             "Run these commands in order from the directory holding the downloaded archive. Keep Cargo.lock and use --locked; the toolchain file selects the pinned compiler."
           ],
@@ -612,12 +619,6 @@
               "language": "bash",
               "code": "tar -xzf paykit-wallet-coming-soon.tar.gz\ncd paykit-wallet-demo\ncargo run --locked",
               "caption": "Run the complete downloaded fixture."
-            }
-          ],
-          "links": [
-            {
-              "label": "Download the wallet fixture for this version",
-              "href": "/docs-examples/coming-soon/paykit-wallet-coming-soon.tar.gz"
             }
           ]
         },
@@ -722,9 +723,9 @@
             "coming-soon-adapter-boundary"
           ],
           "list": [
-            "Public path: obtain the payee identity and app ID through your product flow, then call get_payment_list with PublicStorage rather than populating the map by hand. Keep client timeouts and fetch budgets explicit.",
-            "For a durable wallet, construct paykit-sdk with shared storage, a live-session provider and your payment adapter. Restore any backup before app publication. Enroll the app with publish_paykit_app; sync_public_endpoints publishes your adapter's receiving details.",
-            "Use resolve_public_contact_payment for public discovery or resolve_private_contact_payment for private lists. Keep that choice explicit: private failure is not public fallback permission.",
+            "Direct read-only lookup with paykit-lib: obtain the payee identity and app ID through your product flow, then call get_payment_list with PublicStorage rather than populating the map by hand. Keep client timeouts and fetch budgets explicit.",
+            "Durable resolution with paykit-sdk: use resolve_public_contact_payment for the payee's public endpoints or resolve_private_contact_payment for private lists. Keep that choice explicit: private failure is not public fallback permission.",
+            "Publish your own app and public endpoints: construct paykit-sdk with shared storage, a live-session provider and your payment adapter. Restore any backup before app publication. Enroll the app with publish_paykit_app; sync_public_endpoints publishes your adapter's receiving details.",
             "Replace the fixture payload and lookup policy with rail-specific target validation, user authorization, durable execution intent and settlement checks. Verify shared-state deployment requirements before multi-app use."
           ],
           "links": [
@@ -798,19 +799,25 @@
         },
         {
           "id": "prerequisites",
-          "title": "1. Prepare the build environment",
+          "title": "1. Prepare and download the fixture",
           "evidence": [
             "coming-soon-lib-package"
           ],
           "list": [
             "Install Rust through rustup so the included rust-toolchain.toml can select Rust 1.91.1. The shell commands below assume a terminal with tar.",
             "Have a C compiler/linker, pkg-config and internet access for toolchain/dependency downloads and the pinned Git source.",
-            "Start in an empty working directory. Download the archive linked in the next step into that directory; keep its filename unchanged."
+            "Start in an empty working directory. Use the link below to download the archive into that directory; keep its filename unchanged."
+          ],
+          "links": [
+            {
+              "label": "Download the point-of-sale fixture for this version",
+              "href": "/docs-examples/coming-soon/paykit-point-of-sale-coming-soon.tar.gz"
+            }
           ]
         },
         {
           "id": "run",
-          "title": "2. Download, extract and run",
+          "title": "2. Extract and run",
           "evidence": [
             "coming-soon-lib-package",
             "coming-soon-app-scope",
@@ -831,7 +838,7 @@
             "coming-soon-roundtrip-test"
           ],
           "paragraphs": [
-            "Download the complete fixture using this page's archive link. It contains Cargo.toml, Cargo.lock, rust-toolchain.toml and src/main.rs; no separately copied code is needed.",
+            "The archive contains Cargo.toml, Cargo.lock, rust-toolchain.toml and src/main.rs; no separately copied code is needed.",
             "The manifest pins paykit-lib to Git revision 0b9c63d25dbd0cd5e7cf6ec577bc170732d350be, the source selected for v0.1.1-rc9. Keep this exact source pin rather than substituting a registry dependency or floating branch.",
             "Run these commands in order from the directory holding the downloaded archive. Keep Cargo.lock and use --locked; the toolchain file selects the pinned compiler."
           ],
@@ -840,12 +847,6 @@
               "language": "bash",
               "code": "tar -xzf paykit-point-of-sale-coming-soon.tar.gz\ncd paykit-point-of-sale-demo\ncargo run --locked",
               "caption": "Run the complete downloaded fixture."
-            }
-          ],
-          "links": [
-            {
-              "label": "Download the point-of-sale fixture for this version",
-              "href": "/docs-examples/coming-soon/paykit-point-of-sale-coming-soon.tar.gz"
             }
           ]
         },
@@ -989,7 +990,7 @@
         },
         {
           "id": "integrate",
-          "title": "Next: queue a real request, then verify payment",
+          "title": "Non-production SDK integration checklist",
           "evidence": [
             "coming-soon-sdk-new",
             "coming-soon-noise-publish",
@@ -1011,17 +1012,20 @@
             "Persist the order reference, exact terms, counterparty and a newly generated request ID before proposing. Retry propose_payment_request_with_id only as the same creating App and identity with the same values and retained shared Event Message history. After state deletion or a pre-creation backup restore, reconcile order and execution records first; the saved ID alone does not prevent duplicates. Never reuse the fixture's fixed ID across real orders.",
             "Define your own asset precision and conversion policy. The example usd amount and Lightning method do not establish conversion support or a payable destination.",
             "Track local queue and request state separately from delivery and payment state. The payer uses request-constrained resolution; acceptance or ProofSubmitted is not permission for the merchant to release goods.",
-            "Bind method-specific proof to the order and request, and independently validate the rail outcome before marking an order paid. Exercise this with non-production infrastructure before adding funds."
+            "Bind method-specific proof to the order and request, and independently validate the rail outcome before marking an order paid."
           ],
           "links": [
             {
-              "label": "Review the request interaction",
-              "href": "/docs/coming-soon/flows"
-            },
-            {
               "label": "Review trust and production prerequisites",
               "href": "/docs/coming-soon/boundaries"
+            },
+            {
+              "label": "Review the request interaction",
+              "href": "/docs/coming-soon/flows"
             }
+          ],
+          "paragraphs": [
+            "First review the trust and production prerequisites linked below. Exercise this with non-production infrastructure before adding funds."
           ]
         }
       ],
