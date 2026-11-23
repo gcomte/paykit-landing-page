@@ -60,7 +60,11 @@ test('synthetic Resources uses real route navigation TOC versioned Markdown llms
     assert.match(html, /data-testid="docs-page-kind">Reference<\/p>/);
     assert.ok(html.includes(document.version.commit));
     assert.ok(!html.includes(document.version.readiness.notice));
-    assert.ok(html.includes(document.version.sourceUrl));
+    assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"|Source commit|View exact source/);
+    const sources = html.match(/<nav aria-label="Page sources">([\s\S]*?)<\/nav>/)?.[1];
+    for (const link of document.pages.find(({ slug }) => slug === 'resources').sourceLinks) {
+      assert.ok(sources.includes(`href="${link.href}"`));
+    }
     assert.ok(html.includes(`Covers Paykit ${document.version.tag}`));
     assert.ok(html.includes(`dateTime="${document.lastUpdated}"`));
     assert.ok(html.includes(`href="/docs/${version}/resources"`));

@@ -238,10 +238,13 @@ test('real refresh producer bytes automatically feed the same real reader, guide
         .format(new Date(`${document.lastUpdated}T00:00:00Z`));
       for (const output of [entryView, articleView]) {
         for (const value of [overview.title, overview.description, overview.sections[0].title,
-          document.version.ref, document.version.commit, humanDate]) {
+          `Covers Paykit ${document.version.tag ?? document.version.ref ?? document.version.label}`, humanDate]) {
           assert.ok(output.text.includes(value), `${stage}: technical view consumes ${value}`);
         }
-        assert.ok(output.links.some(([href]) => href === document.version.sourceUrl));
+        for (const link of overview.sourceLinks) {
+          assert.ok(output.links.some(([href]) => href === link.href), `${stage}: technical view consumes page source ${link.href}`);
+        }
+        assert.doesNotMatch(output.text, /Source commit|View exact source/);
         assert.ok(!output.text.includes(document.version.readiness.notice));
       }
       // React SSR spells the HTML attribute dateTime; HTML names are case-insensitive.

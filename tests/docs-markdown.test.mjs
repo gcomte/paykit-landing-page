@@ -56,12 +56,15 @@ test('Markdown GET uses the actual documentation route and layout, including sou
   const markdown = await response.text();
   const document = JSON.parse(readFileSync('content/docs/coming-soon.json', 'utf8'));
   assert.ok(!markdown.includes(document.version.readiness.notice));
-  assert.ok(markdown.includes(document.version.commit));
-  assert.ok(markdown.includes(document.version.sourceUrl));
+  assert.ok(markdown.includes(`Covers Paykit ${document.version.tag ?? document.version.ref ?? document.version.label}`));
+  for (const link of document.pages[0].sourceLinks) assert.ok(markdown.includes(link.href));
+  assert.doesNotMatch(markdown, /Source commit|View exact source/);
   assert.ok(!markdown.includes('Selected source snapshot—check its ref and commit before integrating.'));
   assert.ok(markdown.includes(`# ${document.pages[0].title}`));
   assert.ok(marked.parse(markdown).includes(`<h1>${document.pages[0].title}</h1>`));
-  assert.ok(renderToStaticMarkup(await renderedDocumentation(load)).includes(document.version.commit));
+  const html = renderToStaticMarkup(await renderedDocumentation(load));
+  assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"/);
+  for (const link of document.pages[0].sourceLinks) assert.ok(html.includes(`href="${link.href}"`));
 });
 
 export function observations(html) {
@@ -218,6 +221,8 @@ test('docs routes omit global source/readiness boxes and switcher while retainin
       const tree = await renderedDocumentation(load, version, page.slug);
       const html = renderToStaticMarkup(tree);
       const forbidden = [
+        ['source aside', 'data-testid="docs-version-marker"'],
+        ['source landmark', 'aria-label="Documentation source"'],
         ['selected-source box', 'aria-label="Selected source version"'],
         ['readiness box', 'data-testid="readiness-notice"'],
         ['version switcher', 'aria-label="Documentation version"'],
@@ -225,16 +230,18 @@ test('docs routes omit global source/readiness boxes and switcher while retainin
       assert.deepEqual(forbidden, [], `${version}/${page.slug}: retired global UI`);
       const covered = doc.version.tag ?? doc.version.ref ?? doc.version.label;
       const [observed] = observations([html]);
-      assert.ok(observed.text.includes(covered));
-      assert.ok(observed.text.includes(doc.version.commit));
-      assert.ok(observed.links.some(([href]) => href === doc.version.sourceUrl));
+      assert.ok(observed.text.includes(`Covers Paykit ${covered}`));
+      assert.ok(html.includes(`dateTime="${doc.lastUpdated}"`));
+      for (const link of page.sourceLinks) assert.ok(observed.links.some(([href]) => href === link.href));
+      assert.doesNotMatch(observed.text, /Source commit|View exact source/);
       assert.ok(html.includes(`aria-current="page">${page.title}</a>`));
       assert.doesNotMatch(html, /<strong>(?:Released|Selected source)<\/strong>/);
       const markdown = load('components/docs/markdown.ts').documentationMarkdown(tree);
       assert.ok(!markdown.includes(doc.version.readiness.notice));
+      assert.doesNotMatch(markdown, /Source commit|View exact source/);
       assert.ok(!markdown.includes('Selected source snapshot—check its ref and commit before integrating.'));
     }
   }
   const entry = renderToStaticMarkup(layout({ children: await load('app/docs/page.tsx').default() }));
-  assert.doesNotMatch(entry, /readiness-notice|aria-label="Selected source version"|aria-label="Documentation version"/);
+  assert.doesNotMatch(entry, /docs-version-marker|aria-label="Documentation source"|readiness-notice|aria-label="Selected source version"|aria-label="Documentation version"/);
 });

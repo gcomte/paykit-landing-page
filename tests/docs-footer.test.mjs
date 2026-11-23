@@ -71,9 +71,12 @@ test('all seventeen docs footers use their actual snapshot tag and persisted UTC
     const { version, lastUpdated } = documents[row.version];
     assert.ok(footer.includes(`Covers Paykit ${version.tag}`), `${row.route}: covered version belongs in footer`);
     assert.ok(footer.includes(`Last updated: <time dateTime="${lastUpdated}">${humanDates[row.version]}</time>`), `${row.route}: persisted human-readable date`);
-    assert.ok(html.includes(version.commit), 'exact source identity remains');
+    assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"|Source commit|View exact source/);
     assert.ok(!html.includes(version.readiness.notice), 'internal readiness is not a global footer warning');
-    assert.ok(html.includes(version.sourceUrl), 'exact source link remains');
+    const page = documents[row.version].pages.find(({ slug }) => slug === (row.route === '/docs' ? 'overview' : row.route.split('/').at(-1)));
+    const sources = footer.match(/<nav aria-label="Page sources">([\s\S]*?)<\/nav>/)?.[1];
+    assert.ok(sources, row.route);
+    for (const link of page.sourceLinks) assert.ok(sources.includes(`href="${link.href}"`), 'technical source identity remains');
     assert.ok(!html.includes('data-testid="readiness-notice"'));
     assert.ok(!html.includes('aria-label="Documentation version"'));
   }
@@ -159,4 +162,47 @@ test('the actual landing React tree remains free of documentation footer metadat
   assert.ok(!html.includes('docs-footer-metadata'));
   assert.ok(!html.includes('Covers Paykit'));
   assert.ok(!html.includes('Last updated:'));
+});
+
+
+test('all seventeen actual docs routes keep version/date footers and Page sources without a Documentation source panel', async () => {
+  const load = sourceLoader();
+  const documents = Object.fromEntries(await Promise.all(['released', 'coming-soon'].map(async (version) =>
+    [version, await load('components/docs/content.ts').getDocumentation(version)])));
+  for (const row of await docsTrees(load, documents)) {
+    const document = documents[row.version];
+    const page = document.pages.find(({ slug }) => slug === (row.route === '/docs' ? 'overview' : row.route.split('/').at(-1)));
+    const html = renderToStaticMarkup(row.tree);
+    assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"/, `${row.route}: no source aside`);
+    const response = row.route === '/docs'
+      ? await load('app/docs/markdown/route.ts').GET()
+      : await load('app/docs/[version]/[slug]/markdown/route.ts').GET(new Request(`https://example.invalid${row.route}/markdown`), {
+        params: Promise.resolve({ version: row.version, slug: page.slug }),
+      });
+    assert.equal(response.status, 200);
+    const markdown = await response.text();
+    const observed = spawnSync('python', ['-B', 'tests/docs-markdown-observe.py'], {
+      input: JSON.stringify([html, marked.parse(markdown)]), encoding: 'utf8',
+    });
+    assert.equal(observed.status, 0, observed.stderr);
+    const [expected, actual] = JSON.parse(observed.stdout);
+    assert.deepEqual(actual, expected, row.route);
+    const coveredVersion = document.version.tag ?? document.version.ref ?? document.version.label;
+    const date = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+      .format(new Date(`${document.lastUpdated}T00:00:00Z`));
+    const footer = html.match(/<footer\b[^>]*>([\s\S]*?)<\/footer>/)?.[1];
+    assert.ok(footer?.includes(`Covers Paykit ${coveredVersion}`), row.route);
+    assert.ok(footer.includes(`Last updated: <time dateTime="${document.lastUpdated}">${date}</time>`), row.route);
+    const sources = footer.match(/<nav aria-label="Page sources">([\s\S]*?)<\/nav>/)?.[1];
+    assert.ok(sources?.includes('Source references'), row.route);
+    for (const output of [expected, actual]) {
+      assert.ok(output.text.includes(`Covers Paykit ${coveredVersion} · Last updated: ${date}`), row.route);
+      assert.doesNotMatch(output.text, /Documentation source|Source commit|View exact source/, row.route);
+      assert.ok(!output.links.some(([href]) => href === document.version.sourceUrl), `${row.route}: no relocated tree link`);
+      for (const link of page.sourceLinks) {
+        assert.ok(sources.includes(`href="${link.href}"`), `${row.route}: Page sources ${link.href}`);
+        assert.ok(output.links.some(([href]) => href === link.href), `${row.route}: retained technical source`);
+      }
+    }
+  }
 });

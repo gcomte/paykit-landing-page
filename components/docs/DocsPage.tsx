@@ -131,17 +131,6 @@ export default function DocsPage({
               <p className={styles.kind} data-testid="docs-page-kind">{page.kind === "tutorial" ? "Integration tutorial" : page.kind === "reference" ? "Reference" : "Explanation"}</p>
               <a href={markdownHref ?? `${documentationPath(version, page.slug)}/markdown`} className={styles.markdownAction}>View as Markdown</a>
             </div>
-            <aside className={styles.provenance} aria-label="Documentation source" data-testid="docs-version-marker">
-              <div className={styles.provenanceHeading}>
-                <strong>{coveredVersion}</strong>
-                {documentation.version.label !== coveredVersion && <span>{documentation.version.label}</span>}
-                {documentation.version.ref
-                  ? <span className={styles.tag}>{documentation.version.kind === "tag" ? "Tag" : "Branch"}: {documentation.version.ref}</span>
-                  : documentation.version.tag && <span className={styles.tag}>Tag: {documentation.version.tag}</span>}
-              </div>
-              <p className={styles.commit}><span>Source commit</span> <code>{documentation.version.commit}</code></p>
-              <ExternalLink href={documentation.version.sourceUrl}>View exact source</ExternalLink>
-            </aside>
             {page.sections.length > 1 && (
               <nav aria-label="On this page" className={styles.contents}>
                 <span>On this page</span>

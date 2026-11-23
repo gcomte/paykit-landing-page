@@ -4,10 +4,10 @@ import { test, expect } from "@playwright/test";
 
 type Documentation = {
   lastUpdated: string;
-  version: { commit: string; tag?: string; ref?: string; label: string };
+  version: { commit: string; tag?: string; ref?: string; label: string; sourceUrl: string };
   pages: { slug: string; title: string; group: string; kind: string; sections: {
     id: string; title: string; paragraphs?: string[]; links?: { label: string; href: string }[];
-  }[] }[];
+  }[]; sourceLinks: { label: string; href: string }[] }[];
 };
 
 // Uses the real generated corpora and parent's fresh production build, not
@@ -28,7 +28,15 @@ for (const version of ["released", "coming-soon"] as const) {
     const navigation = page.getByRole("navigation", { name: "Documentation pages", exact: true });
     await expect(navigation.getByRole("heading", { name: "Reference", exact: true })).toBeVisible();
     await expect(navigation.getByRole("link", { name: glossary!.title, exact: true })).toHaveAttribute("aria-current", "page");
-    await expect(page.getByTestId("docs-version-marker")).toContainText(documentation.version.commit);
+    await expect(page.getByTestId("docs-version-marker")).toHaveCount(0);
+    await expect(page.locator('aside[aria-label="Documentation source"]')).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "View exact source", exact: true })).toHaveCount(0);
+    await expect(page.locator(`a[href="${documentation.version.sourceUrl}"]`)).toHaveCount(0);
+    const sources = page.getByRole("navigation", { name: "Page sources", exact: true });
+    expect(glossary!.sourceLinks.length).toBeGreaterThan(0);
+    for (const source of glossary!.sourceLinks) {
+      await expect(sources.getByRole("link", { name: source.label, exact: true })).toHaveAttribute("href", source.href);
+    }
     const names = glossary!.sections.map((section) => section.title);
     expect(names.map((name) => name.toLowerCase())).toEqual(names.map((name) => name.toLowerCase()).sort());
     await expect(page.locator("article section > h2")).toHaveText(names);
@@ -54,7 +62,8 @@ for (const version of ["released", "coming-soon"] as const) {
     expect(response.status()).toBe(200);
     const markdown = await response.text();
     expect(markdown).toContain(metadata);
-    expect(markdown).toContain(documentation.version.commit);
+    expect(markdown).not.toMatch(/Source commit|View exact source/);
+    for (const source of glossary!.sourceLinks) expect(marked.parse(markdown)).toContain(`href="${source.href}"`);
     for (const section of glossary!.sections) {
       expect(markdown).toContain(`<a id="${section.id}"></a>`);
       expect(markdown).toContain(`## ${section.title}`);

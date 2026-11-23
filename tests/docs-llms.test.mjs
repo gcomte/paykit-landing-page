@@ -82,12 +82,12 @@ test('docs index.md aliases preserve exact existing bodies, version, date, sourc
       const body = await response.text();
       assert.equal(body, await original.text(), `${version}/${page.slug} exact compatibility`);
       const [observed] = observations([marked.parse(body)]);
-      assert.ok(observed.text.includes(doc.version.label));
+      assert.ok(observed.text.includes(`Covers Paykit ${doc.version.tag ?? doc.version.ref ?? doc.version.label}`));
       const date = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
         .format(new Date(`${doc.lastUpdated}T00:00:00Z`));
       assert.ok(observed.text.includes(date));
-      assert.ok(observed.text.includes(doc.version.commit));
-      assert.ok(observed.links.some(([href]) => href === doc.version.sourceUrl));
+      assert.doesNotMatch(observed.text, /Source commit|View exact source/);
+      for (const link of page.sourceLinks) assert.ok(observed.links.some(([href]) => href === link.href));
     }
   }
   for (const [version, slug] of [['unknown', 'overview'], ['released', '../wallets'], ['coming-soon', 'not-a-page']]) {

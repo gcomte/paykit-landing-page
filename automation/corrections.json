@@ -34,7 +34,30 @@
   },
   "requirements": [
     {
+      "id": "docs-footer-only-version-presentation",
+      "userText": "It's not helpful. The comment \"Covers Paykit v0.1.1-rc9\" in the footer is enough.",
+      "instructionSource": "Explicit follow-up user presentation instruction, 2026-11-22.",
+      "requirement": "Global presentation only: remove the shared Documentation source/provenance header box entirely from HTML and matching Markdown, including its duplicate Source commit/View exact source chrome; do not hide it or relocate its commit/tree link into another visible box or footer. Show actual version labels (tag/ref/label) only in the existing Covers Paykit version/date footers. Keep the persisted generation date unchanged, both retained URL sets, the decided default, page navigation, Next steps, Markdown action, llms.txt link, article sections/code/diagrams and technical Source references. Preserve source mappings, source/commit identity validation, public-source/privacy/review boundaries and internal readiness metadata. Keep the compact llms/index version/source/commit/date catalogue and its technical titles/descriptions; components/docs/llms.ts remains unchanged. No generated content/evidence/locks/manifests/blueprints/assets/date edits or corpus refresh for this deletion. Future actual regeneration still derives all representations from the same generated snapshot/build, with no manual generated edits; newest published release selection, normal no-op/shared-input controls and the older snapshot remain unchanged. This scoped display correction supersedes only earlier expectations for a visible provenance panel, not technical source or metadata obligations.",
+      "implementationStatus": "implemented-pending-independent-review",
+      "enforcedBy": [
+        "components/docs/DocsPage.tsx",
+        "tests/docs-footer.test.mjs",
+        "tests/docs-markdown.test.mjs",
+        "tests/docs-presentation-policy.test.mjs",
+        "tests/docs-llms.test.mjs",
+        "tests/docs-llms-generation.test.mjs",
+        "tests/browser/docs.spec.ts",
+        "automation/COORDINATOR.md",
+        "automation/WEEKLY.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md"
+      ],
+      "enforcementScope": "One shared UI deletion and scoped presentation-policy/assertion migration only; independent review, build/browser checks and publication remain coordinator-owned. No source, private-context, runtime/auth/security, dependency, SDK or scheduling changes."
+    },
+    {
       "id": "docs-global-presentation-cleanup",
+      "supersededBy": "docs-footer-only-version-presentation",
+      "supersededPresentationScope": "Only the visible Documentation source/provenance panel expectation: actual version labels now live in existing version/date footers. Preserve all other requirements and source/privacy/review boundaries.",
       "userText": "User authorizes removing all3 repeated global source/readiness boxes and Released/Selected source switcher.",
       "instructionSource": "Explicit latest user presentation instruction and approved SCOPE.md, 2026-11-22.",
       "requirement": "global presentation only. Remove the shared selected-source note, readiness aside and version row; no version switcher or substitute WIP banners/hidden duplicates. Use actual version labels (tag/ref/label), retaining both retained URL sets, the decided default, version/date footers and source references. Keep readiness metadata internal and source-validated; preserve article technical qualifications, limitations, code, diagrams and links without implying production readiness. The compact llms/index guide omits global readiness notices, duplicated attribution links and the generic production-readiness disclaimer, retaining current versions/commits/dates/sources and all generated descriptions/links. All representations derive from the same generated snapshot/build on actual regeneration; no manual generated edits or presentation-only corpus/date bumps. Preserve weekly newest published release discovery and the older snapshot. Imports must run `tests/docs-presentation-policy.test.mjs` plus route/guide, producer and weekly skip regressions; independent review and coordinator-owned build/browser/publication remain separate.",

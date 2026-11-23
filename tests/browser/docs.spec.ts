@@ -21,6 +21,7 @@ type PageData = {
   sourceLinks: { label: string; href: string }[];
 };
 type Documentation = {
+  lastUpdated: string;
   version: { label: string; commit: string; tag?: string; ref?: string; sourceUrl: string; readiness: { status: string; notice: string; sourceUrl: string } };
   pages: PageData[];
 };
@@ -60,7 +61,21 @@ test("docs entry renders the selected-source overview rather than a version choo
   const overview = documentation.pages.find((entry) => entry.slug === "overview")!;
   await page.goto("/docs");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(overview.title);
-  await expect(page.getByTestId("docs-version-marker")).toContainText(documentation.version.commit);
+  await expect(page.getByTestId("docs-version-marker")).toHaveCount(0);
+  await expect(page.locator('aside[aria-label="Documentation source"]')).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "View exact source", exact: true })).toHaveCount(0);
+  await expect(page.locator(`a[href="${documentation.version.sourceUrl}"]`)).toHaveCount(0);
+  const covered = documentation.version.tag ?? documentation.version.ref ?? documentation.version.label;
+  const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+    .format(new Date(`${documentation.lastUpdated}T00:00:00Z`));
+  const footer = page.getByTestId("docs-footer-metadata");
+  await expect(footer).toHaveText(`Covers Paykit ${covered} · Last updated: ${date}`);
+  await expect(footer.locator("time")).toHaveAttribute("datetime", documentation.lastUpdated);
+  const sources = page.getByRole("navigation", { name: "Page sources", exact: true });
+  expect(overview.sourceLinks.length).toBeGreaterThan(0);
+  for (const source of overview.sourceLinks) {
+    await expect(sources.getByRole("link", { name: source.label, exact: true })).toHaveAttribute("href", source.href);
+  }
   await expect(page.getByText(warning, { exact: true })).toHaveCount(0);
 });
 
@@ -87,13 +102,18 @@ for (const version of versions) {
         await expect(navigation.getByRole("heading", { name: group, exact: true })).toBeVisible();
       }
       await expect(navigation.getByRole("link", { name: entry.title, exact: true })).toHaveAttribute("aria-current", "page");
-      const marker = page.getByTestId("docs-version-marker");
-      await expect(marker.locator("strong")).toHaveText(documentation.version.tag ?? documentation.version.ref ?? documentation.version.label);
+      await expect(page.getByTestId("docs-version-marker")).toHaveCount(0);
+      await expect(page.locator('aside[aria-label="Documentation source"]')).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "View exact source", exact: true })).toHaveCount(0);
+      await expect(page.locator(`a[href="${documentation.version.sourceUrl}"]`)).toHaveCount(0);
+      const covered = documentation.version.tag ?? documentation.version.ref ?? documentation.version.label;
+      const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+        .format(new Date(`${documentation.lastUpdated}T00:00:00Z`));
+      const footer = page.getByTestId("docs-footer-metadata");
+      await expect(footer).toHaveText(`Covers Paykit ${covered} · Last updated: ${date}`);
+      await expect(footer.locator("time")).toHaveAttribute("datetime", documentation.lastUpdated);
       expect(documentation.version.commit).toMatch(/^[a-f0-9]{40}$/);
       if (version === "released") expect(documentation.version.tag, "released docs identify the exact release tag").toBeTruthy();
-      await expect(marker.locator("code")).toHaveText(documentation.version.commit);
-      if (documentation.version.tag) await expect(marker).toContainText(documentation.version.tag);
-      await expect(marker.getByRole("link", { name: "View exact source" })).toHaveAttribute("href", documentation.version.sourceUrl);
       expect(new URL(documentation.version.sourceUrl).protocol).toBe("https:");
       expect(documentation.version.sourceUrl).toContain(documentation.version.commit);
       await expect(page.getByRole("note", { name: "Selected source version" })).toHaveCount(0);
@@ -170,10 +190,21 @@ for (const slug of slugs) {
       await expect(page).toHaveURL(new RegExp(`${documentPath(version, slug)}$`));
       await expect(page.getByRole("main")).toHaveAttribute("data-doc-version", version);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(entry.title);
-      const marker = page.getByTestId("docs-version-marker");
-      await expect(marker.locator("strong")).toHaveText(documentation.version.tag ?? documentation.version.ref ?? documentation.version.label);
-      await expect(marker.locator("code")).toHaveText(documentation.version.commit);
-      await expect(marker.getByRole("link", { name: "View exact source" })).toHaveAttribute("href", documentation.version.sourceUrl);
+      await expect(page.getByTestId("docs-version-marker")).toHaveCount(0);
+      await expect(page.locator('aside[aria-label="Documentation source"]')).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "View exact source", exact: true })).toHaveCount(0);
+      await expect(page.locator(`a[href="${documentation.version.sourceUrl}"]`)).toHaveCount(0);
+      const covered = documentation.version.tag ?? documentation.version.ref ?? documentation.version.label;
+      const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+        .format(new Date(`${documentation.lastUpdated}T00:00:00Z`));
+      const footer = page.getByTestId("docs-footer-metadata");
+      await expect(footer).toHaveText(`Covers Paykit ${covered} · Last updated: ${date}`);
+      await expect(footer.locator("time")).toHaveAttribute("datetime", documentation.lastUpdated);
+      const sources = page.getByRole("navigation", { name: "Page sources", exact: true });
+      expect(entry.sourceLinks.length).toBeGreaterThan(0);
+      for (const source of entry.sourceLinks) {
+        await expect(sources.getByRole("link", { name: source.label, exact: true })).toHaveAttribute("href", source.href);
+      }
       const active = page.getByRole("navigation", { name: "Documentation pages", exact: true }).getByRole("link", { name: entry.title, exact: true });
       await expect(active).toHaveAttribute("href", documentPath(version, slug));
       await expect(active).toHaveAttribute("aria-current", "page");

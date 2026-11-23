@@ -4,8 +4,8 @@ import { test, expect } from "@playwright/test";
 
 type Published = {
   lastUpdated: string;
-  version: { label: string; commit: string; sourceUrl: string; readiness: { notice: string; sourceUrl: string } };
-  pages: { slug: string; title: string; description: string }[];
+  version: { label: string; tag?: string; ref?: string; commit: string; sourceUrl: string; readiness: { notice: string; sourceUrl: string } };
+  pages: { slug: string; title: string; description: string; sourceLinks: { label: string; href: string }[] }[];
 };
 const config = JSON.parse(readFileSync("docs-generation.json", "utf8")) as { defaultVersion: string };
 const versions = [config.defaultVersion, ...["released", "coming-soon"].filter((v) => v !== config.defaultVersion)];
@@ -96,8 +96,9 @@ test("all docs .md aliases preserve exact current bodies and invalid-route statu
       expect(alias.headers()["link"]).toBe(describedby);
       expect(await alias.body(), base).toEqual(await legacy.body());
       const body = await alias.text();
-      expect(body).toContain(doc.version.commit);
-      expect(body).toContain(doc.version.sourceUrl);
+      expect(body).toContain(`Covers Paykit ${doc.version.tag ?? doc.version.ref ?? doc.version.label}`);
+      expect(body).not.toMatch(/Source commit|View exact source/);
+      for (const source of page.sourceLinks) expect(marked.parse(body)).toContain(`href="${source.href}"`);
       const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
         .format(new Date(`${doc.lastUpdated}T00:00:00Z`));
       expect(body).toContain(date);

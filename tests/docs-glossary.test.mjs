@@ -88,7 +88,11 @@ test('generated glossary uses the Reference navigation and page kind through the
     assert.ok(html.includes(`Covers Paykit ${documents[version].version.tag}`));
     assert.ok(html.includes(`dateTime="${documents[version].lastUpdated}"`));
     assert.ok(!html.includes('Synthetic readiness qualification.'));
-    assert.ok(html.includes(documents[version].version.sourceUrl));
+    assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"|Source commit|View exact source/);
+    const sources = html.match(/<nav aria-label="Page sources">([\s\S]*?)<\/nav>/)?.[1];
+    for (const link of documents[version].pages.find(({ slug }) => slug === 'glossary').sourceLinks) {
+      assert.ok(sources.includes(`href="${link.href}"`));
+    }
     for (const term of ['alpha', 'beta']) {
       assert.ok(html.includes(`href="#${term}"`));
       assert.ok(html.includes(`<h2 id="${term}-title">`));

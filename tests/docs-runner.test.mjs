@@ -50,11 +50,11 @@ test('version chrome identifies selected tag truthfully and retains the separate
   const page = await loadTs('components/docs/DocsPage.tsx', { './content': content, './docs.module.css': {} });
   for (const [version, documentation] of [['coming-soon', selectedDoc], ['released', stableDoc]]) {
     const html = renderToStaticMarkup(React.createElement(page.default, { documentation, page: documentation.pages[0], version }));
-    assert.ok(html.includes(`<strong>${documentation.version.ref}</strong>`));
-    assert.match(html.replace(/<[^>]*>/g, ''), /Tag: v0\.1\.1-rc9/);
+    const footer = html.match(/<footer\b[^>]*>([\s\S]*?)<\/footer>/)?.[1];
+    assert.ok(footer.includes(`Covers Paykit ${documentation.version.ref}`));
     assert.ok(html.includes(`href="/docs/${version}/overview" aria-current="page"`));
-    assert.ok(html.includes(documentation.version.commit));
-    assert.ok(html.includes(documentation.version.sourceUrl));
+    assert.doesNotMatch(html, /docs-version-marker|aria-label="Documentation source"|Source commit|View exact source/);
+    assert.ok(!html.includes(documentation.version.sourceUrl), 'no relocated global tree link');
     assert.doesNotMatch(html, /Selected source|aria-label="Documentation version"/);
     assert.doesNotMatch(html, /Synthetic operator caution/);
     assert.doesNotMatch(html, /Unreleased development version|Coming soon/);
