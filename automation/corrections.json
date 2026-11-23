@@ -34,6 +34,18 @@
   },
   "requirements": [
     {
+      "id": "docs-plain-language-demos",
+      "userText": "much better. And remember, we want to fix mainly the docs generation, not the docs itself, so that whenever we regenerate the docs, the results will be better",
+      "instructionSource": "Explicit approval of demo terminology and generation-first correction, 2026-11-23.",
+      "requirement": "Teach the author and evaluator to call downloadable runnable examples demos in reader-facing titles, descriptions, guide prose, captions and links. Keep test fixture for actual test setup and preserve exact code, filenames, source quotations and expected stdout. Separate each local demo from live integration. Explain action-critical terms at first use and give the first supported next action or a version-matched reference, with actor and preconditions. Use pinned public sources, omit unsupported details, and correct generation inputs and regenerate instead of hand-editing published output. Preserve weekly cadence, older-snapshot policy and deferred SDK execution.",
+      "implementationStatus": "implemented",
+      "enforcedBy": [
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "tests/docs-demo-language.test.mjs"
+      ]
+    },
+    {
       "id": "docs-footer-version-release-link",
       "userText": "Covers Paykit v0.1.1-rc9  --> the version should always link to the github releases page",
       "instructionSource": "Explicit user footer correction, 2026-11-23.",

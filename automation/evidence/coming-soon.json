@@ -1814,5 +1814,53 @@
     "sourceHash": "a5ab5e725bff728602af8456d784df8c93a1a4470db6d7e14644f62e75e5dd9d",
     "kind": "implemented",
     "claim": "The implemented authorizer takes separate Pubky identity and Paykit key material, validates their derivation relation, and signs authorization using the Pubky identity keypair and derived Noise secret."
+  },
+  {
+    "id": "coming-soon-pos-start-encrypted-link",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-sdk/src/runtime/encrypted_links.rs",
+    "startLine": 515,
+    "endLine": 540,
+    "excerpt": "    /// Start an Encrypted Link Handshake as the initiator.\n    pub async fn initiate_link_with_peer(\n        &self,\n        counterparty: PubkyPublicKey,\n    ) -> Result<LinkedPeerHandshakeReport> {\n        self.start_link_handshake(counterparty, EncryptedLinkHandshakeRole::Initiator)\n            .await\n    }\n\n    /// Start an Encrypted Link Handshake as the responder.\n    pub async fn accept_link_with_peer(\n        &self,\n        counterparty: PubkyPublicKey,\n    ) -> Result<LinkedPeerHandshakeReport> {\n        self.start_link_handshake(counterparty, EncryptedLinkHandshakeRole::Responder)\n            .await\n    }\n\n    /// Advance the stored Encrypted Link Handshake for one counterparty.\n    ///\n    /// An idle handshake is probed without taking a peer lease or rewriting state.\n    /// Available work is reloaded and validated under the ordinary lease.\n    pub async fn advance_link_handshake(\n        &self,\n        counterparty: PubkyPublicKey,\n    ) -> Result<LinkedPeerHandshakeReport> {",
+    "sourceHash": "9265e8ee38ecf47ef700f259df15a25321de110baee6d568a9dc8618ce067c41",
+    "kind": "implemented",
+    "claim": "The Rust SDK separates initiation, acceptance and advancement of an Encrypted Link handshake. Starting is not a completed, authenticated link."
+  },
+  {
+    "id": "coming-soon-pos-rust-link-setup-reference",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "specs/paykit-sdk.md",
+    "startLine": 1272,
+    "endLine": 1295,
+    "excerpt": "### Establish Encrypted Link\n\n1. Require matching live session access and local routing/static keys and\n   generation matching the identity's current signed authorization.\n2. Fetch and verify peer authorization, check its owner and generation pin,\n   persist it, and use its signed routing key, never the App Registry key.\n3. Start an initiator or responder Encrypted Link Handshake through\n   `paykit-lib`.\n4. Persist the handshake snapshot, role, and `linking` peer state.\n5. Advance the stored handshake on retry/poll cycles, checking the peer's\n   authenticated X25519 static key against the signed record whenever available.\n6. When the handshake is pending, replace the stored handshake snapshot.\n7. Completion requires a matching static key before persisting the active link\n   snapshot, clearing the handshake snapshot/role, and marking the peer `linked`.\n8. On restore, repeat local authorization and peer fetch/verify/pin checks.\n   Require the snapshot's routing key and any authenticated peer static key to\n   match; completed links require the static key before send or receive.\n   Snapshot validity alone is not identity authorization.\n9. Failed snapshot restore or protocol/key mismatch requires peer recovery and\n   stops private automation. Transient advancement failures may remain `linking`\n   for retry.\n\nEvery Encrypted Link setup, send, and receive operation fetches current\nauthorization; retained pins are not a substitute for this check.",
+    "sourceHash": "a8c5ad63d1a32b2ca9340ad642fe3bc82e7e04813285d36187cbcc3e465028ae",
+    "kind": "implemented",
+    "claim": "The Rust SDK specification documents matching live access and signed authorization, handshake roles and how a matching authenticated peer key is needed for completion."
+  },
+  {
+    "id": "coming-soon-pos-bindings-link-setup-reference",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-ffi/README.md",
+    "startLine": 124,
+    "endLine": 129,
+    "excerpt": "### Private Links and Stream Processing\n\n- `PaykitSdk.initiateLinkWithPeer`, `acceptLinkWithPeer`, and\n  `advanceLinkHandshake` — establish Encrypted Links with counterparties.\n- `PaykitSdk.linkedPeers`, `blockPeer`, and `unblockPeer` — inspect and\n  manage local peer state.",
+    "sourceHash": "18a2e43ff58da31606f2213164cfbc4ac32955605805105d9dcc15d5660712c3",
+    "kind": "implemented",
+    "claim": "The Swift/Kotlin bindings README names distinct private-link initiation, acceptance and advancement methods."
+  },
+  {
+    "id": "coming-soon-deployment-gcs-object-storage",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-sdk/README.md",
+    "startLine": 637,
+    "endLine": 649,
+    "excerpt": "The supported minimum for shared-state deployments is **Homeserver 0.16.2 with\nGCS storage on every serving instance**; newer versions must preserve the same\nstorage guarantees. Paykit does not automatically verify server versions or\nstorage backends. Applications must verify the deployment before enabling\nshared-state recovery; unverified, user-selected homeservers are unsupported.\nUpdating the Pubky client does not upgrade the homeserver, and the `webdav-locks`\ncapability does not identify these guarantees.\nDrain pre-upgrade writes before rollout; mixed server versions are unsupported.\nEvery shared-state writer must use lock tokens, as this adapter does. Tokenless\nwrites and direct backend edits do not participate in this safety guarantee.\nThe GCS backend conditionally publishes and deletes by object generation after\nchecking the original SQL transaction is alive. Reads return one object version\nor fail. Filesystem storage is not supported for this shared-state guarantee.",
+    "sourceHash": "a2f34040c2cc77f24b7762165a94281596ed06a4ba84362612b89cd9b9328e92",
+    "kind": "application-responsibility",
+    "claim": "Shared state requires Homeserver 0.16.2+ with GCS object storage on every serving instance; filesystem storage is not supported and the operator must verify the deployed version and storage backend."
   }
 ]

@@ -4,7 +4,7 @@
     {
       "slug": "overview",
       "title": "What Paykit does",
-      "description": "Understand payment coordination, then run a safe local wallet or point-of-sale fixture.",
+      "description": "Understand payment coordination, then run a safe local wallet or point-of-sale demo.",
       "group": "Understand Paykit",
       "kind": "explanation",
       "sections": [
@@ -21,15 +21,15 @@
           ],
           "paragraphs": [
             "Paykit helps applications discover how a counterparty can receive payment and exchange payment-related messages over Pubky. A payment endpoint pairs an endpoint-type identifier with its receiving-detail payload; a rail is the payment system your application uses to act on it.",
-            "Paykit is not a wallet balance or settlement service. Your application retains funds, user authorization, rail execution and settlement checks. Start with a local fixture before adding identity, storage or network access."
+            "Paykit is not a wallet balance or settlement service. Your application retains funds, user authorization, rail execution and settlement checks. Start with a local demo before adding identity, storage or network access."
           ],
           "links": [
             {
-              "label": "Run the wallet fixture",
+              "label": "Run the wallet demo",
               "href": "/docs/coming-soon/wallets"
             },
             {
-              "label": "Run the point-of-sale fixture",
+              "label": "Run the point-of-sale demo",
               "href": "/docs/coming-soon/point-of-sale"
             }
           ]
@@ -49,7 +49,7 @@
           "list": [
             "paykit-lib: validated values, app-scoped public discovery and private protocol helpers. You manage sessions and durable state when using this layer directly.",
             "paykit-sdk: a stateful Rust runtime with storage, live-session and payment-adapter boundaries. Prefer this for a durable application rather than rebuilding request and link state.",
-            "paykit-ffi: Paykit uses UniFFI to generate bindings so Swift and Kotlin apps can call the Rust SDK. Binding availability is separate from a Rust crate version; the local Rust fixtures below do not exercise mobile bindings."
+            "paykit-ffi: Paykit uses UniFFI to generate bindings so Swift and Kotlin apps can call the Rust SDK. Binding availability is separate from a Rust crate version; the local Rust demos below do not exercise mobile bindings."
           ],
           "links": [
             {
@@ -72,7 +72,7 @@
         },
         {
           "id": "path",
-          "title": "From a fixture to an application",
+          "title": "From a demo to an application",
           "evidence": [
             "coming-soon-endpoint-read",
             "coming-soon-request-send",
@@ -242,7 +242,7 @@
           ],
           "paragraphs": [
             "The SDK includes read_payment_requests, which checks live identity status and reads one counterparty's request records in a bounded storage operation when live access is available. It checks the optional expected identity; without live access it reads only locally available identity metadata and returns no request records. The upstream signed-out test covers that empty-record behavior.",
-            "This read does not authorize payment or make later proof submission idempotent. Do not cache its result for payment checks or reuse it across a mutation. Earlier transaction commits survive a later error; only the documented outer-lock SharedStateBusy acquisition failure is a safe retry point, not every failure. This helper is not used by the local fixtures and is not a claim about the released API.",
+            "This read does not authorize payment or make later proof submission idempotent. Do not cache its result for payment checks or reuse it across a mutation. Earlier transaction commits survive a later error; only the documented outer-lock SharedStateBusy acquisition failure is a safe retry point, not every failure. This helper is not used by the local demos and is not a claim about the released API.",
             "For receipt history, issued_receipt reads and decrypts a locally issued receipt, including metadata, before Receipt Access delivery. Another app sharing the identity can read it; missing records return NotFound and blocked counterparties return Policy. This is local SDK state access, not proof that a peer received the receipt or that payment settled.",
             "Receipt issuance views derive AccessSent and AccessFailed from the matching outbound Receipt Access message; the durable issuance record remains AccessQueued. The FFI exposes these statuses and delivery-aware updated_at and last_error fields. These are source-inspected SDK/binding behaviors, not mobile or network tests performed by these tutorials."
           ],
@@ -327,7 +327,7 @@
           ],
           "paragraphs": [
             "For public discovery, the payee publishes app-scoped receiving details and the payer reads that app's PaymentList. The endpoint identifier says which method the payload describes; the payload wrapper does not validate an invoice or make it payable.",
-            "The payer must support the method and apply its own selection and risk policy. The wallet fixture demonstrates only this local map lookup, including the no-shared-rail case."
+            "The payer must support the method and apply its own selection and risk policy. The wallet demo demonstrates only this local map lookup, including the no-shared-rail case."
           ],
           "links": [
             {
@@ -355,7 +355,7 @@
           ],
           "paragraphs": [
             "For request-based coordination, establish an authorized Encrypted Link first. The payee proposes an amount, asset, reference and accepted payment methods. The payer reviews the request and can accept or reject it; low-level callers must enforce the sender roles.",
-            "Only the application can authorize a financial action. Its rail integration executes the payment and checks the outcome. The point-of-sale fixture stops before sending any private message."
+            "Only the application can authorize a financial action. Its rail integration executes the payment and checks the outcome. The point-of-sale demo stops before sending any private message."
           ],
           "links": [
             {
@@ -406,13 +406,17 @@
           ],
           "paragraphs": [
             "Public and private resolution are separate paths. A missing or recovering private link is not permission to expose a private payment through a public fallback. Request-bound endpoints further constrain the permitted destination; do not silently replace them.",
-            "If a current private list has already been consumed, use the SDK's freshness token and wait for updated details rather than submitting another payment against the same receiving data.",
+            "Your app decides when a private list has been used. Before submitting a payment that uses up the list, save its version from the payable result (private_payment_list_version). Next time you look up the same peer in the same SDK state, pass that value as after_private_payment_list_version. WaitingForUpdatedPaymentList means the SDK found no newer list and returned no payable endpoints. Wait for new details; do not resend the payment or switch to public discovery.",
             "For received requests, resolve_public_payment_request returns Policy for a blocked counterparty and rechecks the block around public-provider and adapter calls. Plain resolve_public_contact_payment deliberately ignores Linked Peer state. Calls already in flight are not recalled, and reads inside one App's Payment List are not interrupted; do not treat this as cancellation of every public read."
           ],
           "links": [
             {
               "label": "Review recovery and responsibility limits",
               "href": "/docs/coming-soon/boundaries"
+            },
+            {
+              "label": "Rust SDK: how to check for newer private payment details",
+              "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-sdk/src/runtime/payment_resolution.rs#L297-L347"
             }
           ]
         }
@@ -491,11 +495,18 @@
           "title": "A production shared-state prerequisite",
           "evidence": [
             "coming-soon-storage-contract",
-            "coming-soon-shared-state"
+            "coming-soon-shared-state",
+            "coming-soon-deployment-gcs-object-storage"
           ],
           "paragraphs": [
-            "PubkySharedStateStorage requires every serving homeserver instance to run 0.16.2 or newer with GCS storage. Its source explicitly says server versions and backends are not checked automatically. Verify the deployment independently; a Rust dependency upgrade or WebDAV-lock support alone does not establish compatibility.",
+            "For Paykit shared state, verify that every serving homeserver runs version 0.16.2 or newer and uses the GCS object-storage backend, not filesystem storage. Paykit does not check the server version or storage backend for you. Upgrading the Rust dependency or seeing WebDAV-lock support does not establish compatibility.",
             "All participating writers must use lock tokens and pre-upgrade writes must be drained before rollout. Separate device-local blobs do not satisfy the shared-identity contract. Failed or unconfirmed state publication can leave recovery pending; never replace a failed load with empty state just to proceed."
+          ],
+          "links": [
+            {
+              "label": "Paykit SDK: which homeserver version and storage backend to verify",
+              "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-sdk/README.md#L637-L649"
+            }
           ]
         },
         {
@@ -509,18 +520,18 @@
             "coming-soon-adapter-boundary"
           ],
           "list": [
-            "The wallet fixture uses an in-memory endpoint map, not live discovery. Its payload is deliberately not a payable invoice.",
-            "The point-of-sale fixture validates and parses local terms. It opens no encrypted link, negotiates no conversion and settles no order.",
+            "The wallet demo uses an in-memory endpoint map, not live discovery. Its payload is deliberately not a payable invoice.",
+            "The point-of-sale demo validates and parses local terms. It opens no encrypted link, negotiates no conversion and settles no order.",
             "Decimal/asset syntax validation does not establish asset precision, an exchange rate, economic correctness or counterparty capability.",
-            "The pinned implementation and test sources were inspected, not executed for this refresh. No SDK, fixture, mobile-binding or live-network run is claimed; these pages are not a security audit or proof of your deployment."
+            "The pinned implementation and test sources were inspected, not executed for this refresh. No SDK, demo, mobile-binding or live-network run is claimed; these pages are not a security audit or proof of your deployment."
           ],
           "links": [
             {
-              "label": "Wallet fixture and integration checklist",
+              "label": "Wallet demo and integration checklist",
               "href": "/docs/coming-soon/wallets"
             },
             {
-              "label": "Point-of-sale fixture and integration checklist",
+              "label": "Point-of-sale demo and integration checklist",
               "href": "/docs/coming-soon/point-of-sale"
             }
           ]
@@ -534,7 +545,7 @@
           ],
           "paragraphs": [
             "The specs/v0.2 folder is a review candidate for a redesigned transport and coordination model. Its README says the design is not frozen, adds no code and leaves v0.1 as the current protocol.",
-            "Do not read those proposed guarantees into this development snapshot. The source-pinned fixtures and the implemented SDK remain the basis of these pages; there is no shipping promise for the redesign."
+            "Do not read those proposed guarantees into this development snapshot. The source-pinned demos and the implemented SDK remain the basis of these pages; there is no shipping promise for the redesign."
           ]
         }
       ],
@@ -570,7 +581,7 @@
       "sections": [
         {
           "id": "outcome",
-          "title": "The outcome is a local fixture",
+          "title": "What the local demo shows",
           "evidence": [
             "coming-soon-app-scope",
             "coming-soon-endpoint-id",
@@ -579,12 +590,12 @@
           ],
           "paragraphs": [
             "Choose a known endpoint type from an in-memory PaymentList and handle an unsupported method without sending a payment.",
-            "Use no real funds, production credentials or live payment targets. Building may download toolchain and dependency files; running this fixture makes no Pubky discovery request and sends no payment."
+            "Use no real funds, production credentials or live payment targets. Building may download toolchain and dependency files; running this demo makes no Pubky discovery request and sends no payment."
           ]
         },
         {
           "id": "prerequisites",
-          "title": "1. Prepare and download the fixture",
+          "title": "1. Prepare and download the demo",
           "evidence": [
             "coming-soon-lib-package"
           ],
@@ -595,7 +606,7 @@
           ],
           "links": [
             {
-              "label": "Download the wallet fixture for this version",
+              "label": "Download the wallet demo for this version",
               "href": "/docs-examples/coming-soon/paykit-wallet-coming-soon.tar.gz"
             }
           ]
@@ -618,13 +629,13 @@
             {
               "language": "bash",
               "code": "tar -xzf paykit-wallet-coming-soon.tar.gz\ncd paykit-wallet-demo\ncargo run --locked",
-              "caption": "Run the complete downloaded fixture."
+              "caption": "Run the downloaded demo."
             }
           ]
         },
         {
           "id": "code",
-          "title": "3. Read the dependency and the complete small fixture",
+          "title": "3. Read the dependency and the demo code",
           "evidence": [
             "coming-soon-app-scope",
             "coming-soon-endpoint-id",
@@ -643,7 +654,7 @@
             {
               "language": "rust",
               "artifact": "wallet/src/main.rs",
-              "caption": "Complete local fixture; no network integration is opened."
+              "caption": "Complete local demo; no network integration is opened."
             }
           ]
         },
@@ -656,7 +667,7 @@
             "coming-soon-payload-list"
           ],
           "paragraphs": [
-            "This is the expected result when you run the fixture, not an execution report from this refresh. A successful run should exit with status 0 after all assertions pass. Cargo may print download or compilation messages separately; expected program stdout is:"
+            "This is the expected result when you run the demo, not an execution report from this refresh. A successful run should exit with status 0 after all assertions pass. Cargo may print download or compilation messages separately; expected program stdout is:"
           ],
           "code": [
             {
@@ -695,10 +706,10 @@
             "tar reports a missing file: download this version's archive first, keep its filename unchanged and run extraction from the download directory.",
             "cargo or rustup is missing, or Rust 1.91.1 cannot be selected: install/repair rustup, then rerun inside the extracted directory so rust-toolchain.toml is discovered.",
             "A compiler, linker or pkg-config error appears: install the missing build prerequisite. A dependency or toolchain download error needs working network access, not payment credentials.",
-            "Cargo says the lock file needs updating: use a fresh extraction and cargo run --locked. Do not delete the lock, loosen the version or switch to a floating branch to make the fixture pass.",
+            "Cargo says the lock file needs updating: use a fresh extraction and cargo run --locked. Do not delete the lock, loosen the version or switch to a floating branch to make the demo pass.",
             "No shared rail in your own data: compare the exact endpoint identifiers with your supported set. A wrapped payload is not proof that your backend can pay it.",
-            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local fixture.",
-            "If a clean extraction repeats the problem, use the linked public upstream issue tracker to report a minimal reproduction. Identify this documentation page and its fixture archive URL/version, the exact error and expected result, Rust/Cargo versions, and operating system/architecture. Say whether you suspect an upstream library problem or a docs/fixture packaging problem; do not assume upstream owns this archive or guarantees support. Share only non-sensitive diagnostics: remove keys, session/auth material, backups, private messages, endpoint payloads and payment secrets."
+            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local demo.",
+            "If a clean extraction repeats the problem, use the linked public upstream issue tracker to report a minimal reproduction. Identify this documentation page and its demo archive URL/version, the exact error and expected result, Rust/Cargo versions, and operating system/architecture. Say whether you suspect an upstream library problem or a documentation or demo packaging problem; do not assume upstream owns this archive or guarantees support. Share only non-sensitive diagnostics: remove keys, session/auth material, backups, private messages, endpoint payloads and payment secrets."
           ],
           "links": [
             {
@@ -709,7 +720,7 @@
         },
         {
           "id": "integrate",
-          "title": "Next: replace the fixture with real discovery",
+          "title": "Next: replace the demo with real discovery",
           "evidence": [
             "coming-soon-endpoint-read",
             "coming-soon-read-budget",
@@ -726,7 +737,7 @@
             "Direct read-only lookup with paykit-lib: obtain the payee identity and app ID through your product flow, then call get_payment_list with PublicStorage rather than populating the map by hand. Keep client timeouts and fetch budgets explicit.",
             "Durable resolution with paykit-sdk: use resolve_public_contact_payment for the payee's public endpoints or resolve_private_contact_payment for private lists. Keep that choice explicit: private failure is not public fallback permission.",
             "Publish your own app and public endpoints: construct paykit-sdk with shared storage, a live-session provider and your payment adapter. Restore any backup before app publication. Enroll the app with publish_paykit_app; sync_public_endpoints publishes your adapter's receiving details.",
-            "Replace the fixture payload and lookup policy with rail-specific target validation, user authorization, durable execution intent and settlement checks. Verify shared-state deployment requirements before multi-app use."
+            "Replace the demo payload and lookup policy with rail-specific target validation, user authorization, durable execution intent and settlement checks. Verify shared-state deployment requirements before multi-app use."
           ],
           "links": [
             {
@@ -772,7 +783,7 @@
       "sections": [
         {
           "id": "outcome",
-          "title": "The outcome is a local fixture",
+          "title": "What the local demo shows",
           "evidence": [
             "coming-soon-app-scope",
             "coming-soon-event-id",
@@ -794,12 +805,12 @@
           ],
           "paragraphs": [
             "Build one-time payment request terms and assert that serialization and parsing preserve the typed event and request ID.",
-            "Use no real funds, production credentials or live payment targets. Building may download toolchain and dependency files; running this fixture makes no Pubky discovery request and sends no payment."
+            "Use no real funds, production credentials or live payment targets. Building may download toolchain and dependency files; running this demo makes no Pubky discovery request and sends no payment."
           ]
         },
         {
           "id": "prerequisites",
-          "title": "1. Prepare and download the fixture",
+          "title": "1. Prepare and download the demo",
           "evidence": [
             "coming-soon-lib-package"
           ],
@@ -810,7 +821,7 @@
           ],
           "links": [
             {
-              "label": "Download the point-of-sale fixture for this version",
+              "label": "Download the point-of-sale demo for this version",
               "href": "/docs-examples/coming-soon/paykit-point-of-sale-coming-soon.tar.gz"
             }
           ]
@@ -846,13 +857,13 @@
             {
               "language": "bash",
               "code": "tar -xzf paykit-point-of-sale-coming-soon.tar.gz\ncd paykit-point-of-sale-demo\ncargo run --locked",
-              "caption": "Run the complete downloaded fixture."
+              "caption": "Run the downloaded demo."
             }
           ]
         },
         {
           "id": "code",
-          "title": "3. Read the dependency and the complete small fixture",
+          "title": "3. Read the dependency and the demo code",
           "evidence": [
             "coming-soon-app-scope",
             "coming-soon-event-id",
@@ -873,7 +884,7 @@
             "coming-soon-lib-package"
           ],
           "paragraphs": [
-            "The example amount 10.00 usd is protocol data, not a Lightning invoice or conversion quote. The fixture rejects ten as an amount, builds a one-time request, serializes it, then supplies that JSON to a local receive item and checks the parsed event and request ID."
+            "The example amount 10.00 usd is protocol data, not a Lightning invoice or conversion quote. The demo rejects ten as an amount, builds a one-time request, serializes it, then supplies that JSON to a local receive item and checks the parsed event and request ID."
           ],
           "code": [
             {
@@ -884,7 +895,7 @@
             {
               "language": "rust",
               "artifact": "point-of-sale/src/main.rs",
-              "caption": "Complete local fixture; no network integration is opened."
+              "caption": "Complete local demo; no network integration is opened."
             }
           ]
         },
@@ -910,7 +921,7 @@
             "coming-soon-roundtrip-test"
           ],
           "paragraphs": [
-            "This is the expected result when you run the fixture, not an execution report from this refresh. A successful run should exit with status 0 after all assertions pass. Cargo may print download or compilation messages separately; expected program stdout is:"
+            "This is the expected result when you run the demo, not an execution report from this refresh. A successful run should exit with status 0 after all assertions pass. Cargo may print download or compilation messages separately; expected program stdout is:"
           ],
           "code": [
             {
@@ -976,10 +987,10 @@
             "tar reports a missing file: download this version's archive first, keep its filename unchanged and run extraction from the download directory.",
             "cargo or rustup is missing, or Rust 1.91.1 cannot be selected: install/repair rustup, then rerun inside the extracted directory so rust-toolchain.toml is discovered.",
             "A compiler, linker or pkg-config error appears: install the missing build prerequisite. A dependency or toolchain download error needs working network access, not payment credentials.",
-            "Cargo says the lock file needs updating: use a fresh extraction and cargo run --locked. Do not delete the lock, loosen the version or switch to a floating branch to make the fixture pass.",
+            "Cargo says the lock file needs updating: use a fresh extraction and cargo run --locked. Do not delete the lock, loosen the version or switch to a floating branch to make the demo pass.",
             "The request parser returns None: it is not a recognized request-event kind. A recognized result with is_valid false still needs rejection/error handling; dispatch alone does not validate its body.",
-            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local fixture.",
-            "If a clean extraction repeats the problem, use the linked public upstream issue tracker to report a minimal reproduction. Identify this documentation page and its fixture archive URL/version, the exact error and expected result, Rust/Cargo versions, and operating system/architecture. Say whether you suspect an upstream library problem or a docs/fixture packaging problem; do not assume upstream owns this archive or guarantees support. Share only non-sensitive diagnostics: remove keys, session/auth material, backups, private messages, endpoint payloads and payment secrets."
+            "An assertion fails or stdout differs: retain the error and the archive version, then retry a clean extraction. Do not supply real funds or credentials to repair a local demo.",
+            "If a clean extraction repeats the problem, use the linked public upstream issue tracker to report a minimal reproduction. Identify this documentation page and its demo archive URL/version, the exact error and expected result, Rust/Cargo versions, and operating system/architecture. Say whether you suspect an upstream library problem or a documentation or demo packaging problem; do not assume upstream owns this archive or guarantees support. Share only non-sensitive diagnostics: remove keys, session/auth material, backups, private messages, endpoint payloads and payment secrets."
           ],
           "links": [
             {
@@ -1005,11 +1016,14 @@
             "coming-soon-local-proof-reducer",
             "coming-soon-local-acceptance-test",
             "coming-soon-local-proof-test",
-            "coming-soon-propose"
+            "coming-soon-propose",
+            "coming-soon-pos-start-encrypted-link",
+            "coming-soon-pos-rust-link-setup-reference",
+            "coming-soon-pos-bindings-link-setup-reference"
           ],
           "list": [
-            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities, then establish an authenticated private link before trying to deliver requests.",
-            "Persist the order reference, exact terms, counterparty and a newly generated request ID before proposing. Retry propose_payment_request_with_id only as the same creating App and identity with the same values and retained shared Event Message history. After state deletion or a pre-creation backup restore, reconcile order and execution records first; the saved ID alone does not prevent duplicates. Never reuse the fixture's fixed ID across real orders.",
+            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, start with initiate_link_with_peer. Wait until the handshake completes before trying to deliver requests.",
+            "Persist the order reference, exact terms, counterparty and a newly generated request ID before proposing. Retry propose_payment_request_with_id only as the same creating App and identity with the same values and retained shared Event Message history. After state deletion or a pre-creation backup restore, reconcile order and execution records first; the saved ID alone does not prevent duplicates. Never reuse the demo's fixed ID across real orders.",
             "Define your own asset precision and conversion policy. The example usd amount and Lightning method do not establish conversion support or a payable destination.",
             "Track local queue and request state separately from delivery and payment state. The payer uses request-constrained resolution; acceptance or ProofSubmitted is not permission for the merchant to release goods.",
             "Bind method-specific proof to the order and request, and independently validate the rail outcome before marking an order paid."
@@ -1022,6 +1036,14 @@
             {
               "label": "Review the request interaction",
               "href": "/docs/coming-soon/flows"
+            },
+            {
+              "label": "Rust SDK: establish an encrypted link",
+              "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/specs/paykit-sdk.md#establish-encrypted-link"
+            },
+            {
+              "label": "Swift and Kotlin: set up and advance private links",
+              "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-ffi/README.md#private-links-and-stream-processing"
             }
           ],
           "paragraphs": [
@@ -1153,7 +1175,7 @@
           ],
           "links": [
             {
-              "label": "See the request and event identifiers in the local fixture",
+              "label": "See the request and event identifiers in the local demo",
               "href": "/docs/coming-soon/point-of-sale#code"
             }
           ]
@@ -1247,7 +1269,7 @@
           ],
           "links": [
             {
-              "label": "Read the fixture amount and its limits",
+              "label": "Read the demo amount and its limits",
               "href": "/docs/coming-soon/point-of-sale#code"
             }
           ]
@@ -1303,7 +1325,7 @@
           ],
           "links": [
             {
-              "label": "Read the local PaymentList fixture",
+              "label": "Read the local PaymentList demo",
               "href": "/docs/coming-soon/wallets#code"
             }
           ]
@@ -3518,6 +3540,54 @@
       "sourceHash": "a5ab5e725bff728602af8456d784df8c93a1a4470db6d7e14644f62e75e5dd9d",
       "kind": "implemented",
       "claim": "The implemented authorizer takes separate Pubky identity and Paykit key material, validates their derivation relation, and signs authorization using the Pubky identity keypair and derived Noise secret."
+    },
+    {
+      "id": "coming-soon-pos-start-encrypted-link",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-sdk/src/runtime/encrypted_links.rs",
+      "startLine": 515,
+      "endLine": 540,
+      "excerpt": "    /// Start an Encrypted Link Handshake as the initiator.\n    pub async fn initiate_link_with_peer(\n        &self,\n        counterparty: PubkyPublicKey,\n    ) -> Result<LinkedPeerHandshakeReport> {\n        self.start_link_handshake(counterparty, EncryptedLinkHandshakeRole::Initiator)\n            .await\n    }\n\n    /// Start an Encrypted Link Handshake as the responder.\n    pub async fn accept_link_with_peer(\n        &self,\n        counterparty: PubkyPublicKey,\n    ) -> Result<LinkedPeerHandshakeReport> {\n        self.start_link_handshake(counterparty, EncryptedLinkHandshakeRole::Responder)\n            .await\n    }\n\n    /// Advance the stored Encrypted Link Handshake for one counterparty.\n    ///\n    /// An idle handshake is probed without taking a peer lease or rewriting state.\n    /// Available work is reloaded and validated under the ordinary lease.\n    pub async fn advance_link_handshake(\n        &self,\n        counterparty: PubkyPublicKey,\n    ) -> Result<LinkedPeerHandshakeReport> {",
+      "sourceHash": "9265e8ee38ecf47ef700f259df15a25321de110baee6d568a9dc8618ce067c41",
+      "kind": "implemented",
+      "claim": "The Rust SDK separates initiation, acceptance and advancement of an Encrypted Link handshake. Starting is not a completed, authenticated link."
+    },
+    {
+      "id": "coming-soon-pos-rust-link-setup-reference",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "specs/paykit-sdk.md",
+      "startLine": 1272,
+      "endLine": 1295,
+      "excerpt": "### Establish Encrypted Link\n\n1. Require matching live session access and local routing/static keys and\n   generation matching the identity's current signed authorization.\n2. Fetch and verify peer authorization, check its owner and generation pin,\n   persist it, and use its signed routing key, never the App Registry key.\n3. Start an initiator or responder Encrypted Link Handshake through\n   `paykit-lib`.\n4. Persist the handshake snapshot, role, and `linking` peer state.\n5. Advance the stored handshake on retry/poll cycles, checking the peer's\n   authenticated X25519 static key against the signed record whenever available.\n6. When the handshake is pending, replace the stored handshake snapshot.\n7. Completion requires a matching static key before persisting the active link\n   snapshot, clearing the handshake snapshot/role, and marking the peer `linked`.\n8. On restore, repeat local authorization and peer fetch/verify/pin checks.\n   Require the snapshot's routing key and any authenticated peer static key to\n   match; completed links require the static key before send or receive.\n   Snapshot validity alone is not identity authorization.\n9. Failed snapshot restore or protocol/key mismatch requires peer recovery and\n   stops private automation. Transient advancement failures may remain `linking`\n   for retry.\n\nEvery Encrypted Link setup, send, and receive operation fetches current\nauthorization; retained pins are not a substitute for this check.",
+      "sourceHash": "a8c5ad63d1a32b2ca9340ad642fe3bc82e7e04813285d36187cbcc3e465028ae",
+      "kind": "implemented",
+      "claim": "The Rust SDK specification documents matching live access and signed authorization, handshake roles and how a matching authenticated peer key is needed for completion."
+    },
+    {
+      "id": "coming-soon-pos-bindings-link-setup-reference",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-ffi/README.md",
+      "startLine": 124,
+      "endLine": 129,
+      "excerpt": "### Private Links and Stream Processing\n\n- `PaykitSdk.initiateLinkWithPeer`, `acceptLinkWithPeer`, and\n  `advanceLinkHandshake` — establish Encrypted Links with counterparties.\n- `PaykitSdk.linkedPeers`, `blockPeer`, and `unblockPeer` — inspect and\n  manage local peer state.",
+      "sourceHash": "18a2e43ff58da31606f2213164cfbc4ac32955605805105d9dcc15d5660712c3",
+      "kind": "implemented",
+      "claim": "The Swift/Kotlin bindings README names distinct private-link initiation, acceptance and advancement methods."
+    },
+    {
+      "id": "coming-soon-deployment-gcs-object-storage",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-sdk/README.md",
+      "startLine": 637,
+      "endLine": 649,
+      "excerpt": "The supported minimum for shared-state deployments is **Homeserver 0.16.2 with\nGCS storage on every serving instance**; newer versions must preserve the same\nstorage guarantees. Paykit does not automatically verify server versions or\nstorage backends. Applications must verify the deployment before enabling\nshared-state recovery; unverified, user-selected homeservers are unsupported.\nUpdating the Pubky client does not upgrade the homeserver, and the `webdav-locks`\ncapability does not identify these guarantees.\nDrain pre-upgrade writes before rollout; mixed server versions are unsupported.\nEvery shared-state writer must use lock tokens, as this adapter does. Tokenless\nwrites and direct backend edits do not participate in this safety guarantee.\nThe GCS backend conditionally publishes and deletes by object generation after\nchecking the original SQL transaction is alive. Reads return one object version\nor fail. Filesystem storage is not supported for this shared-state guarantee.",
+      "sourceHash": "a2f34040c2cc77f24b7762165a94281596ed06a4ba84362612b89cd9b9328e92",
+      "kind": "application-responsibility",
+      "claim": "Shared state requires Homeserver 0.16.2+ with GCS object storage on every serving instance; filesystem storage is not supported and the operator must verify the deployed version and storage backend."
     }
   ],
   "diagrams": [
