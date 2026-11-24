@@ -741,12 +741,16 @@
             "coming-soon-wallet-registry-first-public-read",
             "coming-soon-wallet-registry-default-references",
             "coming-soon-wallet-registry-default-membership",
-            "coming-soon-wallet-public-list-empty-or-invalid"
+            "coming-soon-wallet-public-list-empty-or-invalid",
+            "coming-soon-public-resolution-code",
+            "coming-soon-wallet-registry-default-preference",
+            "coming-soon-wallet-request-public-app-loading",
+            "coming-soon-wallet-public-adapter-selection"
           ],
           "list": [
             "Direct read-only lookup with paykit-lib: call get_payment_list with the PublicStorage handle from your Pubky client (public_storage()), the payee’s Pubky public key, and the App ID of the app that published the receiving details under that key. Keep client timeouts and fetch budgets explicit.",
-            "If you only have the payee’s Pubky public key, call `get_paykit_app_registry` with `PublicStorage` and that key to see registered App IDs before your app chooses which App ID to pass to `get_payment_list`. The registry may be absent or list several apps; a registration or default doesn’t guarantee a usable endpoint.",
-            "Durable resolution with paykit-sdk: use resolve_public_contact_payment for the payee's public endpoints or resolve_private_contact_payment for private lists. Keep that choice explicit: private failure is not public fallback permission.",
+            "If you only have the payee’s Pubky public key, call `get_paykit_app_registry` with `PublicStorage` and that key to see registered App IDs before your app chooses which App ID to pass to `get_payment_list`. The registry may be absent or list several apps; a registration or default doesn’t guarantee a usable endpoint. A registry default is a preference, not a way to identify the intended checkout.",
+            "Durable resolution with paykit-sdk: use resolve_public_contact_payment for the payee's public endpoints or resolve_private_contact_payment for private lists. Keep that choice explicit: private failure is not public fallback permission. If an actionable received Payment Request requires a payee App ID and has no bound endpoints, use `resolve_public_payment_request` (linked below): it considers public endpoints only from that app. If the request doesn’t require an App ID, your app chooses from the eligible endpoints.",
             "Publish your own app and public endpoints: construct paykit-sdk with shared storage, a live-session provider and your payment adapter. Restore any backup before app publication. Enroll the app with publish_paykit_app; sync_public_endpoints publishes your adapter's receiving details.",
             "Replace the demo payload and lookup policy with rail-specific target validation, user authorization, durable execution intent and settlement checks. Verify shared-state deployment requirements before multi-app use."
           ],
@@ -758,6 +762,10 @@
             {
               "label": "Public App Registry lookup: get_paykit_app_registry",
               "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-lib/src/app_registry.rs#L485-L503"
+            },
+            {
+              "label": "Rust SDK: resolve_public_payment_request",
+              "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/paykit-sdk/src/runtime/payment_resolution.rs#L711-L736"
             },
             {
               "label": "Choose the application adapters",
@@ -1047,10 +1055,13 @@
             "coming-soon-pos-manual-handshake-poll-spec",
             "coming-soon-pos-manual-handshake-advance-idle",
             "coming-soon-pos-manual-handshake-idle-pending",
-            "coming-soon-pos-manual-handshake-pending-linking"
+            "coming-soon-pos-manual-handshake-pending-linking",
+            "coming-soon-pos-manual-handshake-wait-policy",
+            "coming-soon-pos-handshake-error-and-recovery-state",
+            "coming-soon-pos-encrypted-link-recovery-reference"
           ],
           "list": [
-            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, call initiate_link_with_peer with the counterparty’s Pubky public key (PubkyPublicKey), not an App ID or a Noise key. For that same peer, use advance_link_handshake to advance the Rust handshake. A successful report with state LinkedPeerState::Linked means the handshake is complete locally; Linking means it’s still in progress. If your app drives the handshake manually and a successful report still says `Linking`, call `advance_link_handshake` again for the same peer on your app’s next poll. Link completion does not mean a request was delivered.",
+            "Use paykit-sdk with live Pubky access, durable shared state and a payment adapter. Restore any backup before app publication. Publish identity-signed Noise key authorization before publishing private app capabilities with publish_paykit_app. If your Rust app initiates a new encrypted link, call initiate_link_with_peer with the counterparty’s Pubky public key (PubkyPublicKey), not an App ID or a Noise key. For that same peer, use advance_link_handshake to advance the Rust handshake. A successful report with state LinkedPeerState::Linked means the handshake is complete locally. If your app polls manually, it decides how long to wait. A successful `Linking` report is still pending; if your app keeps polling, call `advance_link_handshake` again for the same peer on the next poll. Handle errors separately. If the SDK marks the peer `RecoveryRequired`, see the Encrypted Link recovery reference below. Link completion does not mean a request was delivered.",
             "Persist the order reference, exact terms, counterparty and a newly generated request ID before proposing. Retry propose_payment_request_with_id only as the same creating App and identity with the same values and retained shared Event Message history. After state deletion or a pre-creation backup restore, reconcile order and execution records first; the saved ID alone does not prevent duplicates. Never reuse the demo's fixed ID across real orders.",
             "Define your own asset precision and conversion policy. The example usd amount and Lightning method do not establish conversion support or a payable destination.",
             "Track local queue and request state separately from delivery and payment state. The payer uses request-constrained resolution; acceptance or ProofSubmitted is not permission for the merchant to release goods.",
@@ -1068,6 +1079,10 @@
             {
               "label": "Rust SDK: encrypted-link handshake and completion",
               "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/specs/paykit-sdk.md#establish-encrypted-link"
+            },
+            {
+              "label": "Rust SDK: Encrypted Link recovery (RecoveryRequired)",
+              "href": "https://github.com/pubky/paykit-rs/blob/0b9c63d25dbd0cd5e7cf6ec577bc170732d350be/specs/paykit-sdk.md#encrypted-link-recovery-markers"
             },
             {
               "label": "Swift and Kotlin: set up and advance private links",
@@ -3808,6 +3823,78 @@
       "sourceHash": "9265e8ee38ecf47ef700f259df15a25321de110baee6d568a9dc8618ce067c41",
       "kind": "implemented",
       "claim": "The pending checkpoint report contains the same counterparty and the Linking state."
+    },
+    {
+      "id": "coming-soon-wallet-registry-default-preference",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-lib/src/app_registry.rs",
+      "startLine": 184,
+      "endLine": 195,
+      "excerpt": "    /// Return the preferred application for one Payment Endpoint Identifier.\n    ///\n    /// An endpoint-specific default takes precedence over the identity-wide\n    /// default application.\n    pub fn preferred_app_for_endpoint(\n        &self,\n        identifier: &PaymentEndpointIdentifier,\n    ) -> Option<&PaykitAppId> {\n        self.default_apps_by_endpoint\n            .get(identifier)\n            .or(self.default_app_id.as_ref())\n    }",
+      "sourceHash": "45c5a505a6d46016ebe975f8cc331eabdbf14ec94ae833430b4feb1247534d86",
+      "kind": "implemented",
+      "claim": "The registry preference helper returns the endpoint-specific default or the identity-wide default. It takes an endpoint identifier, not a checkout or Payment Request."
+    },
+    {
+      "id": "coming-soon-wallet-request-public-app-loading",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-sdk/src/runtime/payment_resolution.rs",
+      "startLine": 1274,
+      "endLine": 1300,
+      "excerpt": "        let public_key = counterparty.to_public_key()?;\n        let Some(registry) =\n            paykit_lib::get_paykit_app_registry(&public_storage, &public_key).await?\n        else {\n            return Ok(PublicPaymentCandidateLoad::default());\n        };\n        let loaded = load_public_payment_lists_with_budget(\n            public_app_load_order(&registry, required_app_id),\n            // A block can land during the App Registry read or an earlier\n            // Payment List read. Nothing further starts once it is observed.\n            || self.ensure_peer_not_blocked_if(refuse_blocked_counterparty, counterparty),\n            |app_id,\n             mut remaining_endpoints,\n             mut remaining_requests,\n             mut remaining_payload_bytes| {\n                let public_storage = &public_storage;\n                let public_key = &public_key;\n                async move {\n                    let result = paykit_lib::get_payment_list_with_budget(\n                        public_storage,\n                        public_key,\n                        &app_id,\n                        &mut remaining_endpoints,\n                        &mut remaining_requests,\n                        &mut remaining_payload_bytes,\n                    )\n                    .await;",
+      "sourceHash": "4e522f061f254f833a010fe3e6ebf5f14ee14d51868456ff46ab9ce7b2824ed7",
+      "kind": "implemented",
+      "claim": "Public candidate loading passes the required payee App ID to the app-order helper before reading the resulting individual app lists."
+    },
+    {
+      "id": "coming-soon-wallet-public-adapter-selection",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-sdk/src/runtime/payment_resolution.rs",
+      "startLine": 1419,
+      "endLine": 1435,
+      "excerpt": "        let selected = self\n            .payment\n            .select_public_payment_endpoints(&PublicPaymentEndpointSelectionRequest {\n                counterparty: counterparty.clone(),\n                amount,\n                candidates: candidates.clone(),\n            })\n            .await;\n        // Adapter work already in flight cannot be recalled without\n        // serializing against `block_peer`. Once a block is observed, no\n        // target is built and no result is returned, and the block outranks\n        // a selection error.\n        self.ensure_peer_not_blocked_if(refuse_blocked_counterparty, &counterparty)\n            .await?;\n        let payable = public_payable_from_batch(&selected?, &candidates)?;\n        let payable_endpoints = self\n            .build_public_payable_endpoints(payable, refuse_blocked_counterparty, &counterparty)",
+      "sourceHash": "4e522f061f254f833a010fe3e6ebf5f14ee14d51868456ff46ab9ce7b2824ed7",
+      "kind": "application-responsibility",
+      "claim": "The SDK hands the eligible public candidates to the application payment adapter for selection, then builds targets from its payable selections."
+    },
+    {
+      "id": "coming-soon-pos-manual-handshake-wait-policy",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-sdk/src/runtime/encrypted_links.rs",
+      "startLine": 578,
+      "endLine": 583,
+      "excerpt": "    /// Cancel one local pending Encrypted Link Handshake.\n    ///\n    /// Cancellation is local-only: no remote notification is sent. It persists\n    /// a generation fence, clears buffered work from the cancelled attempt, and\n    /// leaves late packets unable to revive that attempt after restart. Pending\n    /// handshakes do not expire automatically; callers cancel them explicitly.",
+      "sourceHash": "9265e8ee38ecf47ef700f259df15a25321de110baee6d568a9dc8618ce067c41",
+      "kind": "application-responsibility",
+      "claim": "The SDK does not automatically expire a pending handshake. In manual polling the application decides how long to keep waiting; the pending state is not an SDK wait deadline."
+    },
+    {
+      "id": "coming-soon-pos-handshake-error-and-recovery-state",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "paykit-sdk/src/runtime/encrypted_links.rs",
+      "startLine": 2333,
+      "endLine": 2357,
+      "excerpt": "            match drift {\n                \"idle\" => assert_eq!(result.unwrap().unwrap(), source.report()),\n                \"protocol\" => assert!(matches!(result, Ok(Err(PaykitSdkError::Protocol { .. })))),\n                \"transport\" => assert!(\n                    matches!(result, Ok(Err(PaykitSdkError::Transport { context, .. })) if context == \"handshake PUT failed\")\n                ),\n                \"save-rejected\" => {\n                    assert!(matches!(result, Err(PaykitSdkError::Transport { .. })));\n                    assert_eq!(source.peer, baseline.linked_peers[&counterparty]);\n                    assert_eq!(source.state, baseline.encrypted_link_states[&counterparty]);\n                }\n                _ => assert!(matches!(\n                    result,\n                    Err(PaykitSdkError::ConcurrentUpdate { .. })\n                )),\n            }\n            let after = storage.snapshot().unwrap();\n            if drift == \"protocol\" {\n                assert_eq!(\n                    after.linked_peers[&counterparty].state,\n                    LinkedPeerState::RecoveryRequired\n                );\n            } else {\n                assert_eq!(after, current, \"{drift}\");\n            }",
+      "sourceHash": "9265e8ee38ecf47ef700f259df15a25321de110baee6d568a9dc8618ce067c41",
+      "kind": "implemented",
+      "claim": "The frozen SDK test distinguishes an idle success report from protocol, transport and concurrent-update errors, and checks that the protocol case persists LinkedPeerState::RecoveryRequired while the other cases leave the checked state unchanged."
+    },
+    {
+      "id": "coming-soon-pos-encrypted-link-recovery-reference",
+      "version": "coming-soon",
+      "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+      "path": "specs/paykit-sdk.md",
+      "startLine": 1297,
+      "endLine": 1303,
+      "excerpt": "### Encrypted Link Recovery Markers\n\nWhen one side can no longer trust its local Encrypted Link state, the SDK fails\nclosed locally and publishes an Encrypted Link Recovery Marker through Pubky\npublic storage when matching live session access is available. The marker is\nnot sent over the broken link. Its attempt ID also identifies the peer's current\nstream generation, so the marker remains published after recovery completes.",
+      "sourceHash": "a8c5ad63d1a32b2ca9340ad642fe3bc82e7e04813285d36187cbcc3e465028ae",
+      "kind": "proposed",
+      "claim": "The linked SDK specification section describes Encrypted Link recovery markers when local state cannot be trusted; it is a recovery reference, not a manual-poll timeout."
     }
   ],
   "diagrams": [
