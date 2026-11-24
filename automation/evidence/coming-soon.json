@@ -2126,5 +2126,17 @@
     "sourceHash": "a8c5ad63d1a32b2ca9340ad642fe3bc82e7e04813285d36187cbcc3e465028ae",
     "kind": "proposed",
     "claim": "The linked SDK specification section describes Encrypted Link recovery markers when local state cannot be trusted; it is a recovery reference, not a manual-poll timeout."
+  },
+  {
+    "id": "coming-soon-wallet-bound-request-private-resolver",
+    "version": "coming-soon",
+    "commit": "0b9c63d25dbd0cd5e7cf6ec577bc170732d350be",
+    "path": "paykit-sdk/src/runtime/payment_resolution.rs",
+    "startLine": 326,
+    "endLine": 338,
+    "excerpt": "    /// Resolve private endpoints permitted by an actionable received Payment Request.\n    ///\n    /// The request amount is passed to the payment adapter. Candidates are\n    /// restricted to the request's accepted Payment Endpoint Identifiers and,\n    /// when present, its required payee App before adapter selection.\n    /// Request-bound Payment Endpoints replace list discovery and have no list\n    /// version; `after_private_payment_list_version` does not apply to them.\n    pub async fn resolve_private_payment_request(\n        &self,\n        counterparty: PubkyPublicKey,\n        payment_request_id: &PaymentRequestId,\n        after_private_payment_list_version: Option<u64>,\n    ) -> Result<PrivateContactPaymentResolution> {",
+    "sourceHash": "4e522f061f254f833a010fe3e6ebf5f14ee14d51868456ff46ab9ce7b2824ed7",
+    "kind": "implemented",
+    "claim": "The private resolver for an actionable received request takes a counterparty PubkyPublicKey, a borrowed PaymentRequestId and an optional list version. Bound endpoints replace list discovery and have no list version, so the version input does not apply to them."
   }
 ]
