@@ -128,7 +128,7 @@ def exact_scope(actual, expected, label):
             'Incomplete or duplicate ' + label)
 
 
-def validate(args):
+def verified_bundle(args, *, require_document_hash=False):
     require(args.inputs.is_file() and not args.inputs.is_symlink(), 'Missing regular input index')
     index_bytes = args.inputs.read_bytes()
     manifest = load_json(index_bytes)
@@ -137,8 +137,8 @@ def validate(args):
     raw, doc, routes = document_scope(args.document, manifest.get('version'))
     require(manifest.get('versionMetadata') == doc['version']
             and manifest.get('lastUpdated') == doc['lastUpdated'], 'Stale source/version/date metadata')
-    if 'documentSha256' in manifest:
-        require(manifest['documentSha256'] == digest(raw), 'Stale document hash')
+    if require_document_hash or 'documentSha256' in manifest:
+        require(manifest.get('documentSha256') == digest(raw), 'Missing or stale document hash')
     require(manifest.get('pageRoutes') == routes, 'Stale or incomplete page scope')
     entry = manifest.get('entryUrl')
     require(isinstance(entry, str) and entry.endswith('/docs'), 'Invalid entry URL')
@@ -163,14 +163,25 @@ def validate(args):
             body = path.read_bytes()
             require(type(binding.get('bytes')) is int and binding['bytes'] == len(body) and bool(body)
                     and binding.get('sha256') == digest(body), 'Reader body length/hash mismatch')
-    report = load_json(args.report.read_bytes())
+    return digest(index_bytes), expected_routes, urls
+
+
+def validate(args):
+    bundle = verified_bundle(args)
+    return validate_newcomer_report(args.report.read_bytes(), bundle,
+                                   args.author_task_id, args.factual_reviewer_task_id)
+
+
+def validate_newcomer_report(raw, bundle, author, factual):
+    index_hash, expected_routes, urls = bundle
+    report = load_json(raw)
     require(isinstance(report, dict), 'Missing newcomer report object')
     require(report.get('perspective') == 'newcomer' and report.get('execution') == 'reading-only',
             'Expected newcomer reading-only review, not SDK execution')
-    author, factual, reviewer = args.author_task_id, args.factual_reviewer_task_id, report.get('reviewerTaskId')
+    reviewer = report.get('reviewerTaskId')
     require(all(text(value) for value in (author, factual, reviewer))
             and len({author, factual, reviewer}) == 3, 'Distinct actual author/factual/newcomer task IDs required')
-    require(report.get('inputManifestSha256') == digest(index_bytes), 'Stale input manifest hash')
+    require(report.get('inputManifestSha256') == index_hash, 'Stale input manifest hash')
     exact_scope(report.get('checkedRoutes'), expected_routes, 'checked routes')
     require(report.get('passed') is True, 'Newcomer report did not pass')
     summary = report.get('summary')
@@ -208,9 +219,43 @@ def validate(args):
         require(finding['url'].split('#', 1)[0] in urls, 'Finding URL outside checked reader pages')
         require(finding['severity'] != 'blocker' or finding['blocking'], 'Severity blocker must block')
         require(not finding['blocking'], 'Blocking newcomer finding: ' + finding['id'])
-    return {'action': 'pass', 'reviewerTaskId': reviewer, 'inputManifestSha256': digest(index_bytes),
+    return {'action': 'pass', 'reviewerTaskId': reviewer, 'inputManifestSha256': index_hash,
             'checkedRoutes': expected_routes, 'nonblockingFindings': findings,
             'limits': 'Binding/shape gate only; semantic review is the independent reader report.'}
+
+
+def validate_editorial(args):
+    bundle = verified_bundle(args, require_document_hash=True)
+    index_hash, routes, urls = bundle
+    require(args.newcomer_report.is_file() and not args.newcomer_report.is_symlink(),
+            'Missing regular newcomer report')
+    newcomer_bytes = args.newcomer_report.read_bytes()
+    newcomer = validate_newcomer_report(newcomer_bytes, bundle, args.author_task_id, args.factual_reviewer_task_id)
+    require(newcomer['reviewerTaskId'] == args.newcomer_task_id, 'Wrong newcomer task ID in accepted report')
+    require(args.report.is_file() and not args.report.is_symlink(), 'Missing regular editorial report')
+    report = load_json(args.report.read_bytes())
+    require(isinstance(report, dict) and report.get('perspective') == 'editorial'
+            and report.get('execution') == 'reading-only', 'Expected editorial reading-only review')
+    ids = (args.author_task_id, args.factual_reviewer_task_id, args.newcomer_task_id, args.editorial_task_id)
+    require(all(text(value) for value in ids) and len(set(ids)) == 4,
+            'Distinct actual author/factual/newcomer/editorial task IDs required')
+    require(report.get('reviewerTaskId') == args.editorial_task_id, 'Wrong editorial task ID')
+    require(report.get('inputManifestSha256') == index_hash, 'Stale input manifest hash')
+    exact_scope(report.get('checkedRoutes'), routes, 'checked routes')
+    require(report.get('passed') is True and meaningful(report.get('summary')),
+            'Editorial review did not pass or lacks a meaningful summary')
+    findings = report.get('findings')
+    require(isinstance(findings, list), 'Missing editorial findings list')
+    for finding in findings:
+        require(isinstance(finding, dict) and all(meaningful(finding.get(key)) for key in
+                ('url', 'location', 'evidence', 'impact', 'recommendation')), 'Incomplete editorial finding')
+        require(finding['url'].split('#', 1)[0] in urls, 'Finding URL outside checked reader pages')
+        require(finding.get('blocking') is False, 'Blocking or malformed editorial finding')
+    return {'action': 'pass', 'reviewerTaskId': args.editorial_task_id, 'inputManifestSha256': index_hash,
+            'authorTaskId': args.author_task_id, 'factualReviewerTaskId': args.factual_reviewer_task_id,
+            'newcomerTaskId': newcomer['reviewerTaskId'], 'newcomerReportSha256': digest(newcomer_bytes),
+            'checkedRoutes': routes, 'nonblockingFindings': findings,
+            'limits': 'Binding/shape gate only; editorial judgment comes from the independent reader.'}
 
 
 def main(argv=None):
@@ -221,15 +266,20 @@ def main(argv=None):
     cap.add_argument('--version', required=True)
     cap.add_argument('--base-url', required=True)
     cap.add_argument('--output', type=Path, required=True)
-    val = commands.add_parser('validate')
-    val.add_argument('--inputs', type=Path, required=True)
-    val.add_argument('--report', type=Path, required=True)
-    val.add_argument('--document', type=Path, required=True)
-    val.add_argument('--author-task-id', required=True)
-    val.add_argument('--factual-reviewer-task-id', required=True)
+    for command in ('validate', 'validate-editorial'):
+        val = commands.add_parser(command)
+        val.add_argument('--inputs', type=Path, required=True)
+        val.add_argument('--report', type=Path, required=True)
+        val.add_argument('--document', type=Path, required=True)
+        val.add_argument('--author-task-id', required=True)
+        val.add_argument('--factual-reviewer-task-id', required=True)
+        if command == 'validate-editorial':
+            val.add_argument('--newcomer-report', type=Path, required=True)
+            val.add_argument('--newcomer-task-id', required=True)
+            val.add_argument('--editorial-task-id', required=True)
     args = parser.parse_args(argv)
     try:
-        result = capture(args) if args.command == 'capture' else validate(args)
+        result = {'capture': capture, 'validate': validate, 'validate-editorial': validate_editorial}[args.command](args)
     except (OSError, ValueError, TypeError, KeyError, http.client.HTTPException) as error:
         print(json.dumps({'action': 'refused', 'detail': str(error)}))
         raise SystemExit(1)

@@ -123,6 +123,91 @@ class NewcomerReviewTests(unittest.TestCase):
             self.capture(base)
         return self.root / 'bundle'
 
+    def editorial_cli(self, bundle, report, ok=True):
+        path = self.root / 'editorial.json'
+        if report is not None:
+            path.write_text(json.dumps(report))
+        return self.cli('validate-editorial', '--inputs', bundle / 'index.json',
+                        '--report', path, '--newcomer-report', self.root / 'report.json', '--document', self.document,
+                        '--author-task-id', 'synthetic-author-task',
+                        '--factual-reviewer-task-id', 'synthetic-factual-task',
+                        '--newcomer-task-id', 'synthetic-reader-task',
+                        '--editorial-task-id', 'synthetic-editor-task', ok=ok)
+
+    def test_editorial_cli_binds_complete_independent_reading_report(self):
+        bundle = self.fixture_bundle()
+        index = bundle / 'index.json'
+        entry = json.loads(index.read_bytes())['entryUrl']
+        report = {'perspective': 'editorial', 'execution': 'reading-only',
+                  'reviewerTaskId': 'synthetic-editor-task',
+                  'inputManifestSha256': hashlib.sha256(index.read_bytes()).hexdigest(),
+                  'checkedRoutes': self.routes, 'passed': True,
+                  'summary': 'Synthetic review of wording, steps and terminology.',
+                  'findings': [{'url': entry, 'location': 'Synthetic entry',
+                                'evidence': 'Synthetic reader page',
+                                'impact': 'A shorter label might help scanning.',
+                                'recommendation': 'Consider shortening the synthetic label.',
+                                'blocking': False}]}
+        before = {p: p.read_bytes() for p in bundle.iterdir()}
+        self.assertIn('Missing regular newcomer report', self.editorial_cli(bundle, None, ok=False)['detail'])
+        self.validate(bundle, self.synthetic_report(bundle))
+        self.assertIn('Missing regular editorial report', self.editorial_cli(bundle, None, ok=False)['detail'])
+        newcomer_path = self.root / 'report.json'
+        newcomer_path.write_text(json.dumps({**self.synthetic_report(bundle), 'passed': False}))
+        self.assertIn('Newcomer report did not pass', self.editorial_cli(bundle, report, ok=False)['detail'])
+        newcomer_path.write_text(json.dumps({**self.synthetic_report(bundle), 'inputManifestSha256': '1' * 64}))
+        self.assertIn('Stale input manifest hash', self.editorial_cli(bundle, report, ok=False)['detail'])
+        self.validate(bundle, self.synthetic_report(bundle))
+        result = self.editorial_cli(bundle, report)
+        self.assertEqual(result['reviewerTaskId'], report['reviewerTaskId'])
+        self.assertEqual(result['newcomerTaskId'], 'synthetic-reader-task')
+        self.assertEqual(result['newcomerReportSha256'], hashlib.sha256(newcomer_path.read_bytes()).hexdigest())
+        self.assertEqual(result['authorTaskId'], 'synthetic-author-task')
+        self.assertEqual(result['factualReviewerTaskId'], 'synthetic-factual-task')
+        self.assertEqual(result['nonblockingFindings'], report['findings'])
+        self.assertEqual({p: p.read_bytes() for p in bundle.iterdir()}, before)
+
+        for key, value in (('perspective', 'newcomer'), ('execution', 'hands-on'),
+                           ('reviewerTaskId', 'synthetic-reader-task'),
+                           ('reviewerTaskId', 'unverified-editor'),
+                           ('inputManifestSha256', '1' * 64),
+                           ('checkedRoutes', self.routes[:-1]),
+                           ('checkedRoutes', [*self.routes, self.routes[0]]),
+                           ('passed', 1), ('passed', False), ('summary', 'pass'),
+                           ('findings', None)):
+            with self.subTest(field=key, value=value):
+                self.editorial_cli(bundle, {**report, key: value}, ok=False)
+
+        for key, value in (('url', 'https://example.invalid/'), ('evidence', ''),
+                           ('recommendation', ''), ('blocking', True), ('blocking', 0)):
+            with self.subTest(finding=key, value=value):
+                self.editorial_cli(bundle, {**report, 'findings': [
+                    {**report['findings'][0], key: value}]}, ok=False)
+
+        path = bundle / '01.md'
+        path.write_bytes(path.read_bytes() + b'Altered after the review')
+        result = self.editorial_cli(bundle, report, ok=False)
+        self.assertIn('Reader body length/hash mismatch', result['detail'])
+        path.write_bytes(before[path])
+
+        legacy = json.loads(index.read_bytes())
+        legacy.pop('documentSha256')
+        index.write_text(json.dumps(legacy))
+        result = self.editorial_cli(bundle, {**report,
+            'inputManifestSha256': hashlib.sha256(index.read_bytes()).hexdigest()}, ok=False)
+        self.assertIn('document hash', result['detail'])
+
+    def test_editorial_gate_refuses_an_actual_newcomer_id_hidden_by_the_cli_label(self):
+        bundle = self.fixture_bundle()
+        newcomer = {**self.synthetic_report(bundle), 'reviewerTaskId': 'synthetic-editor-task'}
+        self.assertEqual(self.validate(bundle, newcomer)['reviewerTaskId'], 'synthetic-editor-task')
+        editorial = {'perspective': 'editorial', 'execution': 'reading-only',
+                     'reviewerTaskId': 'synthetic-editor-task',
+                     'inputManifestSha256': newcomer['inputManifestSha256'],
+                     'checkedRoutes': self.routes, 'passed': True,
+                     'summary': 'Synthetic review of the exact rendered views.', 'findings': []}
+        self.assertIn('Wrong newcomer task ID', self.editorial_cli(bundle, editorial, ok=False)['detail'])
+
     def rewrite_index(self, bundle, manifest):
         (bundle / 'index.json').write_text(json.dumps(manifest))
         return self.synthetic_report(bundle)

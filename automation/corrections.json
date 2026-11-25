@@ -485,6 +485,21 @@
         "automation/tests/test_demo_locks.py"
       ],
       "enforcementScope": "Weekly source selection and dependency-lock generation; no expanded reviewer lanes, SDK execution or sandbox changes."
+    },
+    {
+      "id": "docs-editorial-clarity-review",
+      "requirement": "After factual and newcomer review, require a distinct public-only editorial reader on the current rendered HTML and Markdown of each regenerated track. Check wording, terminology, step order, actors, prerequisites and observable next actions. Bind the actual report to the exact bundle and separate role IDs; refuse publication for missing, stale, incomplete, failed or blocking reports. Fix material findings in the generation process or source-grounded inputs, regenerate and re-review changed bytes. Record minor suggestions without forcing rewrites. Skip this stage on normal no-change; keep one Sunday coordinator, existing privacy gates, original deadline and shared repair limit. Deliver approved roadmap increments one by one and report only remaining items and a recommended next increment after each verified deployment.",
+      "enforcedBy": [
+        "automation/WEEKLY.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/editorial-review.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "automation/newcomer_review.py",
+        "automation/tests/test_newcomer_review.py",
+        "automation/tests/test_weekly_check.py"
+      ],
+      "enforcementScope": "Editorial role and binding gate within the existing weekly workflow. No extra schedule, changes to generated content in the process-only deployment, or SDK execution."
     }
   ]
 }

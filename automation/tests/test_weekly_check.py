@@ -435,6 +435,31 @@ class WeeklyCheckTests(unittest.TestCase):
                       'No repeated warning/provenance box or new support service'):
             self.assertIn(token, writing)
 
+    def test_editorial_role_changes_refresh_only_coming_soon(self):
+        root, module, manifest = self.fixture()
+        self.assertEqual(module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)['action'], 'skip')
+        role = 'automation/skills/editorial-review.md'
+        (root / role).parent.mkdir(parents=True, exist_ok=True)
+        (root / role).write_text('Synthetic editorial role\n')
+        self.git(root, 'add', role); self.git(root, 'commit', '-m', 'editorial policy changed')
+        result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['processFilesChanged'], [role])
+        self.assertEqual(result['refreshVersions'], ['coming-soon'])
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_weekly_editorial_requires_the_current_bundle_and_report_before_committing(self):
+        source_root = SCRIPT.parents[1]
+        weekly = (source_root / 'automation/WEEKLY.md').read_text()
+        skip = weekly.split('- `action=skip`:', 1)[1].split('\n', 1)[0]
+        self.assertIn('every public author or reviewer', skip)
+        section = weekly.split('### Dedicated editorial clarity gate', 1)[1]
+        command = next(row for row in section.splitlines() if 'validate-editorial' in row)
+        for token in ('--inputs', '--report', '--newcomer-report', '--document', '--author-task-id',
+                      '--factual-reviewer-task-id', '--newcomer-task-id', '--editorial-task-id'):
+            self.assertIn(token, command.split())
+        self.assertIn('require the editorial validation above to pass immediately before committing', section)
+
 
 if __name__ == '__main__':
     unittest.main()
