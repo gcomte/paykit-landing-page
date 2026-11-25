@@ -540,6 +540,22 @@
         "tests/browser/docs.spec.ts"
       ],
       "enforcementScope": "Documentation reading and named current-build browser checks only, not a full assistive-technology audit."
+    },
+    {
+      "id": "paykit-visual-design-review",
+      "requirement": "On refreshed tracks only, capture actual same-build all-route visual artifacts at both named viewports, then use a distinct public-only visual design reader after usability/accessibility. Check visual hierarchy, legibility, layout and consistency. Bind HTML/Markdown, actual screenshot bytes, all prior reader reports and eight real role identities to the exact final candidate. Material barriers or missing evidence block; minor preferences are nonblocking. Keep existing cadence, limits and publication scope. No redesign, guide execution, accessibility certification or diagram accuracy review in this increment.",
+      "enforcedBy": [
+        "automation/WEEKLY.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/visual-design-review.md",
+        "automation/capture-visual-review.mjs",
+        "tests/docs-visual-capture.test.mjs",
+        "automation/newcomer_review.py",
+        "automation/weekly_check.py",
+        "automation/tests/test_newcomer_review.py",
+        "automation/tests/test_weekly_check.py"
+      ],
+      "enforcementScope": "Independent design reading of actual two-viewport rendered evidence, not a redesign or complete accessibility or diagram audit."
     }
   ]
 }

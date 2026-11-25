@@ -428,6 +428,95 @@ class NewcomerReviewTests(unittest.TestCase):
         body.write_bytes(before[body])
         self.assertEqual({p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}, before)
 
+    def test_visual_design_cli_binds_prior_reports_and_actual_capture_inventory(self):
+        import struct
+        import zlib
+
+        def png(width, height):
+            def chunk(kind, data):
+                return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+            return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+                    + chunk(b'IDAT', zlib.compress(bytes((width * 3 + 1) * height))) + chunk(b'IEND', b''))
+
+        bundle = self.fixture_bundle()
+        index = bundle / 'index.json'
+        newcomer = self.synthetic_report(bundle)
+        visual = self.root / 'visual'
+        visual.mkdir()
+        shots = []
+        for i, row in enumerate(json.loads(index.read_bytes())['documents']):
+            for view, width, height in (('desktop', 1440, 900), ('phone', 375, 812)):
+                file = f'{i:02d}-{view}.png'
+                data = png(width, height)
+                (visual / file).write_bytes(data)
+                shots.append({'route': row['route'], 'file': file, 'view': view, 'viewport': {'width': width, 'height': height},
+                              'htmlSha256': row['html']['sha256'], 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+        visual_index = visual / 'index.json'
+        manifest = {'kind': 'rendered-public-visual-input', 'inputManifestSha256': newcomer['inputManifestSha256'],
+                    'screenshots': shots}
+        visual_index.write_text(json.dumps(manifest))
+        name = 'visual-design'
+        topics = {'editorial': [], 'security-privacy': ['secrets', 'identifiers', 'diagnostics', 'data-boundaries'],
+                  'failure-recovery': ['pending-and-failed', 'safe-retry', 'recovery-boundaries', 'escalation'],
+                  'usability-accessibility': ['guide-discovery', 'task-navigation', 'accessible-structure', 'alternatives-and-reflow'],
+                  name: ['hierarchy', 'legibility', 'layout', 'consistency']}
+        roles = {role: f'synthetic-{role}' for role in (*topics, 'author', 'factual-reviewer')}
+        roles['newcomer'] = newcomer['reviewerTaskId']
+        common = {key: newcomer[key] for key in ('execution', 'checkedRoutes', 'inputManifestSha256', 'passed')}
+        common.update(summary='Synthetic reader checked both fixture views.', limits='Offline test fixture, not browser evidence.', findings=[])
+        reports = {role: {**common, 'perspective': role, 'reviewerTaskId': roles[role], 'checkedTopics': labels}
+                   for role, labels in topics.items()}
+        reports['newcomer'] = newcomer
+        reports[name].update(visualManifestSha256=hashlib.sha256(visual_index.read_bytes()).hexdigest(),
+                             checkedScreenshots=[shot['file'] for shot in shots])
+        paths = {role: self.root / f'{role}.json' for role in reports}
+        for role in reports:
+            paths[role].write_text(json.dumps(reports[role]))
+        before = {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+
+        def check(ok=True, reviewer=roles[name]):
+            return self.cli('validate-visual-design', '--inputs', index, '--document', self.document, '--visual-inputs', visual_index,
+                            *[item for role, path in paths.items() for item in ('--report' if role == name else f'--{role}-report', path)],
+                            *[item for role, identity in roles.items() for item in (f'--{role}-task-id', reviewer if role == name else identity)],
+                            ok=ok)
+
+        result = check()
+        self.assertEqual(result['checkedScreenshots'], reports[name]['checkedScreenshots'])
+        self.assertEqual(result['visualManifestSha256'], reports[name]['visualManifestSha256'])
+        self.assertEqual(result['visualDesignReportSha256'], hashlib.sha256(before[paths[name]]).hexdigest())
+        self.assertEqual(result['usabilityAccessibilityTaskId'], roles['usability-accessibility'])
+        for role, identity in roles.items():
+            if role != name:
+                self.assertIn('Distinct actual visual design reviewer', check(ok=False, reviewer=identity)['detail'])
+        for role in reports:
+            paths[role].write_text(json.dumps({**reports[role], 'passed': False}))
+            check(ok=False)
+            paths[role].write_bytes(before[paths[role]])
+        for key, value in [('visualManifestSha256', '1' * 64), ('checkedScreenshots', reports[name]['checkedScreenshots'][:-1]),
+                           ('checkedTopics', topics[name][:-1]), ('execution', 'hands-on')]:
+            paths[name].write_text(json.dumps({**reports[name], key: value}))
+            check(ok=False)
+            paths[name].write_bytes(before[paths[name]])
+        for edited, refusal in [
+                (shots[:-1], 'Incomplete or duplicate visual screenshots'),
+                ([*shots, shots[0]], 'Incomplete or duplicate visual screenshots'),
+                ([{**shots[0], 'htmlSha256': 'b' * 64}, *shots[1:]], 'Screenshot binding'),
+                ([{**shots[0], 'viewport': {'width': 1440, 'height': 901}}, *shots[1:]], 'Wrong screenshot viewport')]:
+            visual_index.write_text(json.dumps({**manifest, 'screenshots': edited}))
+            self.assertIn(refusal, check(ok=False)['detail'])
+        visual_index.write_bytes(before[visual_index])
+        shot = visual / shots[0]['file']
+        shot.write_bytes(before[shot] + b'changed')
+        self.assertIn('Screenshot length/hash mismatch', check(ok=False)['detail'])
+        truncated = before[shot][:33]  # Valid-looking header, no decodable image data.
+        shot.write_bytes(truncated)
+        bad = {**shots[0], 'bytes': len(truncated), 'sha256': hashlib.sha256(truncated).hexdigest()}
+        visual_index.write_text(json.dumps({**manifest, 'screenshots': [bad, *shots[1:]]}))
+        self.assertIn('Incomplete PNG image data', check(ok=False)['detail'])
+        visual_index.write_bytes(before[visual_index])
+        shot.write_bytes(before[shot])
+        self.assertEqual({p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}, before)
+
     def rewrite_index(self, bundle, manifest):
         (bundle / 'index.json').write_text(json.dumps(manifest))
         return self.synthetic_report(bundle)

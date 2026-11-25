@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import urllib.parse
 import urllib.request
+import zlib
 
 APPROVED_SITES = ('https://paykit-landing-page-lake.vercel.app',
                   'https://paykit-landing-page-git-docs-automation-g-a0aa.vercel.app')
@@ -325,6 +326,10 @@ def validate_failure_recovery_reports(args, bundle, recovery_path):
 
 def validate_usability_accessibility(args):
     bundle = verified_bundle(args, require_document_hash=True)
+    return validate_usability_accessibility_reports(args, bundle, args.report)
+
+
+def validate_usability_accessibility_reports(args, bundle, usability_path):
     recovery = validate_failure_recovery_reports(args, bundle, args.failure_recovery_report)
     role_keys = ('authorTaskId', 'factualReviewerTaskId', 'newcomerTaskId', 'editorialTaskId', 'securityPrivacyTaskId')
     prior_roles = {key: recovery[key] for key in role_keys}
@@ -332,7 +337,7 @@ def validate_usability_accessibility(args):
     reviewer = args.usability_accessibility_task_id
     require(text(reviewer) and reviewer not in prior_roles.values(),
             'Distinct actual usability/accessibility reviewer task ID required')
-    raw, report = validate_specialist_report(args.report, bundle, 'usability-accessibility', reviewer)
+    raw, report = validate_specialist_report(usability_path, bundle, 'usability-accessibility', reviewer)
     exact_scope(report.get('checkedTopics'),
                 ('guide-discovery', 'task-navigation', 'accessible-structure', 'alternatives-and-reflow'),
                 'usability/accessibility topics')
@@ -347,6 +352,119 @@ def validate_usability_accessibility(args):
             'limits': 'Reading report binding/shape only; no browser, assistive technology or conformance verification.'}
 
 
+VISUAL_VIEWPORTS = {'desktop': (1440, 900), 'phone': (375, 812)}
+
+
+def validate_visual_png(data, expected_width, viewport_height):
+    require(data.startswith(b'\x89PNG\r\n\x1a\n'), 'Screenshot is not a PNG')
+    offset = 8
+    payloads = []
+    pixel_bytes = None
+    row_size = 0
+    closed = False
+    after_data = False
+    while offset + 12 <= len(data):
+        size = int.from_bytes(data[offset:offset + 4], 'big')
+        end = offset + 12 + size
+        require(end <= len(data), 'Truncated PNG chunk')
+        kind = data[offset + 4:offset + 8]
+        payload = data[offset + 8:end - 4]
+        crc = int.from_bytes(data[end - 4:end], 'big')
+        require(zlib.crc32(payload, zlib.crc32(kind)) == crc, 'Corrupt PNG chunk')
+        if offset == 8:
+            require(kind == b'IHDR' and size == 13, 'Missing PNG metadata')
+            width = int.from_bytes(payload[:4], 'big')
+            height = int.from_bytes(payload[4:8], 'big')
+            require(width == expected_width and viewport_height <= height <= 32768,
+                    'Screenshot PNG dimensions do not match the full-page viewport')
+            # Chromium emits noninterlaced 8-bit RGB/RGBA. Refuse other encodings.
+            require(payload[8] == 8 and payload[9] in (2, 6) and payload[10:] == b'\0\0\0', 'Unsupported screenshot PNG format')
+            row_size = 1 + width * (3 if payload[9] == 2 else 4)
+            pixel_bytes = row_size * height
+        elif kind == b'IDAT':
+            require(not after_data, 'Non-consecutive PNG image data')
+            payloads.append(payload)
+        elif kind == b'IEND':
+            require(size == 0 and end == len(data), 'Invalid PNG ending')
+            closed = True
+            break
+        else:
+            require(kind.isalpha() and kind[:1].islower(), 'Unexpected PNG critical chunk')
+            after_data = bool(payloads)
+        offset = end
+    if not closed or not payloads or pixel_bytes is None or row_size <= 0:
+        raise ValueError('Incomplete PNG image data')
+    decoder = zlib.decompressobj()
+    try:
+        pixels = decoder.decompress(b''.join(payloads), pixel_bytes + 1)
+    except zlib.error as error:
+        raise ValueError('Invalid PNG pixel data') from error
+    require(decoder.eof and not decoder.unused_data and not decoder.unconsumed_tail and len(pixels) == pixel_bytes
+            and all(filter_type <= 4 for filter_type in pixels[::row_size]), 'Invalid PNG pixel data')
+
+
+def verified_visual_bundle(args, bundle):
+    index_hash, routes, urls = bundle
+    require(urls[0].startswith('http://127.0.0.1:'), 'Visual review needs a current-build loopback capture')
+    reader_index = args.inputs.read_bytes()
+    require(digest(reader_index) == index_hash, 'Reader index changed during validation')
+    documents = load_json(reader_index)['documents']
+    path = args.visual_inputs
+    require(path.is_file() and not path.is_symlink(), 'Missing regular visual index')
+    raw = path.read_bytes()
+    manifest = load_json(raw)
+    require(isinstance(manifest, dict) and manifest.get('kind') == 'rendered-public-visual-input'
+            and manifest.get('inputManifestSha256') == index_hash, 'Stale or invalid visual input manifest')
+    expected = {f'{i:02d}-{view}.png': (routes[i], doc['html']['sha256'], view)
+                for i, doc in enumerate(documents) for view in VISUAL_VIEWPORTS}
+    shots = manifest.get('screenshots')
+    if not isinstance(shots, list) or not all(isinstance(shot, dict) for shot in shots):
+        raise ValueError('Missing screenshot list')
+    exact_scope([shot.get('file') for shot in shots], expected, 'visual screenshots')
+    root = path.parent.resolve()
+    for shot in shots:
+        filename = shot['file']
+        route, html_hash, view = expected[filename]
+        width, height = VISUAL_VIEWPORTS[view]
+        require((shot.get('route'), shot.get('htmlSha256'), shot.get('view')) == (route, html_hash, view),
+                'Screenshot binding does not match rendered HTML/route/view')
+        viewport = shot.get('viewport')
+        require(isinstance(viewport, dict) and viewport == {'width': width, 'height': height}
+                and all(type(value) is int for value in viewport.values()), 'Wrong screenshot viewport')
+        file = root / filename
+        require(file.is_file() and not file.is_symlink() and file.resolve() == file, 'Missing regular screenshot')
+        data = file.read_bytes()
+        require(type(shot.get('bytes')) is int and shot['bytes'] == len(data)
+                and shot.get('sha256') == digest(data), 'Screenshot length/hash mismatch')
+        validate_visual_png(data, width, height)
+    return digest(raw), list(expected)
+
+
+def validate_visual_design(args):
+    bundle = verified_bundle(args, require_document_hash=True)
+    usability = validate_usability_accessibility_reports(args, bundle, args.usability_accessibility_report)
+    role_keys = ('authorTaskId', 'factualReviewerTaskId', 'newcomerTaskId', 'editorialTaskId',
+                 'securityPrivacyTaskId', 'failureRecoveryTaskId')
+    prior_roles = {key: usability[key] for key in role_keys}
+    prior_roles['usabilityAccessibilityTaskId'] = usability['reviewerTaskId']
+    reviewer = args.visual_design_task_id
+    require(text(reviewer) and reviewer not in prior_roles.values(), 'Distinct actual visual design reviewer task ID required')
+    visual_hash, screenshots = verified_visual_bundle(args, bundle)
+    raw, report = validate_specialist_report(args.report, bundle, 'visual-design', reviewer)
+    require(report.get('visualManifestSha256') == visual_hash, 'Stale visual manifest hash in review report')
+    exact_scope(report.get('checkedScreenshots'), screenshots, 'checked screenshots')
+    exact_scope(report.get('checkedTopics'), ('hierarchy', 'legibility', 'layout', 'consistency'), 'visual design topics')
+    require(meaningful(report.get('limits')), 'Missing visual design reading limits')
+    require(all(finding.get('viewport') in VISUAL_VIEWPORTS for finding in report['findings']),
+            'Missing or unknown visual finding viewport')
+    prior_digests = {key: value for key, value in usability.items() if key.endswith('ReportSha256')}
+    return {'action': 'pass', 'reviewerTaskId': reviewer, 'inputManifestSha256': bundle[0],
+            'visualManifestSha256': visual_hash, 'visualDesignReportSha256': digest(raw), **prior_roles, **prior_digests,
+            'checkedRoutes': bundle[1], 'checkedScreenshots': screenshots, 'checkedTopics': report['checkedTopics'],
+            'nonblockingFindings': report['findings'],
+            'limits': 'Screenshot and reading report binding only; does not establish visual judgment or conformance.'}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -356,7 +474,7 @@ def main(argv=None):
     cap.add_argument('--base-url', required=True)
     cap.add_argument('--output', type=Path, required=True)
     for command in ('validate', 'validate-editorial', 'validate-security-privacy', 'validate-failure-recovery',
-                    'validate-usability-accessibility'):
+                    'validate-usability-accessibility', 'validate-visual-design'):
         val = commands.add_parser(command)
         val.add_argument('--inputs', type=Path, required=True)
         val.add_argument('--report', type=Path, required=True)
@@ -370,18 +488,23 @@ def main(argv=None):
         if command not in ('validate', 'validate-editorial'):
             val.add_argument('--editorial-report', type=Path, required=True)
             val.add_argument('--security-privacy-task-id', required=True)
-        if command in ('validate-failure-recovery', 'validate-usability-accessibility'):
+        if command in ('validate-failure-recovery', 'validate-usability-accessibility', 'validate-visual-design'):
             val.add_argument('--security-privacy-report', type=Path, required=True)
             val.add_argument('--failure-recovery-task-id', required=True)
-        if command == 'validate-usability-accessibility':
+        if command in ('validate-usability-accessibility', 'validate-visual-design'):
             val.add_argument('--failure-recovery-report', type=Path, required=True)
             val.add_argument('--usability-accessibility-task-id', required=True)
+        if command == 'validate-visual-design':
+            val.add_argument('--usability-accessibility-report', type=Path, required=True)
+            val.add_argument('--visual-design-task-id', required=True)
+            val.add_argument('--visual-inputs', type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         result = {'capture': capture, 'validate': validate, 'validate-editorial': validate_editorial,
                   'validate-security-privacy': validate_security_privacy,
                   'validate-failure-recovery': validate_failure_recovery,
-                  'validate-usability-accessibility': validate_usability_accessibility}[args.command](args)
+                  'validate-usability-accessibility': validate_usability_accessibility,
+                  'validate-visual-design': validate_visual_design}[args.command](args)
     except (OSError, ValueError, TypeError, KeyError, http.client.HTTPException) as error:
         print(json.dumps({'action': 'refused', 'detail': str(error)}))
         raise SystemExit(1)
