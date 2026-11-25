@@ -574,5 +574,33 @@ class WeeklyCheckTests(unittest.TestCase):
         self.assertIn('on the exact final bytes before committing', section)
 
 
+    def test_diagram_reading_role_triggers_refresh_without_generation_on_skip(self):
+        root, module, manifest = self.fixture()
+        resolver = lambda *args: COMMIT
+        self.assertEqual(module.check_weekly(root, manifest, resolver=resolver)['action'], 'skip')
+        role = 'automation/skills/diagram-accuracy-usefulness-review.md'
+        (root / role).parent.mkdir(parents=True, exist_ok=True)
+        (root / role).write_text((SCRIPT.parents[1] / role).read_text())
+        self.git(root, 'add', role)
+        self.git(root, 'commit', '-m', 'diagram review role')
+        result = module.check_weekly(root, manifest, resolver=resolver)
+        self.assertEqual(result['refreshVersions'], ['coming-soon'])
+        self.assertEqual(result['processFilesChanged'], [role])
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_diagram_runbook_keeps_capture_distinct_from_regeneration(self):
+        doc = (SCRIPT.parents[1] / 'automation/WEEKLY.md').read_text()
+        self.assertIn('diagram accuracy/usefulness', doc.split('- `action=skip`:', 1)[1].split('\n', 1)[0])
+        section = doc.split('### Dedicated diagram accuracy and usefulness gate', 1)[1].split('## 4.', 1)[0]
+        self.assertIn('capture-diagram-review', section)
+        self.assertIn('--with-diagram-observations', doc)
+        self.assertIn('script- and network-disabled Chromium context', section)
+        self.assertIn('This stage does not regenerate diagrams.', section)
+        command = next(line for line in section.splitlines() if 'validate-diagram-review' in line)
+        for token in ('--site-root', '--diagram-inputs', '--visual-design-report', '--diagram-review-task-id'):
+            self.assertIn(token, command.split())
+        self.assertIn('require a pass immediately before committing', section)
+
+
 if __name__ == '__main__':
     unittest.main()

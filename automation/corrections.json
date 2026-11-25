@@ -556,6 +556,22 @@
         "automation/tests/test_weekly_check.py"
       ],
       "enforcementScope": "Independent design reading of actual two-viewport rendered evidence, not a redesign or complete accessibility or diagram audit."
+    },
+    {
+      "id": "paykit-diagram-accuracy-usefulness-review",
+      "requirement": "On refreshed tracks only, bind each actual rendered diagram occurrence, caption/alternative, exact served existing SVG and Mermaid, and immutable document source to the final reader/visual capture. After visual design require a separate public-only diagram reader to check every pictured node and directed edge against exact-version public source lines, compare caption and text alternatives, and assess teaching usefulness. Missing evidence or material errors block. Keep prior gates, cadence and repair limits unchanged; no automatic diagram regeneration, redesign or guide execution in this stage.",
+      "enforcedBy": [
+        "automation/WEEKLY.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/diagram-accuracy-usefulness-review.md",
+        "automation/capture-visual-review.mjs",
+        "automation/diagram-observations.mjs",
+        "tests/docs-diagram-observations.test.mjs",
+        "automation/newcomer_review.py",
+        "automation/tests/test_newcomer_review.py",
+        "automation/tests/test_weekly_check.py"
+      ],
+      "enforcementScope": "Independent public-source diagram reading and rendered-artifact binding only."
     }
   ]
 }

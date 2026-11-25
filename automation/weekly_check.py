@@ -20,6 +20,7 @@ PROCESS_INPUTS = [
     'automation/README.md', 'automation/corrections.json', 'automation/SOURCE-BOUNDARY.md',
     'automation/refresh_page.py', 'automation/refresh_development.py', 'automation/check_source.py',
     'automation/weekly_check.py', 'automation/newcomer_review.py', 'automation/capture-visual-review.mjs',
+    'automation/diagram-observations.mjs',
     'automation/prepare_development.py', 'automation/recipes',
     'automation/release_source.py', 'automation/refresh_glossary.py', 'automation/refresh_resources.py',
     'automation/demo_locks.py', 'automation/tests/test_demo_locks.py', 'automation/verify_stable_package.py',

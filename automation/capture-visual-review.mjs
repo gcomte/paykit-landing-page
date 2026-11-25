@@ -8,8 +8,9 @@ const [inputs, output, ...extra] = process.argv.slice(2);
 const require = (condition, message) => { if (!condition) throw new Error(message); };
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const views = { desktop: { width: 1440, height: 900 }, phone: { width: 375, height: 812 } };
-require(extra.length === 0 && inputs && output && path.isAbsolute(inputs) && path.isAbsolute(output),
-        'Usage: node automation/capture-visual-review.mjs /ABS/reader/index.json /ABS/new-visual-directory');
+const withDiagrams = extra.length === 1 && extra[0] === '--with-diagram-observations';
+require((extra.length === 0 || withDiagrams) && inputs && output && path.isAbsolute(inputs) && path.isAbsolute(output),
+        'Usage: node automation/capture-visual-review.mjs /ABS/reader/index.json /ABS/new-visual-directory [--with-diagram-observations]');
 require((await lstat(inputs)).isFile(), 'Reader index must be a regular file');
 const raw = await readFile(inputs);
 const index = JSON.parse(raw);
@@ -20,14 +21,23 @@ require(index.kind === 'rendered-public-reader-input' && ['released', 'coming-so
         Array.isArray(index.pageRoutes) && index.pageRoutes.length && Array.isArray(index.documents), 'Invalid reader index');
 const routes = ['/docs', ...index.pageRoutes];
 const prefix = `/docs/${index.version}/`;
+const markdownBodies = [];
 require(new Set(routes).size === routes.length && index.documents.length === routes.length, 'Incomplete or duplicate route scope');
 for (const [i, route] of routes.entries()) {
   require(i === 0 || (typeof route === 'string' && route.startsWith(prefix) &&
           /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(route.slice(prefix.length))), 'Invalid versioned route');
   const row = index.documents[i];
   require(row.route === route && row.url === entry.origin + route && /^[0-9a-f]{64}$/.test(row.html?.sha256), 'Invalid HTML binding');
+  if (withDiagrams) {
+    const mdFile = path.join(path.dirname(inputs), `${String(i).padStart(2, '0')}.md`);
+    require((await lstat(mdFile)).isFile(), 'Markdown body must be a regular file');
+    const md = await readFile(mdFile);
+    require(sha256(md) === row.md?.sha256 && md.length === row.md?.bytes, 'Markdown differs from the reader bundle');
+    markdownBodies.push(md.toString('utf8'));
+  }
 }
 
+const observerApi = withDiagrams ? await import('./diagram-observations.mjs') : null;
 await mkdir(output); // Existing output, including a partial capture, is refused.
 const browser = await chromium.launch();
 const screenshots = [];
@@ -41,6 +51,8 @@ try {
     let networkIssue;
     let routeChanged = false;
     let closingActivity;
+    let markdownObserver;
+    const diagramAssetDigests = new Map();
     const idle = () => pending.size === 0 && routed.size === 0;
     try {
       context.on('request', request => { pending.add(request); activity++; });
@@ -65,7 +77,16 @@ try {
           // Inspect the first response before following any redirect, including subresources.
           const response = await route.fetch({ maxRedirects: 0, timeout: 15000 });
           if (!response.ok()) await refuse(route, `unusable local ${route.request().resourceType()} (${response.status()})`);
-          else await route.fulfill({ response });
+          else {
+            const url = new URL(route.request().url());
+            if (withDiagrams && route.request().resourceType() === 'image' && url.pathname.startsWith('/docs-assets/')) {
+              const hash = sha256(await response.body());
+              require(!diagramAssetDigests.has(url.href) || diagramAssetDigests.get(url.href) === hash,
+                      'A served diagram changed during capture');
+              diagramAssetDigests.set(url.href, hash);
+            }
+            await route.fulfill({ response });
+          }
         } catch {
           await refuse(route, 'could not fetch or deliver local resource');
         } finally {
@@ -77,6 +98,7 @@ try {
         return socket.close();
       });
       const page = await context.newPage();
+      if (observerApi) markdownObserver = await observerApi.createMarkdownObserver(browser, viewport);
       page.setDefaultTimeout(15000);
       let mainDocuments = 0;
       let expectedUrl;
@@ -119,25 +141,41 @@ try {
         }
         await page.evaluate(async () => { await document.fonts.ready; window.scrollTo(0, 0); });
         let bytes;
+        let images;
+        const markdown = markdownObserver ? await markdownObserver.observe(markdownBodies[i], row.url) : null;
         for (let attempt = 0; attempt < 2; attempt++) {
           await settle();
           assertCaptureState();
           const observed = activity;
+          const before = observerApi ? await observerApi.htmlDiagramImages(page) : null;
           const candidate = await page.screenshot({ fullPage: true, animations: 'disabled', scale: 'css', timeout: 15000 });
           await settle();
           assertCaptureState();
-          if (activity === observed) { bytes = candidate; break; }
+          const after = observerApi ? await observerApi.htmlDiagramImages(page) : null;
+          assertCaptureState();
+          if (idle() && activity === observed && JSON.stringify(before) === JSON.stringify(after)) {
+            bytes = candidate;
+            images = after;
+            break;
+          }
         }
         require(bytes, `Browser resources changed during both screenshot attempts: ${row.route}`);
         const file = `${String(i).padStart(2, '0')}-${view}.png`;
         await writeFile(path.join(output, file), bytes, { flag: 'wx' });
-        screenshots.push({ route: row.route, view, viewport, htmlSha256: row.html.sha256,
-                          file, bytes: bytes.length, sha256: sha256(bytes) });
+        const shot = { route: row.route, view, viewport, htmlSha256: row.html.sha256,
+                       file, bytes: bytes.length, sha256: sha256(bytes) };
+        if (withDiagrams) shot.diagramObservations = {
+          markdownSha256: row.md.sha256,
+          markdown,
+          html: images.map(image => ({ ...image, sha256: diagramAssetDigests.get(image.url) ?? null })),
+        };
+        screenshots.push(shot);
       }
       require(!networkIssue && idle() && !routeChanged, 'Unsettled or failed final browser capture');
       closingActivity = activity;
     } finally {
-      await context.close();
+      try { if (markdownObserver) await markdownObserver.close(); }
+      finally { await context.close(); }
     }
     // Keep observers attached through close. Even a successful late request invalidates the seal.
     require(!networkIssue && idle() && !routeChanged && activity === closingActivity,

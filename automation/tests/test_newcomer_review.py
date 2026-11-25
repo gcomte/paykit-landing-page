@@ -29,17 +29,20 @@ class NewcomerReviewTests(unittest.TestCase):
                        for route in self.routes for suffix in ('', '/index.md')}
 
     @contextlib.contextmanager
-    def server(self, redirect=None, status=200):
+    def server(self, redirect=None, status=200, on_request=None):
         bodies = self.bodies
         requests = []
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
                 requests.append(self.path)
                 body = bodies.get(self.path, b'missing')
+                if on_request:
+                    on_request(self.path)
                 self.send_response(302 if redirect else status if self.path in bodies else 404)
                 if redirect:
                     self.send_header('Location', redirect)
-                self.send_header('Content-Type', 'text/markdown' if self.path.endswith('.md') else 'text/html')
+                self.send_header('Content-Type', 'image/svg+xml' if self.path.endswith('.svg') else
+                                 'text/markdown' if self.path.endswith('.md') else 'text/html')
                 self.send_header('Content-Length', str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
@@ -62,7 +65,7 @@ class NewcomerReviewTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0 if ok else 1, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload['action'], 'captured' if args[0] == 'capture' and ok
+        self.assertEqual(payload['action'], 'captured' if args[0] in ('capture', 'capture-diagram-review') and ok
                          else 'pass' if ok else 'refused')
         return payload
 
@@ -516,6 +519,147 @@ class NewcomerReviewTests(unittest.TestCase):
         visual_index.write_bytes(before[visual_index])
         shot.write_bytes(before[shot])
         self.assertEqual({p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}, before)
+
+    def test_diagram_gate_requires_actual_browser_observations_and_exact_sources(self):
+        import struct
+        import zlib
+
+        digest = lambda data: hashlib.sha256(data).hexdigest()
+        root = self.root / 'site'
+        self.document = root / 'content/docs/coming-soon.json'
+        self.document.parent.mkdir(parents=True)
+        alt = 'Synthetic actor sends terms to the application.'
+        self.doc['pages'][0]['sections'] = [{'id': 'flow', 'diagram': {'id': 'sample', 'caption': 'Synthetic flow.', 'alt': alt}}]
+        self.doc['pages'][1]['sections'] = []
+        self.document.write_text(json.dumps(self.doc))
+        route = self.routes[1]
+        asset = '/docs-assets/coming-soon/sample'
+        assets = {'svg': b'<svg xmlns="http://www.w3.org/2000/svg"><text>test</text></svg>', 'mmd': b'graph TD\n A --> B\n'}
+        for kind, data in assets.items():
+            relative = asset + '.' + kind
+            f = root / 'public' / relative.lstrip('/')
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(data)
+            self.bodies[relative] = data
+        self.bodies[route] = f'<html><article><section id="flow"><figure><img src="{asset}.svg" alt="{alt}"></figure></section></article></html>'.encode()
+        md_path = route + '/index.md'
+        self.bodies[md_path] = f'![{alt}](<{asset}.svg>)\n'.encode()
+        original_md = self.bodies[md_path]
+        index = self.root / 'bundle/index.json'
+        diagram = self.root / 'diagrams'
+        visual = self.root / 'visual'
+        visual.mkdir()
+        visual_index = visual / 'index.json'
+        armed = False
+
+        def late_drift(path):
+            if armed and path == asset + '.mmd':
+                self.bodies[md_path] = original_md + b'\nLate renderer drift.\n'
+
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+
+        # Browser behavior is covered by the real Node/Playwright tests. This fixture only
+        # exercises retention and rejection of those observations through the actual Python CLI.
+        with self.server(on_request=late_drift) as (base, requests):
+            self.capture(base)
+            newcomer = self.synthetic_report(index.parent)
+            shots = []
+            for i, row in enumerate(json.loads(index.read_bytes())['documents']):
+                for view, width, height in (('desktop', 1440, 900), ('phone', 375, 812)):
+                    data = (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+                            + chunk(b'IDAT', zlib.compress(bytes((width * 3 + 1) * height))) + chunk(b'IEND', b''))
+                    leaf = f'{i:02d}-{view}.png'
+                    (visual / leaf).write_bytes(data)
+                    parsed = {'url': base + asset + '.svg', 'alt': alt, 'visible': True}
+                    observations = {'markdownSha256': row['md']['sha256'], 'markdown': [parsed] if i == 1 else [],
+                                    'html': [{**parsed, 'section': 'flow', 'sha256': digest(assets['svg'])}] if i == 1 else []}
+                    shots.append({'route': row['route'], 'file': leaf, 'view': view, 'viewport': {'width': width, 'height': height},
+                                  'htmlSha256': row['html']['sha256'], 'bytes': len(data), 'sha256': digest(data),
+                                  'diagramObservations': observations})
+            visual_payload = {'kind': 'rendered-public-visual-input', 'inputManifestSha256': newcomer['inputManifestSha256'],
+                              'screenshots': shots}
+            visual_index.write_text(json.dumps(visual_payload))
+            original_visual = visual_index.read_bytes()
+            capture_args = ('capture-diagram-review', '--inputs', index, '--visual-inputs', visual_index,
+                            '--document', self.document, '--site-root', root)
+            self.assertEqual(self.cli(*capture_args, '--output', diagram)['diagrams'], 1)
+            self.assertEqual(requests.count(asset + '.svg'), 1)
+            self.assertEqual(requests.count(asset + '.mmd'), 1)
+
+            armed = True
+            rejected = self.root / 'late-diagrams'
+            self.assertIn('Live renderer HTML/Markdown differs', self.cli(*capture_args, '--output', rejected, ok=False)['detail'])
+            self.assertTrue((rejected / '00.mmd').is_file())
+            self.assertFalse((rejected / 'index.json').exists())
+            armed = False
+            self.bodies[md_path] = original_md
+
+            view = shots[2]
+            observed = view['diagramObservations']
+            for label, field, wrong in (('inert', 'html', []),
+                                        ('alt', 'markdown', [{**observed['markdown'][0], 'alt': '**Synthetic**'}]),
+                                        ('alternate', 'html', [{**observed['html'][0], 'url': base + '/alternate.svg'}]),
+                                        ('hash', 'html', [{**observed['html'][0], 'sha256': '0' * 64}])):
+                altered = {**view, 'diagramObservations': {**observed, field: wrong}}
+                visual_index.write_text(json.dumps({**visual_payload, 'screenshots': [*shots[:2], altered, *shots[3:]]}))
+                dest = self.root / (label + '-diagrams')
+                self.assertIn(f'Actual rendered {field} image', self.cli(*capture_args, '--output', dest, ok=False)['detail'])
+                self.assertFalse(dest.exists())
+            visual_index.write_bytes(original_visual)
+
+        diagram_index = diagram / 'index.json'
+        occurrence = route + '#flow'
+        self.assertEqual(json.loads(diagram_index.read_bytes())['diagrams'][0]['occurrence'], occurrence)
+        for kind, data in assets.items():
+            self.assertEqual((diagram / ('00.' + kind)).read_bytes(), data)
+        terminal_name = 'diagram-review'
+        topics = {'editorial': [], 'security-privacy': ['secrets', 'identifiers', 'diagnostics', 'data-boundaries'],
+                  'failure-recovery': ['pending-and-failed', 'safe-retry', 'recovery-boundaries', 'escalation'],
+                  'usability-accessibility': ['guide-discovery', 'task-navigation', 'accessible-structure', 'alternatives-and-reflow'],
+                  'visual-design': ['hierarchy', 'legibility', 'layout', 'consistency'],
+                  terminal_name: ['nodes-and-edges', 'caption-and-alternative', 'teaching-usefulness']}
+        roles = {role: f'synthetic-{role}' for role in (*topics, 'author', 'factual-reviewer')}
+        roles['newcomer'] = newcomer['reviewerTaskId']
+        common = {key: newcomer[key] for key in ('execution', 'checkedRoutes', 'inputManifestSha256', 'passed')}
+        common.update(summary='Synthetic companion report for this fixture.', limits='Local fixture only.', findings=[])
+        reports = {role: {**common, 'perspective': role, 'reviewerTaskId': roles[role], 'checkedTopics': labels}
+                   for role, labels in topics.items()}
+        visual_hash = digest(visual_index.read_bytes())
+        reports['newcomer'] = newcomer
+        reports['visual-design'].update(visualManifestSha256=visual_hash, checkedScreenshots=[shot['file'] for shot in shots])
+        source = f"https://github.com/pubky/paykit-rs/blob/{self.doc['version']['commit']}/src/lib.rs#L2-L5"
+        review = reports[terminal_name]
+        review.update(perspective='diagram-accuracy-usefulness', diagramManifestSha256=digest(diagram_index.read_bytes()),
+                      visualManifestSha256=visual_hash, checks=[{'occurrence': occurrence, 'semantics': 'Synthetic edge A to B.',
+                      'usefulness': 'Synthetic explanation with corresponding caption and alternative.', 'publicSources': [source]}])
+        paths = {role: self.root / f'{role}.json' for role in reports}
+        for role in reports:
+            paths[role].write_text(json.dumps(reports[role]))
+
+        def check(ok=True, reviewer=roles[terminal_name]):
+            return self.cli('validate-diagram-review', '--inputs', index, '--visual-inputs', visual_index,
+                            '--diagram-inputs', diagram_index, '--document', self.document, '--site-root', root,
+                            *[datum for role, f in paths.items() for datum in ('--report' if role == terminal_name else f'--{role}-report', f)],
+                            *[datum for role, value in roles.items() for datum in (f'--{role}-task-id', reviewer if role == terminal_name else value)],
+                            ok=ok)
+
+        accepted = check()
+        self.assertEqual(accepted['checkedDiagrams'], [occurrence])
+        self.assertEqual(accepted['diagramManifestSha256'], digest(diagram_index.read_bytes()))
+        for role, identity in roles.items():
+            if role != terminal_name:
+                check(ok=False, reviewer=identity)
+        for role in reports:
+            paths[role].write_text(json.dumps({**reports[role], 'passed': False}))
+            check(ok=False)
+            paths[role].write_text(json.dumps(reports[role]))
+        for wrong_source in ('https://github.com/pubky/paykit-rs/blob/main/src/lib.rs#L2-L5', source.replace('L2-L5', 'L9-L3')):
+            paths[terminal_name].write_text(json.dumps({**review, 'checks': [{**review['checks'][0], 'publicSources': [wrong_source]}]}))
+            self.assertIn('exact-version', check(ok=False)['detail'])
+        (diagram / '00.svg').write_bytes(b'changed after capture')
+        paths[terminal_name].write_text(json.dumps(review))
+        self.assertIn('Captured diagram asset changed', check(ok=False)['detail'])
 
     def rewrite_index(self, bundle, manifest):
         (bundle / 'index.json').write_text(json.dumps(manifest))

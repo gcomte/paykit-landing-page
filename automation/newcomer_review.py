@@ -442,6 +442,10 @@ def verified_visual_bundle(args, bundle):
 
 def validate_visual_design(args):
     bundle = verified_bundle(args, require_document_hash=True)
+    return validate_visual_design_reports(args, bundle, args.report)
+
+
+def validate_visual_design_reports(args, bundle, visual_path):
     usability = validate_usability_accessibility_reports(args, bundle, args.usability_accessibility_report)
     role_keys = ('authorTaskId', 'factualReviewerTaskId', 'newcomerTaskId', 'editorialTaskId',
                  'securityPrivacyTaskId', 'failureRecoveryTaskId')
@@ -450,7 +454,7 @@ def validate_visual_design(args):
     reviewer = args.visual_design_task_id
     require(text(reviewer) and reviewer not in prior_roles.values(), 'Distinct actual visual design reviewer task ID required')
     visual_hash, screenshots = verified_visual_bundle(args, bundle)
-    raw, report = validate_specialist_report(args.report, bundle, 'visual-design', reviewer)
+    raw, report = validate_specialist_report(visual_path, bundle, 'visual-design', reviewer)
     require(report.get('visualManifestSha256') == visual_hash, 'Stale visual manifest hash in review report')
     exact_scope(report.get('checkedScreenshots'), screenshots, 'checked screenshots')
     exact_scope(report.get('checkedTopics'), ('hierarchy', 'legibility', 'layout', 'consistency'), 'visual design topics')
@@ -465,6 +469,183 @@ def validate_visual_design(args):
             'limits': 'Screenshot and reading report binding only; does not establish visual judgment or conformance.'}
 
 
+def diagram_scope(args, bundle, visual_hash):
+    index_hash, routes, urls = bundle
+    require(urls[0].startswith('http://127.0.0.1:'), 'Diagram review requires the owned current-build loopback capture')
+    raw = args.inputs.read_bytes()
+    require(digest(raw) == index_hash, 'Reader index changed during validation')
+    index = load_json(raw)
+    version = index['version']
+    doc_raw, doc, doc_routes = document_scope(args.document, version)
+    require(digest(doc_raw) == index['documentSha256'] and routes == ['/docs', *doc_routes], 'Diagram document changed during validation')
+    root = args.site_root.resolve()
+    require(root.is_dir() and args.document.resolve() == root / f'content/docs/{version}.json',
+            'Diagram document must belong to the final candidate checkout')
+    require(isinstance(doc['version']['commit'], str), 'Diagram source commit must be a literal SHA')
+    visual = args.visual_inputs.read_bytes()
+    require(digest(visual) == visual_hash, 'Visual index changed during diagram validation')
+    browser = {(shot['route'], shot['view']): shot.get('diagramObservations')
+               for shot in load_json(visual)['screenshots']}
+    base = urls[0][:-len('/docs')]
+    items = []
+    local = {}
+    for i, (page, route) in enumerate(zip(doc['pages'], doc_routes, strict=True), 1):
+        row = index['documents'][i]
+        html_hash = row['html']['sha256']
+        md_hash = row['md']['sha256']
+        sections = page.get('sections')
+        if not isinstance(sections, list) or not all(isinstance(s, dict) for s in sections):
+            raise ValueError('Missing diagram page sections')
+        html_images = []
+        markdown_images = []
+        for section in sections:
+            diagram = section.get('diagram')
+            if diagram is None:
+                continue
+            anchor = section.get('id')
+            require(isinstance(diagram, dict) and isinstance(anchor, str) and re.fullmatch(r'[a-z0-9-]+', anchor),
+                    'Invalid diagram section')
+            asset = diagram.get('id')
+            require(isinstance(asset, str) and re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', asset)
+                    and meaningful(diagram.get('caption')) and meaningful(diagram.get('alt')), 'Invalid diagram metadata')
+            occurrence = f'{route}#{anchor}'
+            require(occurrence not in local, 'Duplicate diagram occurrence')
+            svg_path = f'/docs-assets/{version}/{asset}.svg'
+
+            row = {'occurrence': occurrence, 'route': route, 'url': urls[i], 'htmlSha256': html_hash,
+                   'markdownSha256': md_hash, 'caption': diagram['caption'], 'alt': diagram['alt'], 'assets': {}}
+            local[occurrence] = {}
+            for kind in ('svg', 'mmd'):
+                relative = f'/docs-assets/{version}/{asset}.{kind}'
+                candidate = root / 'public' / relative.lstrip('/')
+                require(candidate.is_file() and not candidate.is_symlink() and candidate.resolve() == candidate,
+                        'Missing regular candidate diagram asset')
+                with candidate.open('rb') as file:
+                    data = file.read(4 * 1024 * 1024 + 1)
+                require(0 < len(data) <= 4 * 1024 * 1024, 'Empty or oversized diagram asset')
+                row['assets'][kind] = {'path': relative, 'file': f'{len(items):02d}.{kind}',
+                                       'bytes': len(data), 'sha256': digest(data)}
+                local[occurrence][kind] = data
+            items.append(row)
+            rendered = {'url': base + svg_path, 'alt': diagram['alt'], 'visible': True}
+            markdown_images.append(rendered)
+            html_images.append({**rendered, 'section': anchor, 'sha256': row['assets']['svg']['sha256']})
+        for view in VISUAL_VIEWPORTS:
+            observation = browser.get((route, view))
+            if not isinstance(observation, dict) or observation.get('markdownSha256') != md_hash:
+                raise ValueError('Missing or stale browser diagram observations')
+            for key, expected in (('html', html_images), ('markdown', markdown_images)):
+                actual = observation.get(key)
+                require(isinstance(actual, list) and actual == expected and all(row['visible'] is True for row in actual),
+                        f'Actual rendered {key} image, alt or visibility differs: {route} ({view})')
+    require(items, 'No diagrams in the selected track; review scope needs explicit resolution')
+    return doc['version']['commit'], items, local
+
+
+def capture_diagram_review(args):
+    bundle = verified_bundle(args, require_document_hash=True)
+    visual_hash, _ = verified_visual_bundle(args, bundle)
+    require(bundle[2][0].startswith('http://127.0.0.1:'), 'Diagram review requires the owned current-build loopback capture')
+    base = bundle[2][0][:-len('/docs')]
+    require(args.output.is_absolute(), 'Output must be an absolute new directory')
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+    reader_index = args.inputs.read_bytes()
+    require(digest(reader_index) == bundle[0], 'Reader index changed during diagram capture')
+
+    def read_current_renderer():
+        for row in load_json(reader_index)['documents']:
+            for kind, suffix, mime in (('html', '', 'text/html'), ('md', '/index.md', 'text/markdown')):
+                request = urllib.request.Request(row['url'] + suffix,
+                            headers={'Cache-Control': 'no-cache', 'User-Agent': 'paykit-newcomer-reader'})
+                with opener.open(request, timeout=TIMEOUT) as response:
+                    require(response.status == 200 and response.url == request.full_url
+                            and response.headers.get_content_type() == mime, 'Wrong current renderer response')
+                    data = response.read(row[kind]['bytes'] + 1)
+                require(len(data) == row[kind]['bytes'] and digest(data) == row[kind]['sha256'],
+                        'Live renderer HTML/Markdown differs from reader capture')
+
+    read_current_renderer()
+    commit, items, local = diagram_scope(args, bundle, visual_hash)
+    args.output.mkdir(exist_ok=False)
+    for row in items:
+        for kind, asset in row['assets'].items():
+            request = urllib.request.Request(base + asset['path'], headers={'Cache-Control': 'no-cache'})
+            with opener.open(request, timeout=TIMEOUT) as response:
+                require(response.status == 200 and response.url == request.full_url, 'Expected exact owned diagram asset response')
+                if kind == 'svg':
+                    require(response.headers.get_content_type() == 'image/svg+xml', 'Unexpected SVG content type')
+                value = response.read(asset['bytes'] + 1)
+            require(value == local[row['occurrence']][kind], 'Served diagram bytes differ from the candidate checkout')
+            (args.output / asset['file']).write_bytes(value)
+    read_current_renderer()
+    index = args.output / 'index.json'
+    index.write_text(json.dumps({'kind': 'rendered-public-diagram-input', 'inputManifestSha256': bundle[0],
+                                 'visualManifestSha256': visual_hash, 'sourceCommit': commit, 'diagrams': items}, indent=2) + '\n')
+    return {'action': 'captured', 'diagrams': len(items), 'diagramInputs': str(index),
+            'diagramManifestSha256': digest(index.read_bytes())}
+
+
+def verified_diagram_bundle(args, bundle, visual_hash):
+    commit, expected, local = diagram_scope(args, bundle, visual_hash)
+    path = args.diagram_inputs
+    require(path.is_file() and not path.is_symlink(), 'Missing regular diagram index')
+    raw = path.read_bytes()
+    require(load_json(raw) == {'kind': 'rendered-public-diagram-input', 'inputManifestSha256': bundle[0], 'visualManifestSha256': visual_hash,
+                               'sourceCommit': commit, 'diagrams': expected}, 'Stale diagram manifest or incomplete occurrence/asset scope')
+    root = path.parent.resolve()
+    for row in expected:
+        for kind, asset in row['assets'].items():
+            file = root / asset['file']
+            require(file.is_file() and not file.is_symlink() and file.resolve() == file, 'Missing regular captured diagram asset')
+            with file.open('rb') as handle:
+                data = handle.read(asset['bytes'] + 1)
+            require(data == local[row['occurrence']][kind], 'Captured diagram asset changed')
+    return digest(raw), commit, {row['occurrence']: row['url'] for row in expected}
+
+
+def exact_public_line_source(value, commit):
+    if not isinstance(value, str):
+        return False
+    pattern = (rf'https://github\.com/pubky/paykit-rs/blob/{commit}/'
+               r'([A-Za-z0-9_./-]+)#L([1-9][0-9]*)(?:-L([1-9][0-9]*))?')
+    match = re.fullmatch(pattern, value)
+    return bool(match and all(part not in ('', '.', '..') for part in match[1].split('/'))
+                and (match[3] is None or int(match[2]) <= int(match[3])))
+
+
+def validate_diagram_review(args):
+    bundle = verified_bundle(args, require_document_hash=True)
+    visual = validate_visual_design_reports(args, bundle, args.visual_design_report)
+    prior_roles = {key: value for key, value in visual.items() if key.endswith('TaskId') and key != 'reviewerTaskId'}
+    prior_roles['visualDesignTaskId'] = visual['reviewerTaskId']
+    reviewer = args.diagram_review_task_id
+    require(text(reviewer) and reviewer not in prior_roles.values(), 'Distinct actual diagram reviewer task ID required')
+    manifest_hash, commit, occurrences = verified_diagram_bundle(args, bundle, visual['visualManifestSha256'])
+    raw, report = validate_specialist_report(args.report, bundle, 'diagram-accuracy-usefulness', reviewer)
+    require(report.get('diagramManifestSha256') == manifest_hash and report.get('visualManifestSha256') == visual['visualManifestSha256'],
+            'Stale diagram or visual manifest hash in review report')
+    exact_scope(report.get('checkedTopics'), ('nodes-and-edges', 'caption-and-alternative', 'teaching-usefulness'), 'diagram topics')
+    require(meaningful(report.get('limits')), 'Missing diagram reading limits')
+    checks = report.get('checks')
+    if not isinstance(checks, list) or not all(isinstance(row, dict) for row in checks):
+        raise ValueError('Missing diagram checks')
+    exact_scope([row.get('occurrence') for row in checks], occurrences, 'checked diagram occurrences')
+    for check in checks:
+        require(meaningful(check.get('semantics')) and meaningful(check.get('usefulness')), 'Missing diagram observations')
+        sources = check.get('publicSources')
+        require(isinstance(sources, list) and bool(sources) and all(exact_public_line_source(s, commit) for s in sources)
+                and len(sources) == len(set(sources)), 'Expected distinct exact-version public source line citations')
+    for finding in report['findings']:
+        require(occurrences.get(finding.get('occurrence')) == finding['url'].split('#', 1)[0],
+                'Finding does not refer to an actual diagram occurrence on this route')
+    prior_digests = {key: value for key, value in visual.items() if key.endswith('ReportSha256')}
+    return {'action': 'pass', 'reviewerTaskId': reviewer, 'inputManifestSha256': bundle[0], **prior_roles, **prior_digests,
+            'visualManifestSha256': visual['visualManifestSha256'], 'diagramManifestSha256': manifest_hash,
+            'diagramReviewReportSha256': digest(raw), 'checkedRoutes': bundle[1], 'checkedDiagrams': list(occurrences),
+            'nonblockingFindings': report['findings'],
+            'limits': 'Artifact, citation shape and role binding only; not semantic proof or regeneration.'}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -473,8 +654,11 @@ def main(argv=None):
     cap.add_argument('--version', required=True)
     cap.add_argument('--base-url', required=True)
     cap.add_argument('--output', type=Path, required=True)
+    diag = commands.add_parser('capture-diagram-review')
+    for field in ('inputs', 'visual-inputs', 'document', 'site-root', 'output'):
+        diag.add_argument('--' + field, type=Path, required=True)
     for command in ('validate', 'validate-editorial', 'validate-security-privacy', 'validate-failure-recovery',
-                    'validate-usability-accessibility', 'validate-visual-design'):
+                    'validate-usability-accessibility', 'validate-visual-design', 'validate-diagram-review'):
         val = commands.add_parser(command)
         val.add_argument('--inputs', type=Path, required=True)
         val.add_argument('--report', type=Path, required=True)
@@ -488,23 +672,28 @@ def main(argv=None):
         if command not in ('validate', 'validate-editorial'):
             val.add_argument('--editorial-report', type=Path, required=True)
             val.add_argument('--security-privacy-task-id', required=True)
-        if command in ('validate-failure-recovery', 'validate-usability-accessibility', 'validate-visual-design'):
+        if command in ('validate-failure-recovery', 'validate-usability-accessibility', 'validate-visual-design', 'validate-diagram-review'):
             val.add_argument('--security-privacy-report', type=Path, required=True)
             val.add_argument('--failure-recovery-task-id', required=True)
-        if command in ('validate-usability-accessibility', 'validate-visual-design'):
+        if command in ('validate-usability-accessibility', 'validate-visual-design', 'validate-diagram-review'):
             val.add_argument('--failure-recovery-report', type=Path, required=True)
             val.add_argument('--usability-accessibility-task-id', required=True)
-        if command == 'validate-visual-design':
+        if command in ('validate-visual-design', 'validate-diagram-review'):
             val.add_argument('--usability-accessibility-report', type=Path, required=True)
             val.add_argument('--visual-design-task-id', required=True)
             val.add_argument('--visual-inputs', type=Path, required=True)
+        if command == 'validate-diagram-review':
+            for field in ('diagram-inputs', 'site-root', 'visual-design-report'):
+                val.add_argument('--' + field, type=Path, required=True)
+            val.add_argument('--diagram-review-task-id', required=True)
     args = parser.parse_args(argv)
     try:
         result = {'capture': capture, 'validate': validate, 'validate-editorial': validate_editorial,
                   'validate-security-privacy': validate_security_privacy,
                   'validate-failure-recovery': validate_failure_recovery,
                   'validate-usability-accessibility': validate_usability_accessibility,
-                  'validate-visual-design': validate_visual_design}[args.command](args)
+                  'validate-visual-design': validate_visual_design, 'capture-diagram-review': capture_diagram_review,
+                  'validate-diagram-review': validate_diagram_review}[args.command](args)
     except (OSError, ValueError, TypeError, KeyError, http.client.HTTPException) as error:
         print(json.dumps({'action': 'refused', 'detail': str(error)}))
         raise SystemExit(1)
