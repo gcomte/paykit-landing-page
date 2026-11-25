@@ -517,5 +517,34 @@ class WeeklyCheckTests(unittest.TestCase):
         self.assertIn('Require the failure/recovery validation on the exact final bytes immediately before committing', section)
 
 
+    def test_usability_role_and_browser_checks_trigger_process_refresh(self):
+        root, module, manifest = self.fixture()
+        resolver = lambda *args: COMMIT
+        self.assertEqual(module.check_weekly(root, manifest, resolver=resolver)['action'], 'skip')
+        paths = ('automation/skills/usability-accessibility-review.md', 'tests/browser/docs.spec.ts')
+        for name in paths:
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text((SCRIPT.parents[1] / name).read_text())
+        self.git(root, 'add', *paths)
+        self.git(root, 'commit', '-m', 'docs usability and browser QA inputs')
+        result = module.check_weekly(root, manifest, resolver=resolver)
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['refreshVersions'], ['coming-soon'])
+        self.assertEqual(result['processFilesChanged'], list(paths))
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_weekly_usability_separates_reading_evidence_from_browser_qa(self):
+        weekly = (SCRIPT.parents[1] / 'automation/WEEKLY.md').read_text()
+        self.assertIn('usability/accessibility', weekly.split('- `action=skip`:', 1)[1].split('\n', 1)[0])
+        section = weekly.split('### Dedicated usability and accessibility reading gate', 1)[1].split('## 4.', 1)[0]
+        command = next(row for row in section.splitlines() if 'validate-usability-accessibility' in row)
+        for token in ('--newcomer-report', '--editorial-report', '--security-privacy-report', '--failure-recovery-report',
+                      '--failure-recovery-task-id', '--usability-accessibility-task-id'):
+            self.assertIn(token, command.split())
+        self.assertIn('separately requires the **actual browser** QA', section)
+        self.assertIn('from `/docs` for Coming soon and from the versioned Overview for Released', section)
+        self.assertIn('exact final candidate immediately before committing', section)
+
+
 if __name__ == '__main__':
     unittest.main()

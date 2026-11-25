@@ -526,6 +526,20 @@
         "automation/tests/test_weekly_check.py"
       ],
       "enforcementScope": "Reader-facing failure/recovery documentation only; no product execution or payment/recovery assurance."
+    },
+    {
+      "id": "paykit-usability-accessibility-review",
+      "requirement": "On refreshed tracks only, require a distinct public-only usability/accessibility reader after failure/recovery. Check version-specific guide discovery, navigation, usable structure and alternatives from the exact rendered HTML and Markdown. Bind the passing report and four prior reader reports to one final capture and seven actual role IDs. Separately verify current-build phone-width keyboard-only journeys to the matching Point of Sale guide and first code example for both snapshots. Material barriers or missing evidence block publication; log minor suggestions and preserve existing cadence and repair limits. No guide execution, aesthetic redesign, human study or conformance claim.",
+      "enforcedBy": [
+        "automation/WEEKLY.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/usability-accessibility-review.md",
+        "automation/newcomer_review.py",
+        "automation/tests/test_newcomer_review.py",
+        "automation/tests/test_weekly_check.py",
+        "tests/browser/docs.spec.ts"
+      ],
+      "enforcementScope": "Documentation reading and named current-build browser checks only, not a full assistive-technology audit."
     }
   ]
 }

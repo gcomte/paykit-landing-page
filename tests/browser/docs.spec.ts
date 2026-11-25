@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 type Version = "released" | "coming-soon";
 type PageData = {
@@ -289,3 +289,43 @@ test("docs skip link, page navigation, next steps and code scrolling work with a
   await current.focus();
   expect(await current.evaluate((node) => getComputedStyle(node).outlineStyle)).not.toBe("none");
 });
+
+async function tabTo(page: Page, control: Locator) {
+  await expect(control).toBeVisible();
+  // Bound the search, but use only genuine sequential keyboard focus, not click/focus().
+  for (let steps = 0; steps < 40; steps++) {
+    if (await control.evaluate((node) => node === document.activeElement)) return;
+    await page.keyboard.press("Tab");
+  }
+  await expect(control, "control must be reachable by sequential Tab").toBeFocused();
+}
+
+for (const version of versions) {
+  test(`${version}: reach the Point of Sale example with only the keyboard at phone width`, async ({ page }) => {
+    const docs = await readDocumentation(version);
+    const pos = docs.pages.find((entry) => entry.slug === "point-of-sale");
+    expect(pos, "the snapshot should contain a Point of Sale guide").toBeDefined();
+    const route = documentPath(version, "point-of-sale");
+    await page.setViewportSize({ width: 375, height: 812 });
+    // The shared entry intentionally starts on Coming soon; Released has its own direct Overview.
+    await page.goto(version === "released" ? documentPath(version, "overview") : "/docs");
+    await expect(page.getByRole("main")).toHaveAttribute("data-doc-version", version);
+    const nav = page.getByRole("navigation", { name: "Documentation pages", exact: true });
+    const link = nav.getByRole("link", { name: pos!.title, exact: true });
+    await expect(link).toHaveAttribute("href", route);
+    await tabTo(page, link);
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL((url) => url.pathname === route);
+    await expect(page.getByRole("heading", { level: 1, name: pos!.title, exact: true })).toBeVisible();
+
+    const example = page.getByRole("article").locator("pre").first();
+    await expect(example).toHaveRole("region");
+    await expect(example).toHaveAccessibleName(/\bcode\b/i);
+    await tabTo(page, example);
+    await page.keyboard.press("Tab");
+    await expect(example).not.toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(example).toBeFocused();
+    await expectNoOverflow(page);
+  });
+}

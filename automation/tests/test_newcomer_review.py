@@ -363,6 +363,71 @@ class NewcomerReviewTests(unittest.TestCase):
         body.write_bytes(before[body])
         self.assertEqual({p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}, before)
 
+    def test_usability_accessibility_gate_binds_prior_reports_and_refuses_incomplete_review(self):
+        bundle = self.fixture_bundle()
+        index = bundle / 'index.json'
+        newcomer = self.synthetic_report(bundle)
+        roles = {'author': 'synthetic-author-task', 'factual-reviewer': 'synthetic-factual-task',
+                 'newcomer': newcomer['reviewerTaskId'], 'editorial': 'synthetic-editor-task',
+                 'security-privacy': 'synthetic-security-task', 'failure-recovery': 'synthetic-recovery-task',
+                 'usability-accessibility': 'synthetic-access-task'}
+        common = {key: newcomer[key] for key in ('execution', 'checkedRoutes', 'inputManifestSha256', 'passed')}
+        common.update(summary='Synthetic reader checked the rendered fixture.', limits='No interactive behavior tested.', findings=[])
+        topics = {'editorial': [], 'security-privacy': ['secrets', 'identifiers', 'diagnostics', 'data-boundaries'],
+                  'failure-recovery': ['pending-and-failed', 'safe-retry', 'recovery-boundaries', 'escalation'],
+                  'usability-accessibility': ['guide-discovery', 'task-navigation', 'accessible-structure', 'alternatives-and-reflow']}
+        reports = {name: {**common, 'perspective': name, 'reviewerTaskId': roles[name], 'checkedTopics': checked}
+                   for name, checked in topics.items()}
+        reports['newcomer'] = newcomer
+        name = 'usability-accessibility'
+        paths = {role: self.root / f'{role}.json' for role in reports}
+        for role, report in reports.items():
+            paths[role].write_text(json.dumps(report))
+        before = {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+
+        def check(ok=True, reviewer=roles[name]):
+            flags = [item for role, identity in roles.items()
+                     for item in (f'--{role}-task-id', reviewer if role == name else identity)]
+            paths_args = [item for role, path in paths.items()
+                          for item in ('--report' if role == name else f'--{role}-report', path)]
+            return self.cli('validate-usability-accessibility', '--inputs', index, '--document', self.document,
+                            *paths_args, *flags, ok=ok)
+
+        result = check()
+        self.assertEqual(result['checkedTopics'], topics[name])
+        self.assertEqual(result['checkedRoutes'], self.routes)
+        self.assertEqual(result['reviewerTaskId'], roles[name])
+        self.assertEqual(result['failureRecoveryTaskId'], roles['failure-recovery'])
+        for field, role in [('newcomer', 'newcomer'), ('editorial', 'editorial'),
+                            ('securityPrivacy', 'security-privacy'), ('failureRecovery', 'failure-recovery'),
+                            ('usabilityAccessibility', name)]:
+            self.assertEqual(result[f'{field}ReportSha256'], hashlib.sha256(before[paths[role]]).hexdigest())
+        for role, identity in roles.items():
+            if role != name:
+                self.assertIn('Distinct actual usability/accessibility', check(ok=False, reviewer=identity)['detail'])
+
+        for role, key, value in [('failure-recovery', 'passed', False), ('failure-recovery', 'reviewerTaskId', roles[name]),
+                                 ('failure-recovery', 'inputManifestSha256', 'a' * 64), (name, 'passed', 1),
+                                 (name, 'execution', 'browser-tested'), (name, 'limits', 'unknown'),
+                                 (name, 'checkedTopics', topics[name][:-1]), (name, 'checkedRoutes', self.routes[:-1]),
+                                 (name, 'reviewerTaskId', roles['failure-recovery']), (name, 'findings', None),
+                                 (name, 'findings', [{'url': json.loads(index.read_bytes())['entryUrl'],
+                                     'location': 'Synthetic entry', 'evidence': 'Synthetic reader page',
+                                     'impact': 'An essential action is inaccessible.',
+                                     'recommendation': 'Make the essential action reachable.', 'blocking': True}])]:
+            with self.subTest(role=role, field=key):
+                paths[role].write_text(json.dumps({**reports[role], key: value}))
+                check(ok=False)
+                paths[role].write_bytes(before[paths[role]])
+        paths['failure-recovery'].unlink()
+        self.assertIn('Missing regular failure-recovery report', check(ok=False)['detail'])
+        paths['failure-recovery'].write_bytes(before[paths['failure-recovery']])
+        body = bundle / '01.md'
+        body.write_bytes(before[body] + b' changed after the review')
+        self.assertIn('Reader body length/hash mismatch', check(ok=False)['detail'])
+        body.write_bytes(before[body])
+        self.assertEqual({p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}, before)
+
     def rewrite_index(self, bundle, manifest):
         (bundle / 'index.json').write_text(json.dumps(manifest))
         return self.synthetic_report(bundle)
