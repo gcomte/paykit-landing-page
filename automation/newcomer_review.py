@@ -226,36 +226,71 @@ def validate_newcomer_report(raw, bundle, author, factual):
 
 def validate_editorial(args):
     bundle = verified_bundle(args, require_document_hash=True)
-    index_hash, routes, urls = bundle
+    return validate_editorial_reports(args, bundle, args.report)
+
+
+def validate_editorial_reports(args, bundle, editorial_path):
+    index_hash, routes, _ = bundle
     require(args.newcomer_report.is_file() and not args.newcomer_report.is_symlink(),
             'Missing regular newcomer report')
     newcomer_bytes = args.newcomer_report.read_bytes()
     newcomer = validate_newcomer_report(newcomer_bytes, bundle, args.author_task_id, args.factual_reviewer_task_id)
     require(newcomer['reviewerTaskId'] == args.newcomer_task_id, 'Wrong newcomer task ID in accepted report')
-    require(args.report.is_file() and not args.report.is_symlink(), 'Missing regular editorial report')
-    report = load_json(args.report.read_bytes())
-    require(isinstance(report, dict) and report.get('perspective') == 'editorial'
-            and report.get('execution') == 'reading-only', 'Expected editorial reading-only review')
     ids = (args.author_task_id, args.factual_reviewer_task_id, args.newcomer_task_id, args.editorial_task_id)
     require(all(text(value) for value in ids) and len(set(ids)) == 4,
             'Distinct actual author/factual/newcomer/editorial task IDs required')
-    require(report.get('reviewerTaskId') == args.editorial_task_id, 'Wrong editorial task ID')
-    require(report.get('inputManifestSha256') == index_hash, 'Stale input manifest hash')
-    exact_scope(report.get('checkedRoutes'), routes, 'checked routes')
-    require(report.get('passed') is True and meaningful(report.get('summary')),
-            'Editorial review did not pass or lacks a meaningful summary')
-    findings = report.get('findings')
-    require(isinstance(findings, list), 'Missing editorial findings list')
-    for finding in findings:
-        require(isinstance(finding, dict) and all(meaningful(finding.get(key)) for key in
-                ('url', 'location', 'evidence', 'impact', 'recommendation')), 'Incomplete editorial finding')
-        require(finding['url'].split('#', 1)[0] in urls, 'Finding URL outside checked reader pages')
-        require(finding.get('blocking') is False, 'Blocking or malformed editorial finding')
+    raw, report = validate_specialist_report(editorial_path, bundle, 'editorial', args.editorial_task_id)
     return {'action': 'pass', 'reviewerTaskId': args.editorial_task_id, 'inputManifestSha256': index_hash,
             'authorTaskId': args.author_task_id, 'factualReviewerTaskId': args.factual_reviewer_task_id,
             'newcomerTaskId': newcomer['reviewerTaskId'], 'newcomerReportSha256': digest(newcomer_bytes),
-            'checkedRoutes': routes, 'nonblockingFindings': findings,
+            'editorialReportSha256': digest(raw),
+            'checkedRoutes': routes, 'nonblockingFindings': report['findings'],
             'limits': 'Binding/shape gate only; editorial judgment comes from the independent reader.'}
+
+
+def validate_specialist_report(path, bundle, perspective, reviewer):
+    index_hash, routes, urls = bundle
+    require(path.is_file() and not path.is_symlink(), f'Missing regular {perspective} report')
+    raw = path.read_bytes()
+    report = load_json(raw)
+    require(isinstance(report, dict) and report.get('perspective') == perspective
+            and report.get('execution') == 'reading-only', f'Expected {perspective} reading-only review')
+    require(report.get('reviewerTaskId') == reviewer, f'Wrong {perspective} task ID')
+    require(report.get('inputManifestSha256') == index_hash, 'Stale input manifest hash')
+    exact_scope(report.get('checkedRoutes'), routes, 'checked routes')
+    require(report.get('passed') is True and meaningful(report.get('summary')),
+            f'{perspective.capitalize()} review did not pass or lacks a meaningful summary')
+    findings = report.get('findings')
+    require(isinstance(findings, list), f'Missing {perspective} findings list')
+    for finding in findings:
+        require(isinstance(finding, dict) and all(meaningful(finding.get(key)) for key in
+                ('url', 'location', 'evidence', 'impact', 'recommendation')), f'Incomplete {perspective} finding')
+        require(finding['url'].split('#', 1)[0] in urls, 'Finding URL outside checked reader pages')
+        require(finding.get('blocking') is False, f'Blocking or malformed {perspective} finding')
+    return raw, report
+
+
+def validate_security_privacy(args):
+    bundle = verified_bundle(args, require_document_hash=True)
+    editorial = validate_editorial_reports(args, bundle, args.editorial_report)
+    prior_ids = (editorial['authorTaskId'], editorial['factualReviewerTaskId'],
+                 editorial['newcomerTaskId'], editorial['reviewerTaskId'])
+    reviewer = args.security_privacy_task_id
+    require(text(reviewer) and reviewer not in prior_ids,
+            'Distinct actual security/privacy reviewer task ID required')
+    raw, report = validate_specialist_report(args.report, bundle, 'security-privacy', reviewer)
+    exact_scope(report.get('checkedTopics'), ('secrets', 'identifiers', 'diagnostics', 'data-boundaries'),
+                'security/privacy topics')
+    require(meaningful(report.get('limits')), 'Missing security/privacy reading limits')
+    require(all('publicSource' not in finding or meaningful(finding['publicSource']) for finding in report['findings']),
+            'Malformed public source citation')
+    return {'action': 'pass', 'reviewerTaskId': reviewer, 'inputManifestSha256': bundle[0],
+            'authorTaskId': prior_ids[0], 'factualReviewerTaskId': prior_ids[1], 'newcomerTaskId': prior_ids[2],
+            'editorialTaskId': prior_ids[3], 'newcomerReportSha256': editorial['newcomerReportSha256'],
+            'editorialReportSha256': editorial['editorialReportSha256'],
+            'securityPrivacyReportSha256': digest(raw), 'checkedRoutes': bundle[1],
+            'checkedTopics': report['checkedTopics'], 'nonblockingFindings': report['findings'],
+            'limits': 'Binding/shape only; not verification of product behavior or of the cited sources.'}
 
 
 def main(argv=None):
@@ -266,20 +301,24 @@ def main(argv=None):
     cap.add_argument('--version', required=True)
     cap.add_argument('--base-url', required=True)
     cap.add_argument('--output', type=Path, required=True)
-    for command in ('validate', 'validate-editorial'):
+    for command in ('validate', 'validate-editorial', 'validate-security-privacy'):
         val = commands.add_parser(command)
         val.add_argument('--inputs', type=Path, required=True)
         val.add_argument('--report', type=Path, required=True)
         val.add_argument('--document', type=Path, required=True)
         val.add_argument('--author-task-id', required=True)
         val.add_argument('--factual-reviewer-task-id', required=True)
-        if command == 'validate-editorial':
+        if command != 'validate':
             val.add_argument('--newcomer-report', type=Path, required=True)
             val.add_argument('--newcomer-task-id', required=True)
             val.add_argument('--editorial-task-id', required=True)
+        if command == 'validate-security-privacy':
+            val.add_argument('--editorial-report', type=Path, required=True)
+            val.add_argument('--security-privacy-task-id', required=True)
     args = parser.parse_args(argv)
     try:
-        result = {'capture': capture, 'validate': validate, 'validate-editorial': validate_editorial}[args.command](args)
+        result = {'capture': capture, 'validate': validate, 'validate-editorial': validate_editorial,
+                  'validate-security-privacy': validate_security_privacy}[args.command](args)
     except (OSError, ValueError, TypeError, KeyError, http.client.HTTPException) as error:
         print(json.dumps({'action': 'refused', 'detail': str(error)}))
         raise SystemExit(1)

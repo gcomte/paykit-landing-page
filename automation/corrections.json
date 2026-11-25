@@ -500,6 +500,19 @@
         "automation/tests/test_weekly_check.py"
       ],
       "enforcementScope": "Editorial role and binding gate within the existing weekly workflow. No extra schedule, changes to generated content in the process-only deployment, or SDK execution."
+    },
+    {
+      "id": "paykit-security-privacy-review",
+      "requirement": "On refreshed tracks only, require a separate public-only security/privacy reading review after factual, newcomer and editorial acceptance. Inspect actual rendered HTML and Markdown for secret and identifier handling, sensitive diagnostics, public/private and demo/production boundaries, and unsupported security or privacy assurances. Bind the report to the same final bundle and actual independent role IDs. Material hazards block publication; record minor suggestions without forcing rewrites. Verify repaired generation inputs against exact immutable public evidence and regenerate and re-review changed output. No exploit testing, guide/demo execution, payments, sandbox or extra schedule.",
+      "enforcedBy": [
+        "automation/WEEKLY.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/security-privacy-review.md",
+        "automation/newcomer_review.py",
+        "automation/tests/test_newcomer_review.py",
+        "automation/tests/test_weekly_check.py"
+      ],
+      "enforcementScope": "Defensive documentation reading and artifact/role binding only, not a product security audit or runtime assurance."
     }
   ]
 }

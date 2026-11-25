@@ -208,6 +208,86 @@ class NewcomerReviewTests(unittest.TestCase):
                      'summary': 'Synthetic review of the exact rendered views.', 'findings': []}
         self.assertIn('Wrong newcomer task ID', self.editorial_cli(bundle, editorial, ok=False)['detail'])
 
+    def test_security_privacy_gate_binds_all_reports_and_refuses_wrong_inputs(self):
+        bundle = self.fixture_bundle()
+        newcomer = self.synthetic_report(bundle)
+        self.validate(bundle, newcomer)
+        editor = {**{key: newcomer[key] for key in ('execution', 'inputManifestSha256', 'checkedRoutes', 'passed')},
+                  'perspective': 'editorial', 'reviewerTaskId': 'synthetic-editor-task',
+                  'summary': 'Synthetic editor inspected clarity.', 'findings': []}
+        self.editorial_cli(bundle, editor)
+        topics = ['secrets', 'identifiers', 'diagnostics', 'data-boundaries']
+        finding = {'url': json.loads((bundle / 'index.json').read_bytes())['entryUrl'],
+                   'location': 'Synthetic entry, Markdown', 'evidence': 'Synthetic reader page',
+                   'impact': 'The short synthetic label lacks context.',
+                   'recommendation': 'Clarify the synthetic label.', 'blocking': False}
+        report = {**editor, 'perspective': 'security-privacy', 'reviewerTaskId': 'synthetic-security-task',
+                  'checkedTopics': topics, 'summary': 'Synthetic privacy and security reading.',
+                  'limits': 'No product behavior was exercised.', 'findings': [finding]}
+        report_path = self.root / 'security-privacy.json'
+        editor_path = self.root / 'editorial.json'
+        newcomer_path = self.root / 'report.json'
+
+        def check(ok=True, reviewer=report['reviewerTaskId']):
+            return self.cli('validate-security-privacy', '--inputs', bundle / 'index.json',
+                            '--report', report_path, '--document', self.document,
+                            '--newcomer-report', newcomer_path, '--editorial-report', editor_path,
+                            '--author-task-id', 'synthetic-author-task',
+                            '--factual-reviewer-task-id', 'synthetic-factual-task',
+                            '--newcomer-task-id', newcomer['reviewerTaskId'],
+                            '--editorial-task-id', editor['reviewerTaskId'],
+                            '--security-privacy-task-id', reviewer, ok=ok)
+
+        self.assertIn('Missing regular security-privacy report', check(ok=False)['detail'])
+        report_path.write_text(json.dumps(report))
+        paths = [*bundle.iterdir(), report_path, editor_path, newcomer_path, self.document]
+        original = {path: path.read_bytes() for path in paths}
+        result = check()
+        self.assertEqual(result['checkedTopics'], topics)
+        self.assertEqual(result['checkedRoutes'], self.routes)
+        self.assertEqual(result['nonblockingFindings'], [finding])
+        for field, identity in [('reviewerTaskId', report['reviewerTaskId']),
+                                ('editorialTaskId', editor['reviewerTaskId']),
+                                ('newcomerTaskId', newcomer['reviewerTaskId']),
+                                ('authorTaskId', 'synthetic-author-task'),
+                                ('factualReviewerTaskId', 'synthetic-factual-task')]:
+            self.assertEqual(result[field], identity)
+            if field != 'reviewerTaskId':
+                self.assertIn('Distinct actual security/privacy', check(ok=False, reviewer=identity)['detail'])
+        for field, path in [('securityPrivacyReportSha256', report_path),
+                            ('editorialReportSha256', editor_path), ('newcomerReportSha256', newcomer_path)]:
+            self.assertEqual(result[field], hashlib.sha256(original[path]).hexdigest())
+        self.assertEqual({path: path.read_bytes() for path in paths}, original)
+
+        for field, value in [('execution', 'hands-on'), ('perspective', 'editorial'), ('passed', 1),
+                             ('passed', False), ('checkedTopics', topics[:-1]),
+                             ('checkedTopics', [*topics, topics[0]]), ('checkedRoutes', self.routes[:-1]),
+                             ('limits', 'unknown'), ('reviewerTaskId', editor['reviewerTaskId']),
+                             ('inputManifestSha256', '0' * 64),
+                             ('findings', [{**finding, 'blocking': True}]),
+                             ('findings', [{**finding, 'publicSource': ''}]),
+                             ('findings', [{**finding, 'url': 'https://example.invalid/'}])]:
+            with self.subTest(field=field, value=value):
+                report_path.write_text(json.dumps({**report, field: value}))
+                check(ok=False)
+        report_path.write_bytes(original[report_path])
+
+        for path, mutation, detail in [
+                (editor_path, {**editor, 'passed': False}, 'Editorial review did not pass'),
+                (editor_path, {**editor, 'reviewerTaskId': report['reviewerTaskId']}, 'Wrong editorial task ID'),
+                (newcomer_path, {**newcomer, 'passed': False}, 'Newcomer report did not pass'),
+                (newcomer_path, {**newcomer, 'reviewerTaskId': report['reviewerTaskId']}, 'Wrong newcomer task ID')]:
+            with self.subTest(prior_report=path.name, detail=detail):
+                path.write_text(json.dumps(mutation))
+                self.assertIn(detail, check(ok=False)['detail'])
+                path.write_bytes(original[path])
+
+        for path, detail in [(self.document, 'Missing or stale document hash'),
+                             (bundle / '01.md', 'Reader body length/hash mismatch')]:
+            path.write_bytes(original[path] + b' ')
+            self.assertIn(detail, check(ok=False)['detail'])
+            path.write_bytes(original[path])
+
     def rewrite_index(self, bundle, manifest):
         (bundle / 'index.json').write_text(json.dumps(manifest))
         return self.synthetic_report(bundle)

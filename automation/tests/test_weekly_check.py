@@ -460,6 +460,32 @@ class WeeklyCheckTests(unittest.TestCase):
             self.assertIn(token, command.split())
         self.assertIn('require the editorial validation above to pass immediately before committing', section)
 
+    def test_security_privacy_role_changes_refresh_only_coming_soon(self):
+        root, module, manifest = self.fixture()
+        self.assertEqual(module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)['action'], 'skip')
+        role = 'automation/skills/security-privacy-review.md'
+        (root / role).parent.mkdir(parents=True, exist_ok=True)
+        (root / role).write_text((SCRIPT.parents[1] / role).read_text())
+        self.git(root, 'add', role)
+        self.git(root, 'commit', '-m', 'security privacy reading policy changed')
+        result = module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['processFilesChanged'], [role])
+        self.assertEqual(result['refreshVersions'], ['coming-soon'])
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_weekly_security_privacy_keeps_skip_and_requires_both_prior_reports(self):
+        weekly = (SCRIPT.parents[1] / 'automation/WEEKLY.md').read_text()
+        skip = weekly.split('- `action=skip`:', 1)[1].split('\n', 1)[0]
+        self.assertIn('including editorial and security/privacy', skip)
+        section = weekly.split('### Dedicated security and privacy reading gate', 1)[1]
+        command = next(row for row in section.splitlines() if 'validate-security-privacy' in row)
+        for token in ('--inputs', '--report', '--newcomer-report', '--editorial-report', '--document',
+                      '--author-task-id', '--factual-reviewer-task-id', '--newcomer-task-id',
+                      '--editorial-task-id', '--security-privacy-task-id'):
+            self.assertIn(token, command.split())
+        self.assertIn('require the security/privacy validation on the same final bytes', section)
+
 
 if __name__ == '__main__':
     unittest.main()
