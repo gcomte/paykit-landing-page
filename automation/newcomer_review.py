@@ -272,13 +272,17 @@ def validate_specialist_report(path, bundle, perspective, reviewer):
 
 def validate_security_privacy(args):
     bundle = verified_bundle(args, require_document_hash=True)
+    return validate_security_privacy_reports(args, bundle, args.report)
+
+
+def validate_security_privacy_reports(args, bundle, security_path):
     editorial = validate_editorial_reports(args, bundle, args.editorial_report)
     prior_ids = (editorial['authorTaskId'], editorial['factualReviewerTaskId'],
                  editorial['newcomerTaskId'], editorial['reviewerTaskId'])
     reviewer = args.security_privacy_task_id
     require(text(reviewer) and reviewer not in prior_ids,
             'Distinct actual security/privacy reviewer task ID required')
-    raw, report = validate_specialist_report(args.report, bundle, 'security-privacy', reviewer)
+    raw, report = validate_specialist_report(security_path, bundle, 'security-privacy', reviewer)
     exact_scope(report.get('checkedTopics'), ('secrets', 'identifiers', 'diagnostics', 'data-boundaries'),
                 'security/privacy topics')
     require(meaningful(report.get('limits')), 'Missing security/privacy reading limits')
@@ -293,6 +297,28 @@ def validate_security_privacy(args):
             'limits': 'Binding/shape only; not verification of product behavior or of the cited sources.'}
 
 
+def validate_failure_recovery(args):
+    bundle = verified_bundle(args, require_document_hash=True)
+    security = validate_security_privacy_reports(args, bundle, args.security_privacy_report)
+    prior_roles = {key: security[key] for key in ('authorTaskId', 'factualReviewerTaskId', 'newcomerTaskId', 'editorialTaskId')}
+    prior_roles['securityPrivacyTaskId'] = security['reviewerTaskId']
+    reviewer = args.failure_recovery_task_id
+    require(text(reviewer) and reviewer not in prior_roles.values(),
+            'Distinct actual failure/recovery reviewer task ID required')
+    raw, report = validate_specialist_report(args.report, bundle, 'failure-recovery', reviewer)
+    exact_scope(report.get('checkedTopics'), ('pending-and-failed', 'safe-retry', 'recovery-boundaries', 'escalation'),
+                'failure/recovery topics')
+    require(meaningful(report.get('limits')), 'Missing failure/recovery reading limits')
+    require(all('publicSource' not in finding or meaningful(finding['publicSource']) for finding in report['findings']),
+            'Malformed public source citation')
+    prior_digests = {key: security[key] for key in ('newcomerReportSha256', 'editorialReportSha256', 'securityPrivacyReportSha256')}
+    return {'action': 'pass', 'reviewerTaskId': reviewer, 'inputManifestSha256': bundle[0],
+            **prior_roles, **prior_digests, 'failureRecoveryReportSha256': digest(raw),
+            'checkedRoutes': bundle[1], 'checkedTopics': report['checkedTopics'],
+            'nonblockingFindings': report['findings'],
+            'limits': 'Binding/shape only; no recovery execution or verification of product behavior or cited sources.'}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -301,7 +327,7 @@ def main(argv=None):
     cap.add_argument('--version', required=True)
     cap.add_argument('--base-url', required=True)
     cap.add_argument('--output', type=Path, required=True)
-    for command in ('validate', 'validate-editorial', 'validate-security-privacy'):
+    for command in ('validate', 'validate-editorial', 'validate-security-privacy', 'validate-failure-recovery'):
         val = commands.add_parser(command)
         val.add_argument('--inputs', type=Path, required=True)
         val.add_argument('--report', type=Path, required=True)
@@ -312,13 +338,17 @@ def main(argv=None):
             val.add_argument('--newcomer-report', type=Path, required=True)
             val.add_argument('--newcomer-task-id', required=True)
             val.add_argument('--editorial-task-id', required=True)
-        if command == 'validate-security-privacy':
+        if command in ('validate-security-privacy', 'validate-failure-recovery'):
             val.add_argument('--editorial-report', type=Path, required=True)
             val.add_argument('--security-privacy-task-id', required=True)
+        if command == 'validate-failure-recovery':
+            val.add_argument('--security-privacy-report', type=Path, required=True)
+            val.add_argument('--failure-recovery-task-id', required=True)
     args = parser.parse_args(argv)
     try:
         result = {'capture': capture, 'validate': validate, 'validate-editorial': validate_editorial,
-                  'validate-security-privacy': validate_security_privacy}[args.command](args)
+                  'validate-security-privacy': validate_security_privacy,
+                  'validate-failure-recovery': validate_failure_recovery}[args.command](args)
     except (OSError, ValueError, TypeError, KeyError, http.client.HTTPException) as error:
         print(json.dumps({'action': 'refused', 'detail': str(error)}))
         raise SystemExit(1)

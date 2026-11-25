@@ -288,6 +288,81 @@ class NewcomerReviewTests(unittest.TestCase):
             self.assertIn(detail, check(ok=False)['detail'])
             path.write_bytes(original[path])
 
+    def test_failure_recovery_cli_requires_the_current_chain_and_complete_reading(self):
+        bundle = self.fixture_bundle()
+        index = bundle / 'index.json'
+        newcomer = self.synthetic_report(bundle)
+        review_roles = {'authorTaskId': 'synthetic-author-task', 'factualReviewerTaskId': 'synthetic-factual-task',
+                        'newcomerTaskId': newcomer['reviewerTaskId'], 'editorialTaskId': 'synthetic-editor-task',
+                        'securityPrivacyTaskId': 'synthetic-security-task', 'reviewerTaskId': 'synthetic-recovery-task'}
+        core = {key: newcomer[key] for key in ('execution', 'checkedRoutes', 'inputManifestSha256', 'passed')}
+        core.update(summary='Independent synthetic reading for this fixture.',
+                    limits='Rendered reading only; no recovery was executed.', findings=[])
+        topics = ['pending-and-failed', 'safe-retry', 'recovery-boundaries', 'escalation']
+        editor = {**core, 'perspective': 'editorial', 'reviewerTaskId': review_roles['editorialTaskId']}
+        security = {**core, 'perspective': 'security-privacy', 'reviewerTaskId': review_roles['securityPrivacyTaskId'],
+                    'checkedTopics': ['secrets', 'identifiers', 'diagnostics', 'data-boundaries']}
+        finding = {'url': json.loads(index.read_bytes())['entryUrl'], 'location': 'Synthetic entry, Markdown',
+                   'evidence': 'Synthetic reader page', 'impact': 'Readers might miss where the status is described.',
+                   'recommendation': 'Consider a link to the existing status description.', 'blocking': False}
+        recovery = {**core, 'perspective': 'failure-recovery', 'reviewerTaskId': review_roles['reviewerTaskId'],
+                    'checkedTopics': topics, 'findings': [finding]}
+        reports = {'newcomer': newcomer, 'editorial': editor, 'security-privacy': security, 'failure-recovery': recovery}
+        paths = {key: self.root / f'{key}.json' for key in reports}
+
+        def check(ok=True, reviewer=review_roles['reviewerTaskId']):
+            return self.cli('validate-failure-recovery', '--inputs', index, '--document', self.document,
+                            '--report', paths['failure-recovery'], '--newcomer-report', paths['newcomer'],
+                            '--editorial-report', paths['editorial'], '--security-privacy-report', paths['security-privacy'],
+                            '--author-task-id', review_roles['authorTaskId'],
+                            '--factual-reviewer-task-id', review_roles['factualReviewerTaskId'],
+                            '--newcomer-task-id', review_roles['newcomerTaskId'], '--editorial-task-id', review_roles['editorialTaskId'],
+                            '--security-privacy-task-id', review_roles['securityPrivacyTaskId'], '--failure-recovery-task-id', reviewer,
+                            ok=ok)
+
+        for key, report in reports.items():
+            paths[key].write_text(json.dumps(report))
+        before = {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+        result = check()
+        self.assertEqual(result['checkedRoutes'], self.routes)
+        self.assertEqual(result['checkedTopics'], topics)
+        self.assertEqual(result['nonblockingFindings'], [finding])
+        self.assertEqual(result['inputManifestSha256'], hashlib.sha256(before[index]).hexdigest())
+        for field, key in [('newcomerReportSha256', 'newcomer'), ('editorialReportSha256', 'editorial'),
+                           ('securityPrivacyReportSha256', 'security-privacy'), ('failureRecoveryReportSha256', 'failure-recovery')]:
+            self.assertEqual(result[field], hashlib.sha256(before[paths[key]]).hexdigest())
+        for field, actual_id in review_roles.items():
+            self.assertEqual(result[field], actual_id)
+            if field != 'reviewerTaskId':
+                self.assertIn('Distinct actual failure/recovery', check(ok=False, reviewer=actual_id)['detail'])
+
+        for name, field, value in [
+                ('newcomer', 'reviewerTaskId', review_roles['reviewerTaskId']),
+                ('editorial', 'passed', False), ('security-privacy', 'checkedTopics', ['secrets']),
+                ('security-privacy', 'inputManifestSha256', 'a' * 64),
+                ('security-privacy', 'reviewerTaskId', review_roles['reviewerTaskId']),
+                ('failure-recovery', 'reviewerTaskId', review_roles['securityPrivacyTaskId']),
+                ('failure-recovery', 'checkedTopics', topics[:-1]),
+                ('failure-recovery', 'checkedTopics', [*topics, topics[0]]),
+                ('failure-recovery', 'checkedRoutes', self.routes[:-1]), ('failure-recovery', 'limits', 'unknown'),
+                ('failure-recovery', 'passed', 1), ('failure-recovery', 'execution', 'hands-on'),
+                ('failure-recovery', 'findings', [{**finding, 'blocking': True}]),
+                ('failure-recovery', 'findings', [{**finding, 'blocking': 0}]),
+                ('failure-recovery', 'findings', [{**finding, 'publicSource': ''}])]:
+            with self.subTest(report=name, field=field):
+                paths[name].write_text(json.dumps({**reports[name], field: value}))
+                check(ok=False)
+                paths[name].write_bytes(before[paths[name]])
+        for name in ('security-privacy', 'failure-recovery'):
+            paths[name].unlink()
+            self.assertIn(f'Missing regular {name} report', check(ok=False)['detail'])
+            paths[name].write_bytes(before[paths[name]])
+        body = bundle / '01.md'
+        body.write_bytes(before[body] + b' changed after the review')
+        self.assertIn('Reader body length/hash mismatch', check(ok=False)['detail'])
+        body.write_bytes(before[body])
+        self.assertEqual({p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}, before)
+
     def rewrite_index(self, bundle, manifest):
         (bundle / 'index.json').write_text(json.dumps(manifest))
         return self.synthetic_report(bundle)

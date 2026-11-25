@@ -487,5 +487,35 @@ class WeeklyCheckTests(unittest.TestCase):
         self.assertIn('require the security/privacy validation on the same final bytes', section)
 
 
+    def test_failure_recovery_role_changes_refresh_only_coming_soon(self):
+        root, module, manifest = self.fixture()
+        resolver = lambda *args: COMMIT
+        self.assertEqual(module.check_weekly(root, manifest, resolver=resolver)['action'], 'skip')
+        role = 'automation/skills/failure-recovery-review.md'
+        (root / role).parent.mkdir(parents=True, exist_ok=True)
+        (root / role).write_text((SCRIPT.parents[1] / role).read_text())
+        self.git(root, 'add', role)
+        self.git(root, 'commit', '-m', 'failure recovery reading policy changed')
+        result = module.check_weekly(root, manifest, resolver=resolver)
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['processFilesChanged'], [role])
+        self.assertEqual(result['refreshVersions'], ['coming-soon'])
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_weekly_failure_recovery_requires_exact_chain_and_skips_unchanged_input(self):
+        weekly = (SCRIPT.parents[1] / 'automation/WEEKLY.md').read_text()
+        skip = weekly.split('- `action=skip`:', 1)[1].split('\n', 1)[0]
+        self.assertIn('skip every public author or reviewer', skip)
+        self.assertIn('failure/recovery', skip)
+        section = weekly.split('### Dedicated failure and recovery reading gate', 1)[1].split('## 4.', 1)[0]
+        self.assertIn('after factual, newcomer, editorial and security/privacy acceptance', section)
+        command = next(row for row in section.splitlines() if 'validate-failure-recovery' in row)
+        for key in ('--inputs', '--report', '--newcomer-report', '--editorial-report', '--security-privacy-report',
+                    '--document', '--author-task-id', '--factual-reviewer-task-id', '--newcomer-task-id',
+                    '--editorial-task-id', '--security-privacy-task-id', '--failure-recovery-task-id'):
+            self.assertIn(key, command.split())
+        self.assertIn('Require the failure/recovery validation on the exact final bytes immediately before committing', section)
+
+
 if __name__ == '__main__':
     unittest.main()

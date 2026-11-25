@@ -513,6 +513,19 @@
         "automation/tests/test_weekly_check.py"
       ],
       "enforcementScope": "Defensive documentation reading and artifact/role binding only, not a product security audit or runtime assurance."
+    },
+    {
+      "id": "paykit-failure-recovery-review",
+      "requirement": "For refreshed tracks only, require a distinct public-only failure/recovery reader after security/privacy acceptance. Review exact rendered pages for pending, definite-failure and unknown-outcome distinctions; safe rechecks and retries; documented recovery boundaries; and safe escalation. Require same-version immutable public evidence for behavior claims. Bind the passing report and three prior reader reports to the same capture and six real role IDs. Material unsafe or unsupported guidance blocks; verify repaired generation inputs, regenerate and re-review changed bytes. Keep cadence, deadline, worker cap and shared repairs unchanged. No guide execution, induced failures, live payments, sandbox or other new specialist.",
+      "enforcedBy": [
+        "automation/WEEKLY.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/failure-recovery-review.md",
+        "automation/newcomer_review.py",
+        "automation/tests/test_newcomer_review.py",
+        "automation/tests/test_weekly_check.py"
+      ],
+      "enforcementScope": "Reader-facing failure/recovery documentation only; no product execution or payment/recovery assurance."
     }
   ]
 }
