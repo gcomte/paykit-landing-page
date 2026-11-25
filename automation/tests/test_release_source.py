@@ -7,6 +7,7 @@ import unittest
 
 SCRIPT = Path(__file__).parents[1] / 'release_source.py'
 POLICY = {'repository': 'pubky/paykit-rs', 'selection': 'newest-release'}
+STABLE = {'repository': 'pubky/paykit-rs', 'selection': 'highest-stable'}
 COMMIT = 'a' * 40
 API = 'https://api.github.com/repos/pubky/paykit-rs'
 
@@ -140,7 +141,8 @@ class ReleaseSourceTests(unittest.TestCase):
                     if hasattr(module, 'check_weekly'):
                         import hashlib
                         checker.git(root, 'add', '.'); checker.git(root, 'commit', '--allow-empty', '-m', 'document selected release')
-                        manifest = {'sources': {'coming-soon': {'commit': COMMIT}}, 'contentHashes': {'coming-soon': hashlib.sha256(path.read_bytes()).hexdigest()}}
+                        manifest = {'sources': {'coming-soon': {'commit': COMMIT, 'tag': covered, 'ref': covered, 'kind': 'tag'}},
+                                    'contentHashes': {'coming-soon': hashlib.sha256(path.read_bytes()).hexdigest()}}
                         call = lambda: module.check_weekly(root, manifest, resolver=lambda *args: COMMIT)
                     else:
                         call = lambda: module.check_source(root, 'coming-soon', 'overview', resolver=lambda *args: COMMIT)
@@ -155,6 +157,55 @@ class ReleaseSourceTests(unittest.TestCase):
     def test_public_default_tracks_newest_release_instead_of_any_fixed_tag(self):
         config = json.loads((SCRIPT.parents[1] / 'docs-generation.json').read_bytes())
         self.assertEqual(config['source'], POLICY)
+        self.assertEqual(config.get('releasedSource'), STABLE)
+
+    def test_one_paginated_catalog_selects_stable_by_semver_and_newest_by_publication(self):
+        module = self.module()
+        choose = getattr(module, 'select_sources', None)
+        self.assertIsNotNone(choose, 'A shared release catalog must drive both tracks')
+        p1, p2 = [f'{API}/releases?per_page=100&page={i}' for i in (1, 2)]
+        canonical_next = 'https://api.github.com/repositories/1100020143/releases?per_page=100&page=2'
+        rc = release(1, 'v99.0.0-rc1', prerelease=False)
+        rows = {
+            p1: ([rc, release(2, 'v1.9.0', '2030-01-02T00:00:00Z', prerelease=False),
+                  release(3, 'v5.0.0', '2030-01-01T00:00:00Z', prerelease=True)], f'<{canonical_next}>; rel="next"'),
+            p2: ([release(4, 'v1.10.0+build.7', '2030-01-01T00:00:00Z', prerelease=False),
+                  release(5, 'v20.0.0', prerelease=False, draft=True),
+                  release(6, 'v3.00.0', '2030-01-02T00:00:00Z', prerelease=False),
+                  release(7, 'v40.0.0', None, prerelease=False)], ''),
+        }
+        # The highest stable has an older publication date; RC is newest even with a false flag.
+
+        fetched, resolved = [], []
+        def fetch(url):
+            fetched.append(url)
+            return rows[url]
+        def resolve(repo, kind, ref):
+            resolved.append(ref)
+            return {'sourceCommit': COMMIT, 'sourceObject': 'b' * 40, 'qualifiedRef': 'refs/tags/' + ref}
+        result = choose({'released': STABLE, 'coming-soon': POLICY}, resolve, fetcher=fetch)
+        self.assertEqual(fetched, [p1, p2])
+        self.assertEqual(resolved, ['v1.10.0+build.7', 'v99.0.0-rc1'])
+        self.assertEqual(result['released']['release']['tag_name'], 'v1.10.0+build.7')
+        self.assertEqual(result['released']['sourceObject'], 'b' * 40)
+        self.assertEqual(result['coming-soon']['release']['tag_name'], rc['tag_name'])
+
+    def test_missing_stable_fails_without_resolving_prereleases(self):
+        module = self.module()
+        with self.assertRaisesRegex(ValueError, 'No published stable'):
+            module.select_source(STABLE, lambda *a: self.fail('Resolved a prerelease as stable'),
+                fetcher=lambda _: ([release(tag='v2.0.0-rc.1', prerelease=False)], ''))
+
+    def test_tracks_sharing_the_same_highest_release_resolve_that_ref_once(self):
+        module = self.module()
+        resolved = []
+        def resolve(repo, kind, ref):
+            resolved.append(ref)
+            return {'sourceCommit': COMMIT, 'sourceObject': COMMIT, 'qualifiedRef': f'refs/tags/{ref}'}
+        result = module.select_sources({'released': STABLE, 'coming-soon': POLICY}, resolve,
+                                        fetcher=lambda _: ([release(tag='1.2.3', prerelease=False)], ''))
+        self.assertEqual(resolved, ['1.2.3'])
+        self.assertEqual(result['released']['sourceCommit'], result['coming-soon']['sourceCommit'])
 
     def test_published_release_identity_requires_id_timestamp_and_boolean_prerelease(self):
         module = self.module()

@@ -5,6 +5,9 @@ from pathlib import Path
 import tempfile
 import unittest
 import sys
+import hashlib
+import tarfile
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
@@ -96,6 +99,117 @@ class DevelopmentRefreshTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'lock'):
             module.refresh_development(root, sources)
         self.assertEqual(before, {str(p.relative_to(root)): p.read_bytes() for p in root.rglob('*') if p.is_file()})
+
+    def test_changed_frozen_graph_resolves_a_new_lock_and_packs_the_exact_bytes(self):
+        root, sources, module = self.policy_fixture()[:3]
+        library = sources / 'paykit-lib/Cargo.toml'
+        library.write_text(library.read_text().replace('serde = "1"', 'serde = "2"'))
+        index_path = sources / 'index.json'
+        index = json.loads(index_path.read_bytes())
+        index['version']['packages']['paykit-lib']['dependencies']['serde'] = '2'
+        index['files'] = [{'path': 'paykit-lib/Cargo.toml', 'sha256': hashlib.sha256(library.read_bytes()).hexdigest()}]
+        previous = sources / 'previous/paykit-lib/Cargo.toml'
+        index['previousCommit'] = OLD
+        index['previousLibraryManifest'] = {'commit': OLD, 'path': 'previous/paykit-lib/Cargo.toml',
+            'sha256': hashlib.sha256(previous.read_bytes()).hexdigest()}
+        index_path.write_text(json.dumps(index))
+        locked = (f'version = 4\n\n[[package]]\nname="paykit-lib"\nversion="0.1.1-rc9"\n'
+                  f'source="git+https://github.com/pubky/paykit-rs?rev={NEW}#{NEW}"\n').encode()
+        with patch('demo_locks.generate_lock', return_value=locked) as resolve:
+            result = module.refresh_development(root, sources, cargo_bin=Path('/trusted/rust/bin'), deadline=10**11)
+        self.assertEqual(resolve.call_count, 2)
+        self.assertEqual(result['resolvedLocks'], ['wallet', 'point-of-sale'])
+        for audience in result['resolvedLocks']:
+            base = root / 'public/docs-examples/coming-soon'
+            self.assertEqual((base / audience / 'Cargo.lock').read_bytes(), locked)
+            with tarfile.open(base / f'paykit-{audience}-coming-soon.tar.gz') as archive:
+                self.assertEqual(archive.extractfile(f'paykit-{audience}-demo/Cargo.lock').read(), locked)
+
+    def stable_fixture(self):
+        from release_source import STABLE_POLICY, POLICY
+        root, sources, module, index = self.policy_fixture()
+        old, new = '0.1.0', '0.2.0'
+        tag = 'v' + new
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY,
+            'releasedSource': STABLE_POLICY, 'defaultVersion': 'coming-soon'}))
+        blueprint = json.loads((root / 'automation/blueprints/coming-soon.json').read_bytes())
+        blueprint['evidence'][0]['version'] = 'released'
+        (root / 'automation/blueprints/released.json').write_text(json.dumps(blueprint))
+        old_doc = json.loads((root / 'content/docs/coming-soon.json').read_bytes())
+        old_doc['version']['packages']['paykit-lib']['version'] = old
+        (root / 'content/docs/released.json').write_text(json.dumps(old_doc))
+        checksum = 'e' * 64
+        m = index['version']
+        url = f'https://github.com/pubky/paykit-rs/releases/tag/{tag}'
+        m.update(label=tag, ref=tag, tag=tag, qualifiedRef=f'refs/tags/{tag}', releaseUrl=url)
+        m['release'].update(tag_name=tag, prerelease=False, html_url=url)
+        m['packages']['paykit-lib'].update(version=new, checksum=checksum, published=True, yanked=False,
+                                           verifiedSource={'sourceCommit': NEW})
+        lib = sources / 'paykit-lib/Cargo.toml'
+        prev = sources / 'previous/paykit-lib/Cargo.toml'
+        lib.write_text(lib.read_text().replace('0.1.1-rc9', new))
+        prev.write_text(prev.read_text().replace('0.1.1-rc8', old))
+        index.update(ref=tag, object=m['object'], sourcePolicy=STABLE_POLICY, previousCommit=OLD,
+            files=[{'path': 'paykit-lib/Cargo.toml', 'sha256': hashlib.sha256(lib.read_bytes()).hexdigest()}],
+            previousLibraryManifest={'path': 'previous/paykit-lib/Cargo.toml', 'commit': OLD,
+                'sha256': hashlib.sha256(prev.read_bytes()).hexdigest()})
+        (sources / 'index.json').write_text(json.dumps(index))
+        body = (f'version = 4\n\n[[package]]\nname="paykit-lib"\nversion="{new}"\n'
+                f'source="{module.demo_locks.REGISTRY}"\nchecksum="{checksum}"\n').encode()
+        return root, sources, module, body
+
+    def test_released_refresh_keeps_other_snapshot_and_reuses_lock_on_exact_repeat(self):
+        root, sources, module, locked = self.stable_fixture()
+        before = (root / 'content/docs/coming-soon.json').read_bytes()
+        with patch('demo_locks.generate_lock', return_value=locked) as resolve:
+            result = module.refresh_development(root, sources, version='released',
+                cargo_bin=Path('/trusted/rust/bin'), deadline=10**11)
+            repeat = module.refresh_development(root, sources, version='released',
+                cargo_bin=Path('/trusted/rust/bin'), deadline=10**11)
+        self.assertEqual(resolve.call_count, 2)
+        self.assertEqual(repeat['changedFiles'], [])
+        self.assertEqual(result['resolvedLocks'], ['wallet', 'point-of-sale'])
+        self.assertEqual((root / 'content/docs/coming-soon.json').read_bytes(), before)
+        for audience in result['resolvedLocks']:
+            base = root / 'public/docs-examples/released'
+            self.assertIn('version = "=0.2.0"', (base / audience / 'Cargo.toml').read_text())
+            with tarfile.open(base / f'paykit-{audience}-released.tar.gz') as archive:
+                self.assertEqual(archive.extractfile(f'paykit-{audience}-demo/Cargo.lock').read(), locked)
+
+    def test_failed_second_resolution_leaves_all_outputs_unchanged(self):
+        root, sources, module, locked = self.stable_fixture()
+        before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+        with patch('demo_locks.generate_lock', side_effect=[locked, ValueError('test resolution failed')]):
+            with self.assertRaisesRegex(ValueError, 'test resolution failed'):
+                module.refresh_development(root, sources, version='released',
+                    cargo_bin=Path('/trusted/rust/bin'), deadline=10**11)
+        self.assertEqual(before, {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()})
+
+    def test_coming_soon_registry_publication_reuses_the_pinned_git_locks(self):
+        root, sources, module, index = self.policy_fixture()
+        module.refresh_development(root, sources)
+        base = root / 'public/docs-examples/coming-soon'
+        before = {p.relative_to(base): p.read_bytes() for p in base.rglob('*') if p.is_file()}
+        index['version']['packages']['paykit-lib'].update(published=True, checksum='e' * 64)
+        (sources / 'index.json').write_text(json.dumps(index))
+        with patch('demo_locks.generate_lock', side_effect=AssertionError('Git pin did not change')):
+            result = module.refresh_development(root, sources)
+        self.assertEqual(result['resolvedLocks'], [])
+        self.assertEqual(before, {p.relative_to(base): p.read_bytes() for p in base.rglob('*') if p.is_file()})
+        document = json.loads((root / 'content/docs/coming-soon.json').read_bytes())
+        self.assertEqual(document['version']['packages']['paykit-lib']['checksum'], 'e' * 64)
+
+    def test_changed_demo_manifest_requires_resolution_at_same_source_commit(self):
+        root, sources, module, locked = self.stable_fixture()
+        with patch('demo_locks.generate_lock', return_value=locked) as resolve:
+            kwargs = {'version': 'released', 'cargo_bin': Path('/trusted/rust/bin'), 'deadline': 10**11}
+            module.refresh_development(root, sources, **kwargs)
+            resolve.reset_mock()
+            manifest = root / 'public/docs-examples/released/wallet/Cargo.toml'
+            manifest.write_bytes(manifest.read_bytes().replace(b'resolver = "3"', b'resolver = "2"'))
+            result = module.refresh_development(root, sources, **kwargs)
+        self.assertEqual(resolve.call_count, 1)
+        self.assertEqual(result['resolvedLocks'], ['wallet'])
 
     def test_repeated_refresh_is_a_noop_including_archives(self):
         root, sources, module = self.fixture()

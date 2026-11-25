@@ -6,10 +6,12 @@ import io
 import json
 from pathlib import Path
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
 import urllib.error
+import urllib.request
 import urllib.response
 from email.message import Message
 
@@ -87,8 +89,22 @@ class PrepareDevelopmentTests(unittest.TestCase):
         return root, Path(temporary.name) / 'frozen', module
 
     def prepare(self, module, root, output, commit=NEW):
-        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+        with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
             return module.prepare_development(root, output, commit)
+
+    def test_a_renamed_evidence_file_is_not_required_at_its_old_path(self):
+        root, output, module = self.fixture()
+        old_path = 'paykit-lib/src/synthetic.rs'
+        new_path = 'paykit-lib/src/renamed.rs'
+        compare = json.loads(self.replies[self.compare_url])
+        compare['files'].append({'filename': new_path, 'previous_filename': old_path, 'status': 'renamed'})
+        self.replies[self.compare_url] = json.dumps(compare).encode()
+        old_url = f'{RAW}/{NEW}/{old_path}'
+        self.replies[f'{RAW}/{NEW}/{new_path}'] = self.replies.pop(old_url)
+        self.prepare(module, root, output)
+        index = json.loads((output / 'index.json').read_bytes())
+        self.assertNotIn(old_url, self.calls)
+        self.assertIn(new_path, {row['path'] for row in index['files']})
 
     def test_annotated_tag_freezes_renderer_inputs_with_exact_hashes(self):
         root, output, module = self.fixture()
@@ -292,7 +308,7 @@ class PrepareDevelopmentTests(unittest.TestCase):
             response = urllib.response.addinfourl(io.BytesIO(data), headers, url, code)
             response.msg = 'Synthetic HTTP fixture'
             return response
-        with patch.object(module.urllib.request.HTTPSHandler, 'https_open', side_effect=http):
+        with patch.object(urllib.request.HTTPSHandler, 'https_open', side_effect=http):
             with self.assertRaisesRegex(ValueError, 'redirect'):
                 module.prepare_development(root, output, NEW)
         self.assertEqual(self.calls, [self.ref_url])
@@ -308,7 +324,7 @@ class PrepareDevelopmentTests(unittest.TestCase):
                 stdout = io.StringIO()
                 with patch.object(module, '__file__', str(root / 'automation/prepare_development.py')), \
                         patch.object(sys, 'argv', ['prepare_development.py', '--output', str(output), '--commit', NEW]), \
-                        patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http), \
+                        patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http), \
                         contextlib.redirect_stdout(stdout):
                     if offline:
                         with self.assertRaises(SystemExit) as stopped:
@@ -405,7 +421,7 @@ class PrepareDevelopmentTests(unittest.TestCase):
         source, selected = frozen['sourceSelection'], frozen['release']
         # A newer release has appeared since the gate; preparation must never list it.
         self.replies[API + '/releases?per_page=100&page=1'] = json.dumps([release(99, 'newer-tag')]).encode()
-        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+        with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
             try:
                 module.prepare_development(root, output, NEW, selection=selection)
             except TypeError as error:
@@ -426,7 +442,7 @@ class PrepareDevelopmentTests(unittest.TestCase):
         with patch.object(module, '__file__', str(root / 'automation/prepare_development.py')), \
                 patch.object(sys, 'argv', ['prepare_development.py', '--output', str(output), '--commit', NEW,
                                           '--selection', str(selection)]), \
-                patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http), \
+                patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http), \
                 contextlib.redirect_stdout(stdout):
             try:
                 module.main()
@@ -442,7 +458,7 @@ class PrepareDevelopmentTests(unittest.TestCase):
         self.replies[API + '/releases?per_page=100&page=1'] = json.dumps([
             release(1, 'old', '2030-01-01T00:00:00Z', prerelease=False),
             release(tag=frozen['sourceSelection']['ref'])]).encode()
-        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+        with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
             try:
                 module.prepare_development(root, output, NEW)
             except (KeyError, AttributeError) as error:
@@ -456,7 +472,7 @@ class PrepareDevelopmentTests(unittest.TestCase):
         root, output, module, selection, frozen = self.policy_fixture()
         (root / 'docs-generation.json').write_text(json.dumps({'source': {
             **frozen['sourcePolicy'], 'kind': 'tag', 'ref': frozen['sourceSelection']['ref']}}))
-        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+        with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
             with self.assertRaisesRegex(ValueError, 'selection|policy'):
                 module.prepare_development(root, output, NEW, selection=selection)
         self.assertEqual(self.calls, [])
@@ -466,7 +482,7 @@ class PrepareDevelopmentTests(unittest.TestCase):
         root, output, module, selection, frozen = self.policy_fixture()
         (root / 'docs-generation.json').write_text(json.dumps({'source': {
             'repository': 'pubky/paykit-rs', 'kind': 'tag', 'ref': 'different-explicit-tag'}}))
-        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+        with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
             with self.assertRaisesRegex(ValueError, 'selection|source'):
                 module.prepare_development(root, output, NEW, selection=selection)
         self.assertEqual(self.calls, [])
@@ -475,7 +491,7 @@ class PrepareDevelopmentTests(unittest.TestCase):
     def test_anonymous_prepared_index_satisfies_resources_public_source_contract(self):
         from refresh_glossary import _validate_resources
         root, output, module, selection, frozen = self.policy_fixture()
-        with patch.object(module.urllib.request.OpenerDirector, 'open', side_effect=self.http):
+        with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
             module.prepare_development(root, output, NEW, selection=selection)
         index = json.loads((output / 'index.json').read_bytes())
         rows = {row['path']: row for row in index['files']}
@@ -497,6 +513,135 @@ class PrepareDevelopmentTests(unittest.TestCase):
         document = {'version': {'commit': NEW}, 'pages': []}
         _validate_resources(page, document, 'coming-soon', output, index, [{'path': 'README.md'}])
         self.assertIs(index.get('publicOnly'), True)
+
+    def stable_fixture(self):
+        from test_release_source import POLICY, STABLE, release
+        root, output, module = self.fixture(ref='v1.2.3')
+        previous = 'd' * 40
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY, 'releasedSource': STABLE}))
+        document = root / 'content/docs/released.json'
+        document.write_text(json.dumps({'version': {'commit': previous}}))
+        blueprint = root / 'automation/blueprints'
+        (blueprint / 'released.json').write_bytes((blueprint / 'coming-soon.json').read_bytes())
+        (blueprint / 'coming-soon.json').write_text('{"evidence":[{"path":"wrong-coming-soon.md"}]}')
+        compare = json.loads(self.replies[self.compare_url]); compare['base_commit']['sha'] = previous
+        self.replies[API + f'/compare/{previous}...{NEW}'] = json.dumps(compare).encode()
+        self.replies[f'{RAW}/{previous}/paykit-lib/Cargo.toml'] = self.previous
+        row = release(tag='v1.2.3', prerelease=False)
+        frozen = {'sourceSelection': {'repository': 'pubky/paykit-rs', 'kind': 'tag', 'ref': row['tag_name']},
+                  'sourcePolicy': STABLE, 'release': {k: v for k, v in row.items() if k != 'draft'},
+                  'sourceCommit': NEW, 'sourceObject': OBJECT, 'qualifiedRef': self.qualified,
+                  'documentationCommit': previous, 'documentationContentHash': hashlib.sha256(document.read_bytes()).hexdigest()}
+        self.replies[API + '/releases/' + str(row['id'])] = json.dumps(row).encode()
+        gate = output.parent / 'gate.json'
+        gate.write_text(json.dumps({'action': 'refresh_needed', 'refreshVersions': ['released'],
+                                    'sourceCommit': 'e' * 40, 'selections': {'released': frozen}}))
+        return root, output, module, gate, frozen
+
+    def publish_fixture_package(self, package, *, yanked=False, fault=None):
+        version = f'0.0.{PACKAGES.index(package) + 1}-synthetic'
+        prefix = f'{package}-{version}'
+        vcs = json.dumps({'git': {'sha1': OLD if fault == 'commit' else NEW}, 'path_in_vcs': package}).encode()
+        rust = b'pub fn synthetic() {}\n'
+        body = io.BytesIO()
+        with tarfile.open(fileobj=body, mode='w:gz') as tar:
+            members = [('.cargo_vcs_info.json', vcs), ('src/synthetic.rs', rust)]
+            if fault == 'duplicate-vcs':
+                members.insert(0, ('.cargo_vcs_info.json', b'null'))
+            if fault == 'unsafe-path':
+                members[1] = ('src/../../outside.rs', rust)
+            for name, data in members:
+                info = tarfile.TarInfo(f'{prefix}/{name}')
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+        archive = body.getvalue()
+        url = f'https://crates.io/api/v1/crates/{package}/{version}'
+        self.replies[url] = json.dumps({'version': {'crate': package, 'num': version, 'yanked': yanked,
+            'checksum': '0' * 64 if fault == 'checksum' else hashlib.sha256(archive).hexdigest()}}).encode()
+        archive_url = f'https://static.crates.io/crates/{package}/{prefix}.crate'
+        self.replies[archive_url] = archive
+        self.replies[f'{RAW}/{NEW}/{package}/src/synthetic.rs'] = rust if fault != 'rust' else b'// Different source\n'
+        return archive_url
+
+    def test_released_cli_uses_its_frozen_selection_and_verifies_available_crates(self):
+        root, output, module, gate, frozen = self.stable_fixture()
+        lib = self.publish_fixture_package('paykit-lib')
+        sdk = self.publish_fixture_package('paykit-sdk')
+        ffi = self.publish_fixture_package('paykit-ffi', yanked=True)
+        stdout = io.StringIO()
+        with patch.object(module, '__file__', str(root / 'automation/prepare_development.py')), \
+                patch.object(sys, 'argv', ['prepare_development.py', '--version', 'released', '--output', str(output),
+                                          '--commit', NEW, '--selection', str(gate)]), \
+                patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http), \
+                contextlib.redirect_stdout(stdout):
+            module.main()
+        self.assertEqual(json.loads(stdout.getvalue())['action'], 'prepared')
+        index = json.loads((output / 'index.json').read_bytes())
+        version = index['version']
+        self.assertEqual(index['sourcePolicy'], frozen['sourcePolicy'])
+        self.assertEqual(index['previousCommit'], frozen['documentationCommit'])
+        self.assertEqual(index['previousLibraryManifest']['commit'], frozen['documentationCommit'])
+        self.assertEqual(index['object'], version['object'])
+        self.assertEqual(version['object'], frozen['sourceObject'])
+        self.assertEqual(version['release'], frozen['release'])
+        self.assertEqual(version['releaseUrl'], frozen['release']['html_url'])
+        for package, archive in [('paykit-lib', lib), ('paykit-sdk', sdk)]:
+            self.assertIn(archive, self.calls)
+            self.assertEqual(version['packages'][package]['verifiedSource'], {'sourceCommit': NEW, 'verifiedRustFiles': 1})
+            self.assertEqual((output / 'registry' / f'{package}.crate').read_bytes(), self.replies[archive])
+        ffi_metadata = version['packages']['paykit-ffi']
+        self.assertIs(ffi_metadata['yanked'], True)
+        self.assertIs(ffi_metadata['published'], False)
+        self.assertNotIn('referenceUrl', ffi_metadata)
+        self.assertNotIn(ffi, self.calls)
+        self.assertFalse(any('/releases?' in url for url in self.calls))
+
+    def test_released_refuses_missing_frozen_selection_or_frozen_object_drift_before_downloads(self):
+        root, output, module, gate, _ = self.stable_fixture()
+        with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
+            with self.assertRaisesRegex(ValueError, 'frozen selection'):
+                module.prepare_development(root, output, NEW, version='released')
+            self.assertEqual(self.calls, [])
+            # A new annotated tag object at the same commit must not pass.
+            self.replies[self.ref_url] = json.dumps({'ref': self.qualified, 'object': {'type': 'tag', 'sha': '9' * 40}}).encode()
+            self.replies[API + '/git/tags/' + '9' * 40] = json.dumps({'sha': '9' * 40, 'object': {'type': 'commit', 'sha': NEW}}).encode()
+            with self.assertRaisesRegex(ValueError, 'object.*moved|object.*frozen'):
+                module.prepare_development(root, output, NEW, selection=gate, version='released')
+        self.assertFalse(output.exists())
+        self.assertNotIn(API + '/git/tags/' + '9' * 40, self.calls)
+
+    def test_released_refuses_unavailable_library_or_disagreeing_public_archive(self):
+        for fault, expected in [('missing', 'unavailable'), ('yanked', 'yanked'), ('commit', 'commit'),
+                                ('rust', 'implementation differs'), ('checksum', 'checksum'),
+                                ('duplicate-vcs', 'VCS receipt'), ('unsafe-path', 'Unsafe source path')]:
+            with self.subTest(fault=fault):
+                root, output, module, gate, _ = self.stable_fixture()
+                if fault != 'missing':
+                    self.publish_fixture_package('paykit-lib', fault=fault, yanked=fault == 'yanked')
+                with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
+                    with self.assertRaisesRegex(ValueError, expected):
+                        module.prepare_development(root, output, NEW, selection=gate, version='released')
+                self.assertFalse(output.exists())
+                self.assertFalse(any('/../' in url for url in self.calls))
+
+    def test_versioned_gate_refuses_an_incomplete_or_wrong_version_selection_before_http(self):
+        for fault in ('sourceObject', 'qualifiedRef', 'documentationContentHash', 'track'):
+            with self.subTest(fault=fault):
+                root, output, module, gate, _ = self.stable_fixture()
+                body = json.loads(gate.read_bytes())
+                selection = body['selections']['released']
+                if fault == 'track':
+                    body['selections']['coming-soon'] = body['selections'].pop('released')
+                elif fault == 'documentationContentHash':
+                    selection[fault] = '0' * 64
+                else:
+                    del selection[fault]
+                gate.write_text(json.dumps(body))
+                with patch.object(urllib.request.OpenerDirector, 'open', side_effect=self.http):
+                    with self.assertRaisesRegex(ValueError, 'selection|baseline'):
+                        module.prepare_development(root, output, NEW, selection=gate, version='released')
+                self.assertEqual(self.calls, [])
+                self.assertFalse(output.exists())
 
 
 if __name__ == '__main__':

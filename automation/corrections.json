@@ -470,6 +470,21 @@
         "automation/tests/test_weekly_check.py"
       ],
       "enforcementScope": "Real stdlib capture and read-only binding/report gate plus synthetic CLI/committed-history regressions; semantic approval requires the actual independent newcomer reading. No generated content change, human-study/SDK certification, deployment or native scheduler integration is claimed."
+    },
+    {
+      "id": "weekly-stable-release-and-demo-locks",
+      "requirement": "Check Released independently for the highest published stable SemVer and keep Coming soon on newest published release by publication time. Freeze exact tag/object/commit for each track. Generate, independently review and publish only affected snapshots; preserve the other track. Resolve fresh Cargo locks automatically when a demo manifest or its pinned source changes, using only metadata resolution without inherited credentials. Verify the selected dependency and ship the exact lock bytes with each matching archive. Do not build or run Rust demos, expand the Sunday schedule, or publish on failed verification.",
+      "enforcedBy": [
+        "automation/WEEKLY.md",
+        "automation/weekly_check.py",
+        "automation/prepare_development.py",
+        "automation/refresh_development.py",
+        "automation/demo_locks.py",
+        "automation/tests/test_weekly_check.py",
+        "automation/tests/test_refresh_development.py",
+        "automation/tests/test_demo_locks.py"
+      ],
+      "enforcementScope": "Weekly source selection and dependency-lock generation; no expanded reviewer lanes, SDK execution or sandbox changes."
     }
   ]
 }

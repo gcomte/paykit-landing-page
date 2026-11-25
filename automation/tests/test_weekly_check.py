@@ -133,10 +133,13 @@ class WeeklyCheckTests(unittest.TestCase):
         root, module, manifest = self.fixture()
         import contextlib
         import io
+        import urllib.request
         from unittest.mock import patch
         self.assertTrue(callable(getattr(module, 'main', None)), 'Weekly CLI entry point is missing')
         stream = io.StringIO()
-        with patch.object(module.urllib.request, 'urlopen', return_value=io.BytesIO(json.dumps(manifest).encode())) as fetch, patch.object(module, 'resolve_source', return_value=COMMIT), contextlib.redirect_stdout(stream):
+        response = io.BytesIO(json.dumps(manifest).encode())
+        response.status, response.headers = 200, {}
+        with patch.object(urllib.request.OpenerDirector, 'open', return_value=response) as fetch, patch.object(module, 'resolve_source', return_value=COMMIT), contextlib.redirect_stdout(stream):
             module.main(['--root', str(root)])
         result = json.loads(stream.getvalue())
         self.assertEqual(result['action'], 'skip')
@@ -176,8 +179,84 @@ class WeeklyCheckTests(unittest.TestCase):
         self.assertEqual(fetched.call_count, 1)
         self.assertEqual(self.git(root, 'status', '--porcelain'), '')
 
+    def dual_fixture(self):
+        from test_release_source import POLICY, STABLE, release
+        root, module, manifest = self.fixture()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY, 'releasedSource': STABLE}))
+        rc = release(tag='v2.0.0-rc.1', prerelease=False)
+        stable = release(19, 'v1.0.0', '2030-01-01T00:00:00Z', prerelease=False)
+        for version, row, commit in [('released', stable, 'd' * 40), ('coming-soon', rc, COMMIT)]:
+            body = root / f'content/docs/{version}.json'
+            body.write_text(json.dumps({'version': {'commit': commit, 'tag': row['tag_name']}}))
+            manifest['sources'][version] = {'commit': commit, 'tag': row['tag_name']}
+            manifest['contentHashes'][version] = hashlib.sha256(body.read_bytes()).hexdigest()
+        self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'live versions')
+        return root, module, manifest, rc, stable
+
+    def test_stable_only_refresh_when_newest_publication_is_unchanged(self):
+        from test_release_source import release
+        root, module, manifest, rc, stable = self.dual_fixture()
+        new = release(20, 'v1.1.0', '2030-01-02T00:00:00Z', prerelease=False)
+        calls = []
+        def fetch(url):
+            calls.append(url)
+            return [rc, stable, new], ''
+        def resolve(repo, kind, ref):
+            return {'sourceCommit': COMMIT if ref == rc['tag_name'] else 'e' * 40,
+                    'sourceObject': 'b' * 40, 'qualifiedRef': 'refs/tags/' + ref}
+        result = module.check_weekly(root, manifest, resolver=resolve, fetcher=fetch)
+        self.assertEqual(result['refreshVersions'], ['released'])
+        self.assertEqual(result['reasons'], ['source_changed'])
+        self.assertEqual(result['selections']['released']['release']['tag_name'], new['tag_name'])
+        self.assertEqual(result['selections']['released']['documentationCommit'], 'd' * 40)
+        self.assertEqual(result['sourceCommit'], result['selections']['coming-soon']['sourceCommit'])
+        self.assertEqual(result['documentationCommit'], COMMIT)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+
+    def test_unchanged_tracks_skip_and_process_only_keeps_selected_source_scope(self):
+        root, module, manifest, rc, stable = self.dual_fixture()
+        def resolve(repo, kind, ref):
+            return {'sourceCommit': COMMIT if ref == rc['tag_name'] else 'd' * 40,
+                    'sourceObject': 'b' * 40, 'qualifiedRef': 'refs/tags/' + ref}
+        def gate():
+            return module.check_weekly(root, manifest, resolver=resolve, fetcher=lambda _: ([rc, stable], ''))
+        self.assertEqual(gate()['refreshVersions'], [])
+        self.assertEqual(gate()['action'], 'skip')
+        (root / 'app/layout.tsx').write_text('New shared layout')
+        self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'process change')
+        result = gate()
+        self.assertEqual(result['reasons'], ['generation_process_changed'])
+        self.assertEqual(result['refreshVersions'], ['coming-soon'])
+
+    def test_released_baseline_commit_and_hash_are_required_before_catalog_reads(self):
+        root, module, manifest, _, _ = self.dual_fixture()
+        for group in ('sources', 'contentHashes'):
+            with self.subTest(group=group):
+                wrong = json.loads(json.dumps(manifest))
+                wrong[group]['released'] = {'commit': 'f' * 40} if group == 'sources' else '0' * 64
+                with self.assertRaisesRegex(ValueError, 'released.*deployed'):
+                    module.check_weekly(root, wrong, fetcher=lambda _: self.fail('Bad baseline reached HTTP'))
+
+    def test_contradictory_deployed_tag_or_ref_refuses_before_catalog_reads(self):
+        root, module, manifest, rc, stable = self.dual_fixture()
+        manifest['sources']['released']['tag'] = stable['tag_name']
+        manifest['sources']['coming-soon']['tag'] = rc['tag_name']
+        def resolve(repo, kind, ref):
+            return {'sourceCommit': COMMIT if ref == rc['tag_name'] else 'd' * 40,
+                    'sourceObject': 'b' * 40, 'qualifiedRef': 'refs/tags/' + ref}
+        self.assertEqual(module.check_weekly(root, manifest, resolver=resolve,
+                         fetcher=lambda _: ([rc, stable], ''))['action'], 'skip')
+        for version, field in (('released', 'tag'), ('coming-soon', 'ref')):
+            wrong = json.loads(json.dumps(manifest))
+            wrong['sources'][version][field] = 'v1.0.1'
+            with self.subTest(version=version, field=field), self.assertRaisesRegex(ValueError, 'deployed'):
+                module.check_weekly(root, wrong, fetcher=lambda _: self.fail('Bad baseline reached HTTP'))
+
     def test_release_and_glossary_process_dependencies_each_trigger_refresh(self):
         for name in ('automation/release_source.py', 'automation/refresh_glossary.py',
+                     'automation/demo_locks.py', 'automation/tests/test_demo_locks.py',
+                     'automation/verify_stable_package.py',
                      'automation/tests/test_release_source.py', 'automation/tests/test_refresh_glossary.py'):
             with self.subTest(path=name):
                 root, module, manifest = self.fixture()

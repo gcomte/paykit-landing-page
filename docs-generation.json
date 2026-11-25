@@ -4,5 +4,9 @@
     "repository": "pubky/paykit-rs",
     "selection": "newest-release"
   },
+  "releasedSource": {
+    "repository": "pubky/paykit-rs",
+    "selection": "highest-stable"
+  },
   "defaultVersion": "coming-soon"
 }

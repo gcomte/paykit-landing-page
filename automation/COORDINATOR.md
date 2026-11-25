@@ -14,19 +14,23 @@ User requirement: “of course everything including the llms.txt must always be 
 
 The former transaction/semantic-export/review-framework engineering is stopped. Its reports are historical evidence, not a reason to resume work or an implementation to adopt. Earlier elaborate run protocols and conflicting instructions in reference files are not operative for this simplified workflow.
 
+## Independent release tracks
+
+`docs-generation.json` selects Released by highest published stable SemVer and Coming soon by newest publication (including release candidates). The weekly gate freezes both identities in `selections`; only versions in `refreshVersions` need authoring, review and generation. For each selected track, use the exact commands in `WEEKLY.md`. Changed demo pins/manifests require verified metadata-only Cargo lock resolution; running demos remains deferred. An automation-only change with no generated output changes requires independent code review and verification that reader-facing bytes were preserved, not a fabricated author or reader verdict.
+
 ## Dedicated newcomer reading gate
 
 After candidate generation and independent factual review, and before publication, run a distinct fresh PUBLIC NEWCOMER under `automation/skills/newcomer-review.md`. This is actual rendered reading, not SDK execution, a human study or an expanded review panel. The coordinator owns a verified current production build/server from S, rejects a busy port and cleans only its verified owned process tree with closure readback. Never capture an old, unknown or another task's server. Keep the two-concurrent-worker cap by serializing the separate author, factual and newcomer tasks; preserve the original deadline and two shared repair rounds.
 
 From S, with W an absolute task-owned root and a never-used capture directory, capture the current candidate from that server (3000 is the example owned port):
 
-    python -B automation/newcomer_review.py capture --document content/docs/coming-soon.json --version coming-soon --base-url http://127.0.0.1:3000 --output "$W/reader-candidate-01"
+    python -B automation/newcomer_review.py capture --document "content/docs/$VERSION.json" --version "$VERSION" --base-url http://127.0.0.1:3000 --output "$W/reader-$VERSION-01"
 
 Capture fetches only the entry and actual `document.pages` canonical HTML/`index.md` paths from one explicit loopback origin or an existing approved HTTPS alias, with bounded requests and no redirects, JS or SDK execution. An existing output directory, including a failed partial capture, is never reused. It preserves exact bodies and metadata, writes fixed local filenames and binds them in `index.json`; its result gives the raw index SHA. The historical initial bundle schema remains supported without rewriting it. For candidate acceptance use the owned current-build capture, not the baseline live bundle.
 
 Supply the newcomer only the rendered entry first, without author hints, source code, blueprints, mappings, private context or prior answers. It records discovery journeys before opening the full inventory, then reads the entry and every selected page/Markdown, following only links the docs recommend. Assess purpose, wallet versus POS choice, prerequisites, unfamiliar terms, expected results/limits and next actions. Use its exact real dispatch ID, distinct from the actual author AND factual reviewer; never infer IDs from hidden stores or invent labels. Keep its real immutable report outside S, for example `$W/newcomer-candidate-01.json`, then validate with the actual IDs supplied by dispatch:
 
-    python -B automation/newcomer_review.py validate --inputs "$W/reader-candidate-01/index.json" --report "$W/newcomer-candidate-01.json" --document content/docs/coming-soon.json --author-task-id "$AUTHOR_TASK_ID" --factual-reviewer-task-id "$FACTUAL_REVIEWER_TASK_ID"
+    python -B automation/newcomer_review.py validate --inputs "$W/reader-$VERSION-01/index.json" --report "$W/newcomer-$VERSION-01.json" --document "content/docs/$VERSION.json" --author-task-id "$AUTHOR_TASK_ID" --factual-reviewer-task-id "$FACTUAL_REVIEWER_TASK_ID"
 
 Missing, stale, incomplete, malformed, failed or blocking reports refuse publication. Validation checks identity strings, raw index SHA, current version/source/date/page scope and every regular local body's length/hash; it does not certify semantic understanding or perform the reading. Preserve failed reports; never turn them green. Log nonblocking suggestions and their explained impact without making minor preferences mandatory features.
 
@@ -35,7 +39,7 @@ Feed actionable findings into source-grounded author instructions/blueprint/mapp
 ## For each agreed increment
 
 1. State the small scope and what is deferred. Before authoring an overview, run `python automation/check_source.py --version released --page overview` (or `--version coming-soon` for the configured source). On `skip`, stop without model work, generation or a commit. On lookup `error`, report the failure rather than skipping. Use `--force` for an explicit refresh or generation-process change; automatic process-change detection is not part of this first check. A changed upstream commit is a signal for a source-specific update, not permission to relabel stale content.
-2. Update the generation inputs or a simple script; do not hand-maintain generated documentation. A changed development snapshot refreshes the complete existing development page set with `refresh_development.py`; do not move a version label over stale pages or use the single-page command to cross source commits.
+2. Update the generation inputs or a simple script; do not hand-maintain generated documentation. A changed snapshot refreshes the complete existing page set with `refresh_development.py --version VERSION`; do not move a version label over stale pages or use the single-page command to cross source commits.
 3. Check the changed content against the correct public source/version. Keep private Talos context out of public output and public worker inputs.
 4. Run relevant checks and the site build. Use bounded independent factual/code review of the changed scope, then the dedicated newcomer reading gate above on the current rendered candidate before publication, not a new certification system.
 5. Publish only through the already authorized fork branch and existing Vercel integration. Verify the delivered pages.

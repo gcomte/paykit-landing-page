@@ -78,14 +78,16 @@ class CheckSourceTests(unittest.TestCase):
             module.check_source(root, 'released', 'overview', resolver=unavailable)
 
     def test_resolver_keeps_tag_namespace_and_never_falls_back(self):
-        import io
         from unittest.mock import patch
         _, module = self.fixture()
-        reply = json.dumps({'sha': OLD, 'commit': {'tree': {'sha': NEW}}})
-        with patch.object(module.urllib.request, 'urlopen', return_value=io.StringIO(reply)) as opened:
+        ref_url = 'https://api.github.com/repos/pubky/paykit-rs/git/ref/tags/v1'
+        tag_url = 'https://api.github.com/repos/pubky/paykit-rs/git/tags/' + NEW
+        replies = {ref_url: {'ref': 'refs/tags/v1', 'object': {'type': 'tag', 'sha': NEW}},
+                   tag_url: {'sha': NEW, 'object': {'type': 'commit', 'sha': OLD}}}
+        with patch.object(module, 'read_public', side_effect=lambda url: (200, json.dumps(replies[url]), {})) as opened:
             self.assertEqual(module.resolve_source('pubky/paykit-rs', 'tag', 'v1'), OLD)
-            self.assertTrue(opened.call_args.args[0].full_url.endswith('/refs%2Ftags%2Fv1'))
-        with patch.object(module.urllib.request, 'urlopen') as opened:
+            self.assertEqual([call.args[0] for call in opened.call_args_list], [ref_url, tag_url])
+        with patch.object(module, 'read_public') as opened:
             with self.assertRaisesRegex(ValueError, 'Invalid source ref'):
                 module.resolve_source('pubky/paykit-rs', 'tag', 'invalid ref')
             opened.assert_not_called()
@@ -93,17 +95,26 @@ class CheckSourceTests(unittest.TestCase):
     def test_cli_lookup_failure_returns_error_and_nonzero_exit(self):
         import contextlib
         import io
+        import socket
         import sys
+        from test_release_source import POLICY, STABLE
         from unittest.mock import patch
-        _, module = self.fixture()
+        root, module = self.fixture()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY, 'releasedSource': STABLE}))
         output = io.StringIO()
         with patch.object(sys, 'argv', ['check_source.py', '--version', 'released', '--page', 'overview']), \
-                patch.object(module.urllib.request, 'urlopen', side_effect=OSError('offline')), \
+                patch.object(module, '__file__', str(root / 'automation/check_source.py')), \
+                patch.object(socket, 'getaddrinfo', side_effect=AssertionError('Offline CLI test reached DNS')), \
+                patch('release_source.read_public', side_effect=OSError('offline')) as catalog, \
+                patch.object(module, 'read_public', side_effect=AssertionError('Unexpected exact ref lookup')) as refs, \
                 contextlib.redirect_stdout(output):
             with self.assertRaises(SystemExit) as stopped:
                 module.main()
+        catalog.assert_called_once_with('https://api.github.com/repos/pubky/paykit-rs/releases?per_page=100&page=1')
+        refs.assert_not_called()
         self.assertEqual(stopped.exception.code, 1)
-        self.assertEqual(json.loads(output.getvalue())['action'], 'error')
+        self.assertEqual(json.loads(output.getvalue()),
+                         {'action': 'error', 'reason': 'source_check_failed', 'detail': 'offline'})
 
     def test_development_policy_discovers_a_concrete_tag_and_returns_frozen_selection(self):
         from unittest.mock import patch
@@ -127,6 +138,21 @@ class CheckSourceTests(unittest.TestCase):
         self.assertEqual(result['release']['id'], release()['id'])
         self.assertEqual(calls, [('pubky/paykit-rs', 'tag', release()['tag_name'])])
         self.assertEqual(before, {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()})
+
+    def test_released_checks_highest_stable_not_its_current_document_tag(self):
+        from test_release_source import POLICY, STABLE, release
+        root, module = self.fixture()
+        (root / 'docs-generation.json').write_text(json.dumps({'source': POLICY, 'releasedSource': STABLE}))
+        rc = release(tag='v5.0.0-rc.1', prerelease=False)
+        stable = release(18, 'v1.9.0', '2030-01-02T00:00:00Z', prerelease=False)
+        def resolve(repo, kind, ref):
+            self.assertEqual((repo, kind, ref), ('pubky/paykit-rs', 'tag', stable['tag_name']))
+            return {'sourceObject': 'c' * 40, 'sourceCommit': OLD, 'qualifiedRef': 'refs/tags/' + ref}
+        result = module.check_source(root, 'released', 'overview', resolver=resolve,
+                                     fetcher=lambda _: ([rc, stable], ''))
+        self.assertEqual(result['action'], 'refresh_needed')
+        self.assertEqual(result['sourcePolicy'], STABLE)
+        self.assertEqual(result['sourceObject'], 'c' * 40)
 
 if __name__ == '__main__':
     unittest.main()
