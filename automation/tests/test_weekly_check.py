@@ -508,7 +508,7 @@ class WeeklyCheckTests(unittest.TestCase):
         self.assertIn('skip every public author or reviewer', skip)
         self.assertIn('failure/recovery', skip)
         section = weekly.split('### Dedicated failure and recovery reading gate', 1)[1].split('## 4.', 1)[0]
-        self.assertIn('after factual, newcomer, editorial and security/privacy acceptance', section)
+        self.assertIn('in the early-admitted reader feedback batch', section)
         command = next(row for row in section.splitlines() if 'validate-failure-recovery' in row)
         for key in ('--inputs', '--report', '--newcomer-report', '--editorial-report', '--security-privacy-report',
                     '--document', '--author-task-id', '--factual-reviewer-task-id', '--newcomer-task-id',
@@ -600,6 +600,30 @@ class WeeklyCheckTests(unittest.TestCase):
         for token in ('--site-root', '--diagram-inputs', '--visual-design-report', '--diagram-review-task-id'):
             self.assertIn(token, command.split())
         self.assertIn('require a pass immediately before committing', section)
+
+
+    def test_shared_repair_helper_is_watched_and_never_replaces_final_gates(self):
+        root, module, manifest = self.fixture()
+        resolver = lambda *args: COMMIT
+        self.assertEqual(module.check_weekly(root, manifest, resolver=resolver)['action'], 'skip')
+        helper = 'automation/review_repair.py'
+        (root / helper).parent.mkdir(parents=True, exist_ok=True)
+        (root / helper).write_text((SCRIPT.parents[1] / helper).read_text())
+        self.git(root, 'add', helper)
+        self.git(root, 'commit', '-m', 'shared repair gate')
+        result = module.check_weekly(root, manifest, resolver=resolver)
+        self.assertEqual(result['refreshVersions'], ['coming-soon'])
+        self.assertEqual(result['processFilesChanged'], [helper])
+        self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+        doc = (SCRIPT.parents[1] / 'automation/WEEKLY.md').read_text()
+        loop = doc.split('### Shared feedback and repair loop', 1)[1].split('### Dedicated newcomer', 1)[0]
+        self.assertIn('`reserved=true`', loop)
+        self.assertIn('at most one', loop)
+        self.assertIn('collecting useful feedback', loop)
+        self.assertIn('Do not treat a failing review as a passing predecessor', loop)
+        final = doc.split('## 4. Allowed publication and live readback', 1)[1]
+        self.assertIn('require all original factual', final)
+        self.assertIn('not itself a publication approval', loop)
 
 
 if __name__ == '__main__':

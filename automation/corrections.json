@@ -572,6 +572,20 @@
         "automation/tests/test_weekly_check.py"
       ],
       "enforcementScope": "Independent public-source diagram reading and rendered-artifact binding only."
+    },
+    {
+      "id": "paykit-shared-review-feedback-loop",
+      "requirement": "For every weekly review, batch exact grounded material feedback, keep minor preferences out of the repair, and continue on verified repaired bytes. Reserve at least one of the two shared rounds for readers. After safe factual/QA admission, collect the seven independent reader reports even if one reports a material issue, without treating it as approval. Reject unchanged, repeated or non-improving material repair attempts. Fail closed on missing evidence, deadline or limits; retain all existing final exact-byte approvals and unchanged no-change, cadence, release and publishing scope. Treat the previously observed shared-state deployment scope and caller Payment Request ID wording as material author/evaluator checks only when supported at the frozen source revision.",
+      "enforcedBy": [
+        "automation/WEEKLY.md",
+        "automation/COORDINATOR.md",
+        "automation/skills/writing.md",
+        "automation/skills/evaluation.md",
+        "automation/review_repair.py",
+        "automation/tests/test_review_repair.py",
+        "automation/tests/test_weekly_check.py"
+      ],
+      "enforcementScope": "Bounded coordinator feedback and candidate repair admission only; no new scheduler, approval bypass, generated-prose edit or SDK execution."
     }
   ]
 }

@@ -99,6 +99,34 @@ class NewcomerReviewTests(unittest.TestCase):
                 self.assertEqual(binding['sha256'], hashlib.sha256(body).hexdigest())
 
 
+    def test_current_reader_capture_can_bind_actual_candidate_checkout(self):
+        root = self.root / 'candidate'
+        document = root / 'content/docs/coming-soon.json'
+        document.parent.mkdir(parents=True)
+        document.write_text(json.dumps(self.doc))
+        def git(*args):
+            subprocess.check_output(['git', '-C', str(root), *args], timeout=10)
+        git('init', '-q')
+        git('add', 'content/docs/coming-soon.json')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture candidate')
+        repair = SCRIPT.with_name('review_repair.py')
+        def fingerprint():
+            out = subprocess.check_output([sys.executable, '-B', repair, '--root', root, '--fingerprint'], timeout=15)
+            return json.loads(out)['candidate']
+        first = fingerprint()
+        with self.server() as (base, _):
+            output = self.root / 'bound-bundle'
+            self.cli('capture', '--document', document, '--version', 'coming-soon', '--base-url', base,
+                     '--candidate-root', root, '--output', output)
+            self.assertEqual(json.loads((output / 'index.json').read_bytes())['candidateSha256'], first)
+            document.write_text(json.dumps(self.doc, indent=2))
+            second = fingerprint()
+            self.assertNotEqual(first, second)
+            next_output = self.root / 'bound-bundle-new'
+            self.cli('capture', '--document', document, '--version', 'coming-soon', '--base-url', base,
+                     '--candidate-root', root, '--output', next_output)
+            self.assertEqual(json.loads((next_output / 'index.json').read_bytes())['candidateSha256'], second)
+
     def synthetic_report(self, bundle):
         # Fabricated laboratory fixture, never represented as a real reader verdict.
         index = bundle / 'index.json'

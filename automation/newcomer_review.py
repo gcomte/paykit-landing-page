@@ -8,6 +8,7 @@ import ipaddress
 import json
 from pathlib import Path
 import re
+import subprocess
 import urllib.parse
 import urllib.request
 import zlib
@@ -88,6 +89,15 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 def capture(args):
     raw, doc, routes = document_scope(args.document, args.version)
     base = origin(args.base_url)
+    candidate_root = getattr(args, 'candidate_root', None)
+    candidate = None
+    if candidate_root is not None:
+        from review_repair import snapshot
+        root = candidate_root.resolve()
+        require(args.document.resolve() == root / f'content/docs/{args.version}.json'
+                and base.startswith('http://127.0.0.1:'), 'Expected current-build capture from the exact candidate checkout')
+        candidate = snapshot(root)
+        require(args.document.read_bytes() == raw, 'Document changed before reader capture')
     require(args.output.is_absolute(), 'Output must be an absolute new directory')
     args.output.mkdir(exist_ok=False)
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
@@ -113,6 +123,10 @@ def capture(args):
                 'versionMetadata': doc['version'], 'lastUpdated': doc['lastUpdated'],
                 'documentSha256': digest(raw), 'entryUrl': base + '/docs',
                 'pageRoutes': routes, 'documents': rows}
+    if candidate is not None and candidate_root is not None:
+        from review_repair import snapshot
+        require(snapshot(candidate_root) == candidate and args.document.read_bytes() == raw, 'Checkout changed during reader capture')
+        manifest['candidateSha256'] = candidate[1]
     index = args.output / 'index.json'
     index.write_text(json.dumps(manifest, indent=2) + '\n')
     return {'action': 'captured', 'inputs': str(index), 'inputManifestSha256': digest(index.read_bytes()),
@@ -654,6 +668,7 @@ def main(argv=None):
     cap.add_argument('--version', required=True)
     cap.add_argument('--base-url', required=True)
     cap.add_argument('--output', type=Path, required=True)
+    cap.add_argument('--candidate-root', type=Path, help='Bind the reader index to the exact owned candidate checkout')
     diag = commands.add_parser('capture-diagram-review')
     for field in ('inputs', 'visual-inputs', 'document', 'site-root', 'output'):
         diag.add_argument('--' + field, type=Path, required=True)
@@ -694,7 +709,7 @@ def main(argv=None):
                   'validate-usability-accessibility': validate_usability_accessibility,
                   'validate-visual-design': validate_visual_design, 'capture-diagram-review': capture_diagram_review,
                   'validate-diagram-review': validate_diagram_review}[args.command](args)
-    except (OSError, ValueError, TypeError, KeyError, http.client.HTTPException) as error:
+    except (OSError, ValueError, TypeError, KeyError, http.client.HTTPException, subprocess.SubprocessError) as error:
         print(json.dumps({'action': 'refused', 'detail': str(error)}))
         raise SystemExit(1)
     print(json.dumps(result))
