@@ -53,6 +53,25 @@ class CheckSourceTests(unittest.TestCase):
         self.assertEqual(result['action'], 'refresh_needed')
         self.assertEqual(result['reason'], 'forced')
 
+    def test_explicit_modern_page_source_requires_complete_metadata_without_writing(self):
+        root, module = self.fixture()
+        path = root / 'content/docs/released.json'
+        original = json.loads(path.read_bytes())
+        published = {**original['version'], 'kind': 'tag', 'ref': 'v1', 'label': 'v1',
+                     'sourceUrl': f'https://github.com/pubky/paykit-rs/tree/{OLD}'}
+        for absent in (None, 'label', 'sourceUrl'):
+            with self.subTest(absent=absent):
+                snapshot = dict(published)
+                if absent:
+                    del snapshot[absent]
+                path.write_text(json.dumps({**original, 'version': snapshot, 'lastUpdated': '2026-11-18'}))
+                before = path.read_bytes(), path.stat().st_mtime_ns
+                gate = module.check_source(root, 'released', 'overview', resolver=lambda *args: OLD)
+                self.assertEqual(gate['action'], 'refresh_needed' if absent else 'skip')
+                self.assertEqual(gate['reason'], 'source_metadata_invalid' if absent else 'source_unchanged')
+                self.assertEqual(gate.get('sourceMetadataIssues'), [absent] if absent else None)
+                self.assertEqual((path.read_bytes(), path.stat().st_mtime_ns), before)
+
     def test_selected_branch_change_requests_a_refresh(self):
         root, module = self.fixture()
         config = json.loads((root / 'docs-generation.json').read_text())

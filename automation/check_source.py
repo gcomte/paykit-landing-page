@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
-from release_source import configured_sources, read_public, read_ref, select_source, source_matches
+from release_source import configured_sources, read_public, read_ref, select_source, source_matches, source_metadata_issues
 
 
 def resolve_source(repository, kind, ref):
@@ -31,10 +31,13 @@ def check_source(root, version, page, force=False, resolver=resolve_source_ident
     selection = frozen['sourceSelection']
     kind, ref, commit = selection['kind'], selection['ref'], frozen['sourceCommit']
     unchanged = source_matches(document['version'], frozen)
-    return {'action': 'skip' if unchanged and not force else 'refresh_needed',
-            'reason': 'forced' if force else ('source_unchanged' if unchanged else 'source_changed'),
+    issues = source_metadata_issues(document['version'], frozen) if unchanged else []
+    reason = ('forced' if force else 'source_changed' if not unchanged else
+              'source_metadata_invalid' if issues else 'source_unchanged')
+    return {'action': 'skip' if reason == 'source_unchanged' else 'refresh_needed', 'reason': reason,
             'version': version, 'page': page, 'refKind': kind, 'ref': ref,
-            'documentationCommit': document['version']['commit'], **frozen}
+            'documentationCommit': document['version']['commit'], **frozen,
+            **({'sourceMetadataIssues': issues} if issues else {})}
 
 
 def main():

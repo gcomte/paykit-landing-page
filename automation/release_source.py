@@ -92,6 +92,20 @@ def source_matches(version, frozen):
             and ('sourceObject' not in frozen or version.get('object', frozen['sourceObject']) == frozen['sourceObject']))
 
 
+def source_metadata_issues(version, frozen):
+    """Fields required by the renderer for a published snapshot of this source."""
+    # A catalog policy establishes the published-snapshot contract even if its
+    # document lost every modern field. Explicit-source callers can still use
+    # the historical commit/tag-only format, but not partial renderer metadata.
+    snapshot_fields = {'ref', 'kind', 'qualifiedRef', 'object', 'release', 'label', 'sourceUrl'}
+    if 'sourcePolicy' not in frozen and snapshot_fields.isdisjoint(version):
+        return []
+    selection = frozen['sourceSelection']
+    repository, commit = selection['repository'], frozen['sourceCommit']
+    expected = {'label': selection['ref'], 'sourceUrl': f'https://github.com/{repository}/tree/{commit}'}
+    return [key for key, value in expected.items() if version.get(key) != value]
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         raise ValueError('Public-source HTTP redirects are not allowed')

@@ -187,7 +187,10 @@ class WeeklyCheckTests(unittest.TestCase):
         stable = release(19, 'v1.0.0', '2030-01-01T00:00:00Z', prerelease=False)
         for version, row, commit in [('released', stable, 'd' * 40), ('coming-soon', rc, COMMIT)]:
             body = root / f'content/docs/{version}.json'
-            body.write_text(json.dumps({'version': {'commit': commit, 'tag': row['tag_name']}}))
+            tag = row['tag_name']
+            body.write_text(json.dumps({'version': {'commit': commit, 'tag': tag, 'label': tag,
+                                                    'sourceUrl': f'https://github.com/pubky/paykit-rs/tree/{commit}'},
+                                        'lastUpdated': '2026-11-20'}))
             manifest['sources'][version] = {'commit': commit, 'tag': row['tag_name']}
             manifest['contentHashes'][version] = hashlib.sha256(body.read_bytes()).hexdigest()
         self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'live versions')
@@ -228,6 +231,53 @@ class WeeklyCheckTests(unittest.TestCase):
         result = gate()
         self.assertEqual(result['reasons'], ['generation_process_changed'])
         self.assertEqual(result['refreshVersions'], ['coming-soon'])
+
+    def test_weekly_cli_refreshes_only_tracks_with_invalid_published_metadata(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from unittest.mock import patch
+        root, module, manifest, rc, stable = self.dual_fixture()
+
+        def resolve(repo, kind, ref):
+            return {'sourceCommit': COMMIT if ref == rc['tag_name'] else 'd' * 40,
+                    'sourceObject': 'b' * 40, 'qualifiedRef': 'refs/tags/' + ref}
+
+        def state():
+            return {p.name: (p.read_bytes(), p.stat().st_mtime_ns)
+                    for p in (root / 'content/docs').glob('*.json')}
+
+        for version, field, invalid in [('coming-soon', 'label', None), ('coming-soon', 'sourceUrl', None),
+                                        ('released', 'label', ''), ('released', 'sourceUrl', 'https://github.com/')]:
+            with self.subTest(version=version, field=field, invalid=invalid):
+                path = root / f'content/docs/{version}.json'
+                original = path.read_bytes()
+                doc = json.loads(original)
+                if invalid is None:
+                    del doc['version'][field]
+                else:
+                    doc['version'][field] = invalid
+                path.write_text(json.dumps(doc))
+                manifest['contentHashes'][version] = hashlib.sha256(path.read_bytes()).hexdigest()
+                self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'invalid published metadata fixture')
+                before = state()
+                for force in ([], ['--force']):
+                    output = StringIO()
+                    with patch.object(module, 'read_public', return_value=(200, json.dumps(manifest), {})), \
+                            patch.object(module, 'resolve_source', side_effect=resolve), \
+                            patch('release_source.fetch_release_page', return_value=([rc, stable], '')), \
+                            redirect_stdout(output):
+                        module.main(['--root', str(root), *force])
+                    result = json.loads(output.getvalue())
+                    self.assertEqual(result['action'], 'refresh_needed')
+                    self.assertEqual(result['reasons'], ['source_metadata_invalid'] + (['forced'] if force else []))
+                    expected = {version} | ({'coming-soon'} if force else set())
+                    self.assertEqual(result['refreshVersions'], [v for v in ('released', 'coming-soon') if v in expected])
+                    self.assertEqual(result['sourceMetadataIssues'], {version: [field]})
+                    self.assertEqual(state(), before)
+                    self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+                path.write_bytes(original)
+                manifest['contentHashes'][version] = hashlib.sha256(original).hexdigest()
+                self.git(root, 'add', '.'); self.git(root, 'commit', '-m', 'restore valid display metadata')
 
     def test_released_baseline_commit_and_hash_are_required_before_catalog_reads(self):
         root, module, manifest, _, _ = self.dual_fixture()

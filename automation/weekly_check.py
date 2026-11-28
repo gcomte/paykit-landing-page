@@ -9,7 +9,7 @@ import time
 import math
 from pathlib import Path
 from check_source import resolve_source_identity as resolve_source
-from release_source import configured_sources, read_public, select_sources, source_matches
+from release_source import configured_sources, read_public, select_sources, source_matches, source_metadata_issues
 
 
 SITE_URLS = ['https://paykit-landing-page-lake.vercel.app',
@@ -79,10 +79,17 @@ def check_weekly(root, deployed_manifest, resolver=resolve_source, force=False, 
         raise ValueError('Missing documentation generation history')
     changed = sorted(git(root, 'diff', '--name-only', revision, 'HEAD', '--', *PROCESS_INPUTS).splitlines())
     selections = select_sources(policies, resolver, fetcher, require_object='released' in policies)
-    refresh = {version for version, frozen in selections.items() if not source_matches(documents[version], frozen)}
+    source_changes, metadata_issues = set(), {}
     for version, frozen in selections.items():
+        if not source_matches(documents[version], frozen):
+            source_changes.add(version)
+        elif issues := source_metadata_issues(documents[version], frozen):
+            metadata_issues[version] = issues
         frozen.update(documentationCommit=documents[version]['commit'], documentationContentHash=hashes[version])
-    reasons = ['source_changed'] if refresh else []
+    refresh = source_changes | metadata_issues.keys()
+    reasons = ['source_changed'] if source_changes else []
+    if metadata_issues:
+        reasons.append('source_metadata_invalid')
     if changed:
         reasons.append('generation_process_changed')
     if force:
@@ -99,7 +106,8 @@ def check_weekly(root, deployed_manifest, resolver=resolve_source, force=False, 
             'processFilesChanged': changed, 'documentationRevision': revision, 'head': git(root, 'rev-parse', 'HEAD'),
             'startedEpoch': started, 'deadlineEpoch': deadline, 'budgetSeconds': 21600,
             'refreshVersions': [version for version in policies if version in refresh], 'selections': selections,
-            'refKind': selection['kind'], 'ref': selection['ref'], **shorthand}
+            'refKind': selection['kind'], 'ref': selection['ref'], **shorthand,
+            **({'sourceMetadataIssues': metadata_issues} if metadata_issues else {})}
 
 
 def main(argv=None):

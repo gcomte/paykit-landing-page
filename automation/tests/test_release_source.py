@@ -132,11 +132,11 @@ class ReleaseSourceTests(unittest.TestCase):
                 config.write_text(json.dumps({'source': POLICY, 'defaultVersion': 'coming-soon'}))
                 path = root / 'content/docs/coming-soon.json'
                 doc = json.loads(path.read_bytes())
-                doc['version'].update(kind='tag', ref='older-tag', tag='older-tag')
+                doc['version'].update(kind='tag', sourceUrl=f'https://github.com/pubky/paykit-rs/tree/{COMMIT}')
                 doc['pages'] = [{'slug': 'overview'}]
                 path.write_text(json.dumps(doc))
                 for covered in ('older-tag', release()['tag_name']):
-                    doc['version'].update(ref=covered, tag=covered)
+                    doc['version'].update(ref=covered, tag=covered, label=covered)
                     path.write_text(json.dumps(doc))
                     if hasattr(module, 'check_weekly'):
                         import hashlib
